@@ -1,559 +1,373 @@
-# LICING — Asistente Inteligente de Mercado Público
+# LICING Asistente de MercadoPublico para Hotel San Francisco
 
-> Plataforma inteligente para la búsqueda, filtrado, análisis y priorización de oportunidades de **Mercado Público y Compra Ágil**, utilizando Inteligencia Artificial y modelos predictivos.
+> Asistente inteligente para la detección, filtrado, análisis y seguimiento de oportunidades de licitación en Mercado Público para el Hotel Plaza San Francisco.
 
----
+## Descripción
 
-## 📌 Descripción
+LICING WEB es una plataforma de apoyo a la decisión comercial. Su propósito es reducir el tiempo que el equipo de eventos dedica a revisar manualmente oportunidades en Mercado Público y Compra Ágil.
 
-**LICING** es una plataforma orientada a automatizar parte del proceso de búsqueda y análisis de oportunidades comerciales disponibles en **Mercado Público y Compra Ágil**.
+La plataforma identifica licitaciones potencialmente relevantes para el hotel, las filtra según criterios configurables, las prioriza mediante un puntaje explicable y permite realizar seguimiento de cada oportunidad.
 
-La solución está diseñada para reducir el trabajo manual del equipo comercial del **Hotel Plaza San Francisco**, permitiendo obtener oportunidades relevantes, analizarlas mediante Inteligencia Artificial y priorizarlas según criterios definidos por el negocio.
+LICING no postula automáticamente ni toma decisiones comerciales. La decisión final de participar en una licitación permanece en manos del equipo comercial.
 
-El sistema busca transformar un proceso actualmente manual y repetitivo en un flujo automatizado de:
+## Problema
 
-**Obtención → Filtrado → Análisis → Priorización → Visualización → Decisión**
+El proceso actual de búsqueda manual presenta dificultades:
 
-> ⚠️ LICING funciona como sistema de apoyo a la decisión. La decisión final de participar en una oportunidad permanece bajo responsabilidad del equipo comercial.
+- Revisión diaria de numerosas páginas de resultados.
+- Uso de términos diferentes para una misma necesidad, por ejemplo: `hospedaje`, `alojamiento`, `habitaciones` o `pernoctación`.
+- Resultados no relevantes que generan ruido.
+- Riesgo de perder oportunidades por detectarlas tarde.
+- Posibles inconsistencias entre el resumen de una licitación, su identificador y sus documentos adjuntos.
+- Tiempo elevado para leer bases técnicas y revisar documentos administrativos obligatorios.
 
----
+## Objetivo general
 
-# 🎯 Objetivos
+Desarrollar una aplicación web que permita detectar, filtrar, analizar y priorizar oportunidades de Mercado Público relacionadas con alojamiento, eventos y catering para el Hotel Plaza San Francisco.
 
-### Objetivo general
+## Objetivos específicos
 
-Reducir el tiempo dedicado a la búsqueda y revisión de oportunidades de Mercado Público, facilitando la identificación de aquellas con mayor relevancia para el hotel.
+- Obtener y almacenar licitaciones desde fuentes oficiales autorizadas.
+- Normalizar y mantener trazabilidad de los datos obtenidos.
+- Implementar perfiles de búsqueda reutilizables para alojamiento y eventos/catering.
+- Filtrar oportunidades por palabras clave, sinónimos, exclusiones, región, monto, tipo de proceso y fecha de cierre.
+- Priorizar oportunidades mediante un puntaje explicable.
+- Validar información de una oportunidad mediante la consulta de su detalle y documentos adjuntos.
+- Analizar TDR o bases seleccionadas para extraer servicios, fechas, presupuesto y requisitos administrativos.
+- Gestionar estados comerciales de las oportunidades.
+- Visualizar métricas y el embudo comercial en un dashboard.
 
-### Objetivos específicos
+## Perfiles iniciales
 
-* Automatizar la obtención de oportunidades.
-* Aplicar filtros según criterios definidos por el hotel.
-* Identificar oportunidades potencialmente relevantes.
-* Analizar bases de licitación mediante Inteligencia Artificial.
-* Extraer requisitos y documentos obligatorios.
-* Generar resúmenes ejecutivos.
-* Priorizar oportunidades mediante un modelo predictivo.
-* Centralizar la información en un dashboard.
-* Facilitar la generación y descarga de reportes.
+| Perfil | Términos principales | Objetivo comercial |
+|---|---|---|
+| Alojamiento | Hospedaje, alojamiento, habitaciones, estadía, pernoctación, delegación | Detectar necesidades de hospedaje para funcionarios, delegaciones o actividades institucionales |
+| Eventos y catering | Eventos, catering, banquetería, salón, centro de eventos, coffee break, alimentación | Detectar servicios de alimentación, reuniones, seminarios y uso de espacios |
 
----
+Los perfiles podrán incorporar términos incluidos, términos excluidos, región, monto, días restantes para cierre y tipos de proceso.
 
-# 🏗️ Arquitectura
+## Alcance del MVP
 
-La arquitectura propuesta utiliza una separación por responsabilidades entre frontend, backend, procesamiento inteligente, persistencia e infraestructura.
+La primera versión incluirá:
 
-```mermaid
-flowchart TB
+- Aplicación web accesible desde navegador.
+- Autenticación básica y control de acceso.
+- Ingesta de una muestra real o fuente oficial autorizada de licitaciones.
+- Almacenamiento de datos originales y normalizados.
+- Perfiles de búsqueda para alojamiento y eventos/catering.
+- Filtros por términos, sinónimos, exclusiones, Región Metropolitana, monto y fecha de cierre.
+- Priorización basada en reglas y puntajes explicables.
+- Listado y detalle de oportunidades.
+- Validación del identificador y consulta del detalle de la licitación.
+- Estados comerciales:
+  - Identificada
+  - Calificada
+  - Participada
+  - Adjudicada
+  - Descartada
+- Dashboard inicial con métricas del embudo comercial.
+- Análisis de documentos bajo demanda para oportunidades seleccionadas.
+- Ejecución local reproducible con Docker.
 
-    U[👤 Usuario / Equipo Comercial]
+## Fuera de alcance del MVP
 
-    subgraph FRONTEND["Frontend"]
-        A[React + Vite]
-        D[Dashboard]
-        F[Filtros y búsqueda]
-        R[Reportes]
-    end
+- Postulación automática a licitaciones.
+- Decisiones comerciales automáticas.
+- Garantizar adjudicaciones.
+- Entrenamiento de un modelo predictivo desde cero.
+- Análisis masivo de todos los PDF disponibles.
+- Reemplazar la revisión final del equipo comercial.
+- Despliegue definitivo en un proveedor cloud antes de validar el flujo local.
 
-    subgraph BACKEND["Backend"]
-        G[API Backend]
-        API[API REST]
-        AUTH[Autenticación y autorización]
-        OP[Gestión de oportunidades]
-    end
+## Arquitectura
 
-    subgraph DATA["Obtención y procesamiento"]
-        MP[Mercado Público]
-        CA[Compra Ágil]
-        ING[Ingesta de oportunidades]
-        FIL[Motor de filtros]
-    end
-
-    subgraph AI["Inteligencia Artificial"]
-        PRED[Modelo predictivo]
-        LLM[LLM / Gemini API]
-        SEM[Filtro semántico]
-        SUM[Resumen y extracción de requisitos]
-    end
-
-    subgraph STORAGE["Persistencia"]
-        PG[(PostgreSQL)]
-        MG[(MongoDB)]
-        SB[(Supabase)]
-    end
-
-    subgraph INFRA["Infraestructura"]
-        DOCKER[Docker]
-        GC[Google Cloud]
-    end
-
-    U --> A
-
-    A --> D
-    A --> F
-    A --> R
-
-    A --> API
-
-    API --> AUTH
-    API --> OP
-
-    OP --> FIL
-
-    MP --> ING
-    CA --> ING
-    ING --> FIL
-
-    FIL --> PRED
-    FIL --> LLM
-
-    LLM --> SEM
-    LLM --> SUM
-
-    PRED --> OP
-    SUM --> OP
-
-    OP --> PG
-    OP --> MG
-    PG --> SB
-
-    API --> DOCKER
-    DOCKER --> GC
-```
-
----
-
-## 🔄 Flujo de funcionamiento
-
-```mermaid
-sequenceDiagram
-
-    participant MP as Mercado Público
-    participant ING as Ingesta
-    participant API as Backend
-    participant AI as IA / Gemini
-    participant ML as Modelo Predictivo
-    participant DB as Base de Datos
-    participant UI as Dashboard
-
-    MP->>ING: Nuevas oportunidades
-    ING->>API: Datos obtenidos
-
-    API->>AI: Bases y descripción
-    AI->>AI: Análisis semántico
-    AI->>AI: Extracción de requisitos
-
-    API->>ML: Características de oportunidad
-    ML->>API: Score de relevancia
-
-    API->>DB: Almacenar resultados
-    DB->>UI: Oportunidades procesadas
-
-    UI->>API: Filtros / consultas
-    API->>UI: Resultados priorizados
-```
-
----
-
-# 🧩 Módulos principales
-
-## 1. 🔎 Búsqueda y filtrado
-
-Obtención automática de oportunidades desde Mercado Público y Compra Ágil.
-
-Los resultados podrán filtrarse utilizando criterios como:
-
-* Rubro.
-* Monto.
-* Ubicación.
-* Fechas.
-* Tipo de oportunidad.
-* Palabras clave.
-* Criterios específicos definidos por el hotel.
-
----
-
-## 2. 🧠 Análisis inteligente
-
-El sistema utilizará Inteligencia Artificial para analizar el contenido de las oportunidades y sus bases.
-
-Entre las funcionalidades consideradas:
-
-* Análisis semántico.
-* Resumen automático.
-* Identificación de requisitos.
-* Extracción de documentos obligatorios.
-* Identificación de información relevante.
-* Clasificación de oportunidades.
-
-El LLM será utilizado como componente de análisis, mientras que el modelo predictivo permitirá priorizar las oportunidades según su relevancia.
-
----
-
-## 3. 📊 Gestión y Dashboard
-
-El dashboard permitirá centralizar la información obtenida y procesada.
-
-Se contempla:
-
-* Visualización de oportunidades.
-* Clasificación.
-* Priorización.
-* Seguimiento.
-* Indicadores clave.
-* Reportería.
-* Exportación de resultados.
-
----
-
-# 🧠 Inteligencia Artificial
-
-LICING contempla dos componentes principales de IA:
-
-### LLM
-
-Responsable del análisis del lenguaje natural presente en las bases y descripciones de las oportunidades.
-
-**Funciones previstas:**
-
-```text
-Base de licitación
-       ↓
-Análisis mediante LLM
-       ↓
-Resumen
-       ↓
-Requisitos
-       ↓
-Documentos obligatorios
-       ↓
-Información estructurada
-```
-
-### Modelo predictivo
-
-El modelo predictivo tendrá como objetivo asignar una **prioridad o nivel de relevancia** a cada oportunidad.
-
-```text
-Oportunidad
-     ↓
-Características
-     ↓
-Modelo predictivo
-     ↓
-Score de relevancia
-     ↓
-Priorización
-```
-
----
-
-# 🧱 Tecnologías
-
-> Las tecnologías indicadas como **tentativas** corresponden al stack actualmente considerado para el desarrollo y podrán modificarse durante las etapas de implementación.
-
-| Capa                    | Tecnología            | Estado           |
-| ----------------------- | --------------------- | ---------------- |
-| Frontend                | React + Vite          | 🟡 Tentativa     |
-| Backend                 | Django REST Framework | 🟡 Alternativa   |
-| Backend                 | NestJS                | 🟡 Alternativa   |
-| Lenguaje                | TypeScript            | 🟡 Según backend |
-| IA / ML                 | Python                | 🟢 Considerada   |
-| Procesamiento de datos  | Pandas                | 🟡 Tentativa     |
-| Procesamiento de datos  | Polars                | 🟡 Tentativa     |
-| LLM                     | Google Gemini API     | 🟡 Tentativa     |
-| Base de datos           | PostgreSQL            | 🟡 Tentativa     |
-| Base de datos           | MongoDB               | 🟡 Tentativa     |
-| Plataforma Backend/Data | Supabase              | 🟡 Tentativa     |
-| Contenedores            | Docker                | 🟡 Tentativa     |
-| Cloud                   | Google Cloud          | 🟡 Tentativa     |
-| Control de versiones    | Git + GitHub          | 🟢 Considerada   |
-
-La selección de Django REST Framework o NestJS para backend aún se encuentra en evaluación, al igual que la combinación definitiva de PostgreSQL/MongoDB y la infraestructura cloud. El PPT presenta estas tecnologías como tentativas.
-
----
-
-# 📁 Estructura propuesta del proyecto
-
-```text
-licing/
-│
-├── apps/
-│   │
-│   ├── frontend/
-│   │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   └── hooks/
-│   │
-│   ├── backend/
-│   │   ├── api/
-│   │   ├── auth/
-│   │   ├── opportunities/
-│   │   ├── reports/
-│   │   └── users/
-│   │
-│   └── ai-service/
-│       ├── models/
-│       ├── preprocessing/
-│       ├── prediction/
-│       └── llm/
-│
-├── libs/
-│   ├── common/
-│   └── schemas/
-│
-├── infrastructure/
-│   ├── docker/
-│   ├── cloud/
-│   └── database/
-│
-├── docs/
-│   ├── architecture.md
-│   ├── diagrams/
-│   ├── api/
-│   └── brainstorming/
-│
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-│
-├── .env.example
-├── docker-compose.yml
-├── README.md
-└── .gitignore
-```
-
----
-
-# 🔐 Seguridad
-
-La arquitectura deberá considerar mecanismos de seguridad para proteger la información y controlar el acceso a la plataforma.
-
-Se contempla:
-
-* Autenticación de usuarios.
-* Autorización basada en roles.
-* Protección de endpoints.
-* Variables de entorno para credenciales.
-* Separación entre ambientes.
-* Gestión segura de API Keys.
-* Principio de mínimo privilegio.
-* Protección de información sensible.
-
----
-
-# ☁️ Infraestructura Cloud
-
-La infraestructura cloud se encuentra actualmente en evaluación.
-
-La propuesta contempla utilizar **Google Cloud** como plataforma de infraestructura, complementada con Docker para facilitar la ejecución y despliegue de los componentes.
-
-```text
-                 Google Cloud
-                      │
-              ┌───────┴───────┐
-              │               │
-          Backend          AI / ML
-              │               │
-              └───────┬───────┘
-                      │
-                   Database
-```
-
-La definición final de servicios cloud dependerá de los requerimientos técnicos, costos y necesidades de escalabilidad identificadas durante el desarrollo.
-
----
-
-# 🐳 Contenedores
-
-Docker permitirá encapsular los distintos componentes de la solución y facilitar la consistencia entre ambientes.
+LICING WEB separa la experiencia del usuario del procesamiento de datos e inteligencia artificial.
 
 ```mermaid
 flowchart LR
+    U[Equipo Comercial] --> FE[React + Vite]
+    FE --> API[NestJS API]
 
-    FE[Frontend Container]
-    BE[Backend Container]
-    AI[AI Service Container]
-    DB[(Database)]
+    API --> DB[(PostgreSQL / Supabase)]
+    API --> INT[Servicio de Inteligencia<br/>Python + FastAPI]
 
-    FE --> BE
-    BE --> AI
-    BE --> DB
+    INT --> MP[API o datos oficiales<br/>Mercado Público]
+    INT --> DB
+    INT --> LLM[Gemini API<br/>Análisis bajo demanda]
+
+    API --> DASH[Dashboard y reportes]
 ```
 
-Esto permitirá posteriormente facilitar:
+### Flujo principal
 
-* Desarrollo local.
-* Pruebas.
-* Integración.
-* Despliegue.
-* Escalabilidad.
+```mermaid
+sequenceDiagram
+    participant MP as Mercado Público
+    participant INT as Servicio Python
+    participant DB as PostgreSQL
+    participant API as NestJS
+    participant UI as React
+    participant USER as Equipo Comercial
 
----
+    MP->>INT: Licitaciones o datos autorizados
+    INT->>DB: Guardar fuente original y datos normalizados
+    INT->>DB: Calcular perfil coincidente y puntaje
+    USER->>UI: Consultar oportunidades
+    UI->>API: Solicitar listado filtrado
+    API->>DB: Consultar oportunidades procesadas
+    DB-->>API: Resultados
+    API-->>UI: Listado priorizado y explicable
+    USER->>UI: Solicitar análisis de una oportunidad
+    UI->>API: Solicitud de análisis
+    API->>INT: Trabajo de análisis bajo demanda
+    INT->>DB: Guardar resumen, requisitos y alertas
+```
 
-# 🧪 Testing
+## Componentes
 
-La estrategia de pruebas se definirá progresivamente durante el desarrollo.
+### Frontend
 
-Se contempla trabajar con:
+El frontend permite al equipo comercial:
 
-* Tests unitarios.
-* Tests de integración.
-* Tests de API.
-* Tests end-to-end.
-* Validación de resultados del modelo predictivo.
-* Validación de respuestas generadas por IA.
+- Consultar oportunidades detectadas.
+- Aplicar filtros y seleccionar perfiles de búsqueda.
+- Revisar el detalle de una licitación.
+- Ver por qué una oportunidad recibió su puntaje.
+- Cambiar el estado comercial de una oportunidad.
+- Consultar indicadores y reportes.
 
----
+### Backend
 
-# 🚀 CI/CD
+El backend administra:
 
-El repositorio utilizará **GitHub** como plataforma de control de versiones y gestión del código.
+- Usuarios y autorización.
+- Perfiles de búsqueda.
+- Oportunidades y estados comerciales.
+- Filtros configurables.
+- Dashboard y reportes.
+- Comunicación entre frontend, base de datos y servicio inteligente.
 
-Se contempla incorporar **GitHub Actions** para automatizar progresivamente:
+### Servicio de inteligencia
+
+El servicio en Python realiza:
+
+- Ingesta de licitaciones desde fuentes autorizadas.
+- Normalización y deduplicación de registros.
+- Procesamiento tabular.
+- Detección de coincidencias por términos, sinónimos y exclusiones.
+- Cálculo de puntajes de relevancia.
+- Análisis bajo demanda de bases y TDR.
+- Extracción de servicios, fechas, presupuesto y requisitos administrativos.
+- Integración opcional con Gemini API.
+
+## Priorización inicial
+
+El MVP no depende de un modelo de machine learning entrenado.
+
+La prioridad se calculará con reglas configurables y explicables, por ejemplo:
+
+- Coincidencia con términos obligatorios.
+- Coincidencia con términos relacionados o sinónimos.
+- Presencia de términos excluidos.
+- Región Metropolitana o comuna prioritaria.
+- Tipo de proceso, con prioridad para Compra Ágil.
+- Monto disponible y umbral del perfil.
+- Cercanía de la fecha de cierre.
+- Validación correcta del identificador y sus adjuntos.
+
+Cada resultado mostrará la razón de su clasificación, por ejemplo:
+
+> Coincide con “alojamiento” y “delegación”, está ubicado en Santiago, cierra en 8 días y cumple el umbral de monto configurado.
+
+## Evolución de IA y ML
+
+El análisis semántico y documental se incorporará progresivamente.
+
+### Primera etapa
+
+- Diccionarios de términos y sinónimos.
+- Reglas configurables.
+- Puntajes transparentes.
+- Gemini API para resumir documentos seleccionados y extraer información estructurada.
+
+### Evolución futura
+
+Cuando el equipo comercial registre suficientes decisiones reales, se podrán utilizar como etiquetas:
+
+- Relevante.
+- No relevante.
+- Calificada.
+- Participada.
+- Adjudicada.
+- Descartada.
+
+Con esos datos será posible evaluar un modelo supervisado para mejorar la priorización. El modelo será una mejora del sistema, no un requisito para que el MVP funcione.
+
+## Tecnologías
+
+| Capa | Tecnología | Uso |
+|---|---|---|
+| Frontend | React + Vite + TypeScript | Interfaz web y dashboard |
+| Backend | NestJS + TypeScript | API REST, usuarios, filtros, oportunidades y reportes |
+| Servicio de datos e IA | Python + FastAPI | Ingesta, procesamiento, análisis semántico y TDR |
+| Procesamiento de datos | Polars | Limpieza, transformación y análisis tabular |
+| LLM | Google Gemini API | Resumen y extracción bajo demanda |
+| Base de datos | PostgreSQL | Datos operacionales, análisis, estados y trazabilidad |
+| Plataforma de datos | Supabase | PostgreSQL administrado, autenticación y servicios complementarios |
+| Contenedores | Docker + Docker Compose | Entorno local reproducible |
+| Control de versiones | Git + GitHub | Gestión de código y colaboración |
+| CI/CD | GitHub Actions | Linting, pruebas y build de forma progresiva |
+| Cloud | Por definir | Se decidirá según costos, seguridad y necesidades de despliegue |
+
+## Estructura propuesta
 
 ```text
-Push / Pull Request
-        ↓
-     Linting
-        ↓
-      Tests
-        ↓
-   Build Docker
-        ↓
-  Deploy Cloud
+licing/
+├── apps/
+│   ├── web/                    # React + Vite
+│   ├── api/                    # NestJS
+│   └── intelligence/           # Python + FastAPI
+├── packages/
+│   ├── shared-types/           # Tipos y contratos compartidos
+│   └── config/                 # Configuraciones comunes
+├── docs/
+│   ├── architecture.md
+│   ├── requirements.md
+│   ├── api.md
+│   └── diagrams/
+├── infrastructure/
+│   ├── docker/
+│   └── database/
+├── tests/
+│   ├── integration/
+│   └── e2e/
+├── .github/
+│   └── workflows/
+├── docker-compose.yml
+├── .env.example
+└── README.md
 ```
 
-La implementación del pipeline CI/CD será incorporada durante una etapa posterior del proyecto.
+## Modelo de datos conceptual
 
----
+Las áreas principales de información serán:
 
-# 📈 Observabilidad
+| Área | Ejemplos de información |
+|---|---|
+| Datos originales | Respuesta de API, fecha de extracción, identificador externo, JSON original |
+| Licitación normalizada | Título, organismo, región, monto, fecha de cierre, estado, enlaces y adjuntos |
+| Perfiles de búsqueda | Términos incluidos, excluidos, región, monto y umbrales |
+| Evaluación | Perfil coincidente, puntaje, razones de coincidencia, fecha de análisis |
+| Análisis documental | Resumen, presupuesto, fechas, servicios, requisitos y documentos obligatorios |
+| Gestión comercial | Estado, notas, responsable y fechas de seguimiento |
+| Auditoría | Ejecuciones, errores, cambios de estado y trazabilidad |
 
-La observabilidad será considerada como parte de la evolución de la arquitectura.
+## Metodología de trabajo
 
-Se podrán incorporar posteriormente métricas relacionadas con:
+El proyecto se desarrollará con Scrum liviano y sprints de dos semanas.
 
-* Disponibilidad de la API.
-* Tiempo de respuesta.
-* Errores.
-* Procesamiento de oportunidades.
-* Cantidad de oportunidades analizadas.
-* Uso del servicio de IA.
-* Estado de los procesos de ingesta.
+### Roles
 
----
+- **Product Owner:** representante del Hotel Plaza San Francisco que prioriza necesidades y valida los resultados.
+- **Equipo de desarrollo:** implementa frontend, backend, procesamiento de datos, integración y pruebas.
+- **Scrum Master:** facilita el trabajo, identifica bloqueos y vela por el cumplimiento del objetivo del sprint.
 
-# 🛣️ Roadmap
+### Ceremonias
 
-### Fase 1 — Definición y arquitectura
+- Planificación de sprint.
+- Reunión diaria breve del equipo.
+- Revisión de sprint con el hotel.
+- Retrospectiva interna.
+- Refinamiento periódico del Product Backlog.
 
-* [x] Definir problema.
-* [x] Definir objetivo de la solución.
-* [x] Definir módulos principales.
-* [x] Proponer arquitectura inicial.
-* [ ] Definir stack tecnológico definitivo.
+### Artefactos
 
-### Fase 2 — Obtención de oportunidades
+- Product Backlog.
+- Sprint Backlog.
+- Historias de usuario.
+- Criterios de aceptación.
+- Tablero de tareas en GitHub Projects.
+- Incremento funcional al cierre de cada sprint.
 
-* [ ] Integrar fuente de oportunidades.
-* [ ] Implementar proceso de ingesta.
-* [ ] Normalizar información.
-* [ ] Implementar filtros.
+## Plan de sprints
 
-### Fase 3 — Inteligencia Artificial
+| Sprint | Objetivo | Entregable |
+|---|---|---|
+| Sprint 1 | Preparar base técnica | Repositorio, Docker Compose, PostgreSQL/Supabase, estructura inicial y datos de prueba |
+| Sprint 2 | Obtener y normalizar datos | Ingesta, almacenamiento original, normalización, deduplicación y trazabilidad |
+| Sprint 3 | Construir filtros de negocio | Perfiles Alojamiento y Eventos/Catering, filtros, exclusiones y puntajes |
+| Sprint 4 | Mostrar resultados en la web | Listado, detalle, explicación de puntaje y estados comerciales |
+| Sprint 5 | Validar y analizar oportunidades | Validación de ID, adjuntos y análisis documental bajo demanda |
+| Sprint 6 | Consolidar el MVP | Dashboard, pruebas, documentación, correcciones y demostración |
 
-* [ ] Integrar Gemini API.
-* [ ] Implementar análisis semántico.
-* [ ] Generar resúmenes.
-* [ ] Extraer requisitos.
-* [ ] Identificar documentos obligatorios.
+## Ejemplo de historia de usuario
 
-### Fase 4 — Modelo predictivo
+```text
+Como integrante del equipo de eventos,
+quiero seleccionar el perfil “Alojamiento”
+para visualizar licitaciones relevantes en la Región Metropolitana
+y priorizar rápidamente las oportunidades que el hotel podría atender.
+```
 
-* [ ] Definir variables.
-* [ ] Preparar dataset.
-* [ ] Entrenar modelo.
-* [ ] Evaluar modelo.
-* [ ] Implementar sistema de scoring.
+### Criterios de aceptación
 
-### Fase 5 — Dashboard
+- El usuario puede seleccionar el perfil Alojamiento.
+- El sistema muestra oportunidades vigentes.
+- Los resultados incluyen título, organismo, monto, región y fecha de cierre.
+- El sistema muestra un puntaje de relevancia.
+- El sistema explica los términos y reglas que generaron la coincidencia.
+- El usuario puede cambiar el estado comercial de la oportunidad.
 
-* [ ] Implementar frontend.
-* [ ] Dashboard de oportunidades.
-* [ ] Filtros avanzados.
-* [ ] Priorización.
-* [ ] Reportes.
-* [ ] Exportación.
+## Seguridad
 
-### Fase 6 — Infraestructura
+La solución considerará:
 
-* [ ] Dockerización.
-* [ ] Configuración Cloud.
-* [ ] CI/CD.
-* [ ] Seguridad.
-* [ ] Observabilidad.
+- Autenticación de usuarios.
+- Autorización basada en roles.
+- Validación de datos de entrada.
+- Protección de endpoints.
+- Variables de entorno para credenciales y claves.
+- No publicar secretos en Git.
+- Separación entre ambientes local, pruebas y producción.
+- Principio de mínimo privilegio.
+- Registro de errores y operaciones relevantes.
+- Uso exclusivo de mecanismos oficiales y autorizados para integrarse con Mercado Público.
 
----
+## Calidad y pruebas
 
-# 📊 Alcance
+Se incorporarán de forma progresiva:
 
-## ✅ Dentro del alcance
+- Pruebas unitarias para normalización, filtros y cálculo de puntajes.
+- Pruebas de integración para API, base de datos e ingesta.
+- Pruebas end-to-end para flujos críticos de usuario.
+- Validación manual con oportunidades reales.
+- Revisión del equipo comercial sobre relevancia de resultados.
+- Evaluación de resultados de IA antes de mostrarlos como información definitiva.
 
-* Obtención automática de oportunidades.
-* Filtrado según criterios del hotel.
-* Priorización de oportunidades relevantes.
-* Análisis de bases mediante LLM.
-* Generación de resúmenes ejecutivos.
-* Identificación de requisitos.
-* Identificación de documentos obligatorios.
-* Dashboard.
-* Seguimiento.
-* Descarga de reportes.
+## Ejecución local
 
-## ❌ Fuera del alcance
+> Los comandos concretos se incorporarán al crear los proyectos iniciales.
 
-* Postulación automática a licitaciones.
-* Tomar decisiones comerciales de manera autónoma.
-* Garantizar la adjudicación de una licitación.
-* Reemplazar la revisión final del equipo comercial.
+Requisitos previstos:
 
-El alcance definido en el proyecto establece explícitamente que LICING funciona como una herramienta de apoyo y que la decisión final permanece en manos del equipo comercial.
+- Node.js LTS.
+- Python 3.11 o superior.
+- Docker Desktop.
+- Git.
+- Cuenta de Supabase o PostgreSQL local.
+- Credenciales autorizadas para las integraciones externas necesarias.
 
----
+Flujo esperado:
 
-# 🎯 Resultado esperado
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd licing
+cp .env.example .env
+docker compose up --build
+```
 
-LICING busca transformar un proceso manual de aproximadamente **1 a 2 horas diarias** de revisión de oportunidades en un proceso asistido por automatización e Inteligencia Artificial.
+## Estado del proyecto
 
-El resultado esperado es entregar al equipo comercial oportunidades:
+Proyecto en etapa de definición y construcción del MVP.
 
-**Filtradas → Analizadas → Priorizadas → Listas para revisión**
-
-permitiendo reducir la carga operativa y facilitar la toma de decisiones.
-
----
-
-# 📌 Estado del proyecto
-
-🚧 **En desarrollo**
-
-**Estado actual:** Definición de arquitectura y tecnologías.
-
-> El stack tecnológico aún se encuentra en etapa de evaluación. La arquitectura podrá evolucionar conforme se validen los requerimientos técnicos, de negocio, costos y rendimiento.
-
----
-
-## 👥 Proyecto
-
-**LICING — Asistente Inteligente de Mercado Público**
-
-**Contexto:** Hotel Plaza San Francisco
-
-**Propósito:** Automatización, Inteligencia Artificial y priorización de oportunidades de Mercado Público y Compra Ágil.
+Las decisiones de infraestructura cloud pueden evolucionar según costos, validación técnica, seguridad y retroalimentación del Hotel Plaza San Francisco.

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LICING - Licitaciones</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1c2330; --muted: #667085; --line: #e3e6ec;
+    --accent: #1f5eff; --ok: #12805c; --ok-bg: #e2f5ee; --err: #b42318; --err-bg: #fdeceb;
+    --warn: #8a5a00; --warn-bg: #fff3d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f131a; --card: #171c26; --text: #e8ebf1; --muted: #939bab; --line: #283041;
+      --accent: #6b93ff; --ok: #4cd6a3; --ok-bg: #12352a; --err: #ff8a80; --err-bg: #3a1a18;
+      --warn: #f5c451; --warn-bg: #3a2f12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+  h1 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+            font-size: 13px; font-weight: 600; background: var(--warn-bg); color: var(--warn); }
+  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.err { background: var(--err-bg); color: var(--err); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 26px; line-height: 1.2; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .tools input[type=search] { flex: 1 1 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+                              background: var(--bg); color: var(--text); font: inherit; }
+  .tools label { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  button { font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--bg); }
+  td.num { text-align: right; white-space: nowrap; }
+  .code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg); border: 1px solid var(--line); }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  .tag.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+  .empty, .msg { padding: 28px 16px; text-align: center; color: var(--muted); }
+  .msg.err { color: var(--err); text-align: left; white-space: pre-wrap; }
+  dialog { width: min(760px, 94vw); border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+           color: var(--text); padding: 0; }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dlg-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .dlg-body { padding: 16px 20px 20px; max-height: 70vh; overflow: auto; }
+  .dlg-body h3 { margin: 18px 0 6px; font-size: 14px; }
+  .dlg-body table { min-width: 0; }
+  .dlg-body th, .dlg-body td { padding: 6px 8px; font-size: 13px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; font-size: 14px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LICING<small>Licitaciones y oportunidades</small></h1>
+    <div id="status" class="status"><span class="dot"></span><span id="statusText">Conectando...</span></div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="card">
+    <div class="tools">
+      <input type="search" id="q" placeholder="Buscar por código, nombre u organismo...">
+      <label><input type="checkbox" id="soloValidas"> Solo las que pasan el pre-filtro</label>
+      <button id="reload">Actualizar</button>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th>Código</th><th>Nombre</th><th>Organismo</th><th>Cierre</th><th class="num">Monto est.</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="msg" class="msg" hidden></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head">
+    <div><div class="code" id="dCode"></div><strong id="dName"></strong></div>
+    <button id="dClose">Cerrar</button>
+  </div>
+  <div class="dlg-body" id="dBody"></div>
+</dialog>
+
+<script>
+// ---------------------------------------------------------------
+// CONFIGURACIÓN: pegar aquí los datos del proyecto Supabase de Licing
+// (Supabase > Project Settings > API). La anon/publishable key es pública
+// por diseño; la seguridad la da RLS (ver supabase_rls_lectura.sql).
+// ---------------------------------------------------------------
+const SUPABASE_URL = "https://pdqyxqlhjbqnxjctchiw.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXl4cWxoamJxbnhqY3RjaGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzODExNTksImV4cCI6MjEwNTk1NzE1OX0.w61Wu_FLzdZjmffhVZc8v-VzoxxAcoCEO_2JIjQRESs  ";
+
+const $ = id => document.getElementById(id);
+const configured = !SUPABASE_URL.includes("TU-PROYECTO") && !SUPABASE_KEY.startsWith("TU-");
+let all = [];
+
+const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY };
+
+async function api(path, extra = {}) {
+  const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { headers: { ...H, ...extra } });
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.json()).message || ""; } catch (_) {}
+    throw new Error("HTTP " + res.status + (detail ? " - " + detail : ""));
+  }
+  return res;
+}
+
+async function count(table) {
+  const res = await api(table + "?select=id", { Prefer: "count=exact", Range: "0-0" });
+  return Number((res.headers.get("content-range") || "*/0").split("/")[1]) || 0;
+}
+
+function setStatus(kind, text) {
+  $("status").className = "status " + kind;
+  $("statusText").textContent = text;
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const clp = n => n == null ? "-" : new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
+const fecha = d => d ? new Date(d).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "-";
+
+function showMsg(text, isErr) {
+  const m = $("msg");
+  m.hidden = !text; m.textContent = text || "";
+  m.className = "msg" + (isErr ? " err" : "");
+}
+
+async function load() {
+  $("rows").innerHTML = "";
+  showMsg("");
+  if (!configured) {
+    setStatus("err", "Sin configurar");
+    showMsg("Falta configurar SUPABASE_URL y SUPABASE_KEY al inicio del script de index.html.", true);
+    return;
+  }
+  setStatus("", "Conectando...");
+  const t0 = performance.now();
+  try {
+    const [rows, nLic, nOrg, nItem, nReq] = await Promise.all([
+      api("licitacion?select=id,codigo_mp,tipo,nombre,descripcion,fecha_publicacion,fecha_cierre,monto_estimado,moneda,estado_mp,url,descartada_filtro,motivo_descarte,n_oferentes,organismo(nombre,unidad_compra,region,comuna)&order=fecha_publicacion.desc.nullslast&limit=500").then(r => r.json()),
+      count("licitacion"), count("organismo"), count("licitacion_item"), count("requisito_extraido"),
+    ]);
+    const ms = Math.round(performance.now() - t0);
+    all = rows;
+    setStatus("ok", "Conectado a Supabase (" + ms + " ms)");
+    $("stats").innerHTML = [
+      [nLic, "Licitaciones"], [rows.filter(r => !r.descartada_filtro).length, "Pasan el pre-filtro"],
+      [nOrg, "Organismos"], [nItem, "Ítems"], [nReq, "Requisitos extraídos"],
+    ].map(([n, l]) => '<div class="stat"><b>' + n + "</b><span>" + l + "</span></div>").join("");
+    const ult = await api("ejecucion_busqueda?select=fin,estado,disparo,n_nuevas&order=id.desc&limit=1").then(r => r.json()).catch(() => []);
+    $("foot").textContent = "Origen: " + new URL(SUPABASE_URL).host + " - actualizado " + new Date().toLocaleTimeString("es-CL") +
+      (ult[0] ? " - última sincronización: " + fecha(ult[0].fin) + " (" + ult[0].estado + ", " + ult[0].n_nuevas + " nuevas)" : " - sin sincronizaciones aún");
+    render();
+  } catch (e) {
+    setStatus("err", "Sin conexión");
+    $("stats").innerHTML = "";
+    showMsg("No se pudo leer la base de datos.\n" + e.message +
+      "\n\nRevisa: URL y key correctas, que el script SQL se haya ejecutado y que existan las políticas de lectura (supabase_rls_lectura.sql).", true);
+  }
+}
+
+function render() {
+  const q = $("q").value.trim().toLowerCase();
+  const solo = $("soloValidas").checked;
+  const list = all.filter(r =>
+    (!solo || !r.descartada_filtro) &&
+    (!q || [r.codigo_mp, r.nombre, r.organismo?.nombre].some(v => (v || "").toLowerCase().includes(q))));
+  $("rows").innerHTML = list.map(r =>
+    '<tr data-id="' + r.id + '">' +
+    '<td class="code">' + esc(r.codigo_mp) + '<br><span class="tag">' + esc(r.tipo === "compra_agil" ? "compra ágil" : r.tipo) + "</span></td>" +
+    "<td>" + esc(r.nombre) + "</td>" +
+    "<td>" + esc(r.organismo?.nombre) + '<br><small style="color:var(--muted)">' + esc(r.organismo?.region) + "</small></td>" +
+    "<td>" + fecha(r.fecha_cierre) + "</td>" +
+    '<td class="num">' + clp(r.monto_estimado) + "</td>" +
+    '<td><span class="tag">' + esc(r.estado_mp) + "</span> " +
+      (r.descartada_filtro ? '<span class="tag warn" title="' + esc(r.motivo_descarte) + '">descartada</span>' : '<span class="tag ok">candidata</span>') + "</td>" +
+    "</tr>").join("");
+  if (!list.length && !$("msg").textContent) showMsg(all.length ? "Sin resultados para el filtro." : "Conectado, pero aún no hay licitaciones cargadas.");
+  else if (list.length) showMsg("");
+}
+
+async function detail(id) {
+  const r = all.find(x => x.id == id);
+  if (!r) return;
+  $("dCode").textContent = r.codigo_mp;
+  $("dName").textContent = r.nombre;
+  $("dBody").innerHTML = "Cargando...";
+  $("dlg").showModal();
+  try {
+    const [items, reqs] = await Promise.all([
+      api("licitacion_item?licitacion_id=eq." + id + "&order=correlativo").then(x => x.json()),
+      api("requisito_extraido?licitacion_id=eq." + id).then(x => x.json()),
+    ]);
+    $("dBody").innerHTML =
+      '<dl class="kv">' +
+      "<dt>Organismo</dt><dd>" + esc(r.organismo?.nombre) + " - " + esc(r.organismo?.unidad_compra) + "</dd>" +
+      "<dt>Ubicación</dt><dd>" + esc(r.organismo?.comuna) + ", " + esc(r.organismo?.region) + "</dd>" +
+      "<dt>Tipo</dt><dd>" + esc(r.tipo) + "</dd>" +
+      "<dt>Publicación</dt><dd>" + fecha(r.fecha_publicacion) + "</dd>" +
+      "<dt>Cierre</dt><dd>" + fecha(r.fecha_cierre) + "</dd>" +
+      "<dt>Monto estimado</dt><dd>" + clp(r.monto_estimado) + "</dd>" +
+      "<dt>Oferentes</dt><dd>" + esc(r.n_oferentes ?? "-") + "</dd>" +
+      (r.motivo_descarte ? "<dt>Motivo descarte</dt><dd>" + esc(r.motivo_descarte) + "</dd>" : "") +
+      (/^https?:\/\//.test(r.url || "") ? '<dt>Mercado Público</dt><dd><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Ver ficha</a></dd>' : "") +
+      "</dl>" +
+      "<h3>Descripción</h3><p>" + esc(r.descripcion) + "</p>" +
+      "<h3>Ítems (" + items.length + ")</h3>" +
+      '<table><thead><tr><th>#</th><th>Producto</th><th>Descripción</th><th>Adjudicado a</th><th class="num">Monto unit.</th></tr></thead><tbody>' +
+      items.map(i => "<tr><td>" + i.correlativo + "</td><td>" + esc(i.nombre_producto) + "</td><td>" + esc(i.descripcion) +
+        "</td><td>" + esc(i.adj_nombre_proveedor || "-") + '</td><td class="num">' + clp(i.adj_monto_unitario) + "</td></tr>").join("") +
+      "</tbody></table>" +
+      "<h3>Requisitos extraídos</h3>" +
+      (reqs.length ? reqs.map(q =>
+        "<p><b>" + esc(q.tipo_evento || "evento sin clasificar") + "</b> - " + esc(q.n_asistentes ?? "?") + " asistentes - confianza " +
+        esc(q.confianza_nlp ?? "-") + "<br>" +
+        (q.servicios_req || []).map(s => '<span class="tag">' + esc(s.servicio) + (s.personas ? " " + esc(s.personas) + " pers." : "") +
+          (s.habitaciones ? " " + esc(s.habitaciones) + " hab." : "") + "</span> ").join("") + "</p>").join("") : "<p>Sin requisitos.</p>");
+  } catch (e) {
+    $("dBody").textContent = "Error: " + e.message;
+  }
+}
+
+$("rows").addEventListener("click", e => { const tr = e.target.closest("tr"); if (tr) detail(tr.dataset.id); });
+$("dClose").addEventListener("click", () => $("dlg").close());
+$("q").addEventListener("input", render);
+$("soloValidas").addEventListener("change", render);
+$("reload").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>

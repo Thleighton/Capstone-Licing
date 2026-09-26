@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LICING - Dashboard</title>
+<script>
+// Aplicar la preferencia antes de dibujar la página para evitar destellos.
+try { document.documentElement.dataset.theme = localStorage.getItem('licing-theme') === 'dark' ? 'dark' : 'light'; }
+catch (_) { document.documentElement.dataset.theme = 'light'; }
+</script>
 <style>
   :root {
     --bg: #f5f7fb; --card: #ffffff; --text: #111827; --muted: #6b7280; --line: #e6e9f0; --hover: #f3f5fa;
@@ -392,6 +397,70 @@
   .suggestion-item button { flex:none; font-size:12px; }
   .suggestion-item button:disabled { opacity:.6; cursor:default; transform:none; }
   @media(max-width:520px) { .suggestion-item { align-items:start; flex-direction:column; } }
+  #themeToggle { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+  :root[data-theme="dark"] {
+    color-scheme:dark; --bg:#0e1726; --card:#172337; --text:#e4edf9; --muted:#acbdd3; --line:#35465e; --hover:#22334c;
+    --accent:#99beff; --accent-bg:#263e61; --ok:#87dab5; --ok-bg:#193e35; --warn:#f0cc84; --warn-bg:#44371f;
+    --err:#ffadb5; --err-bg:#472b35; --gray-bg:#2b3b52; --chart-muted:#34475f;
+  }
+  :root[data-theme="dark"] body { background:radial-gradient(ellipse at 100% 0,#19304b,transparent 55%),var(--bg); }
+  :root[data-theme="dark"] aside { background:#121f32; border-color:var(--line); }
+  :root[data-theme="dark"] .logo { color:#dceaff; }
+  :root[data-theme="dark"] .hotel { background:#24354d; color:#c3d6ef; }
+  :root[data-theme="dark"] nav a { color:#b9cbe3; }
+  :root[data-theme="dark"] nav a:hover { background:#263d59; color:#fff; }
+  :root[data-theme="dark"] nav a.active { background:#315681; color:#fff; }
+  :root[data-theme="dark"] .topbar { background:#142135; border-color:var(--line); }
+  :root[data-theme="dark"] .page-heading { background:linear-gradient(110deg,#18375e,#225578); }
+  :root[data-theme="dark"] .card, :root[data-theme="dark"] .stat { border-color:var(--line); box-shadow:0 5px 16px #0002; }
+  :root[data-theme="dark"] .stat { background:linear-gradient(135deg,#172b46,#1a3554); border-top-color:#7aaaf4; }
+  :root[data-theme="dark"] .stat:nth-child(2) { background:linear-gradient(135deg,#172d32,#1b3937); border-top-color:#69bda2; }
+  :root[data-theme="dark"] .stat:nth-child(3) { background:linear-gradient(135deg,#2c2a26,#3a3022); border-top-color:#d2ac63; }
+  :root[data-theme="dark"] .stat:nth-child(4) { background:linear-gradient(135deg,#26243c,#322b49); border-top-color:#b09bdd; }
+  :root[data-theme="dark"] .stat .ico { background:#2b405f; color:#bcd5ff; }
+  :root[data-theme="dark"] .stat:nth-child(2) .ico { background:#264b41; color:#9ae3c2; }
+  :root[data-theme="dark"] .stat:nth-child(3) .ico { background:#514028; color:#f6d38f; }
+  :root[data-theme="dark"] .stat:nth-child(4) .ico { background:#40345a; color:#d5c2fc; }
+  :root[data-theme="dark"] button, :root[data-theme="dark"] .home-actions a, :root[data-theme="dark"] .home-actions button, :root[data-theme="dark"] .recommendation .button { background:#233b59; color:#d3e4ff; border-color:#49698f; }
+  :root[data-theme="dark"] button:hover, :root[data-theme="dark"] .home-actions a:hover, :root[data-theme="dark"] .recommendation .button:hover { background:#304f75; border-color:#80a8db; }
+  :root[data-theme="dark"] .primary, :root[data-theme="dark"] .help-tabs button[aria-selected=true] { background:#3567af; color:#fff; border-color:#608dd0; }
+  :root[data-theme="dark"] .primary:hover { background:#4277c0; }
+  :root[data-theme="dark"] .page-heading .primary { background:#e6bf76; color:#1c2d44; border-color:#e6bf76; }
+  :root[data-theme="dark"] input:not([type=checkbox]), :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background:#101d30; color:var(--text); border-color:#48617f; }
+  :root[data-theme="dark"] input:not([type=checkbox]):focus, :root[data-theme="dark"] select:focus, :root[data-theme="dark"] textarea:focus { background:#1b2e48; border-color:#8cb2ec; }
+  :root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color:#93a8c2; opacity:1; }
+  :root[data-theme="dark"] .search input { background:transparent; }
+  :root[data-theme="dark"] .fields label, :root[data-theme="dark"] .field, :root[data-theme="dark"] .field-heading, :root[data-theme="dark"] .form-sections legend { color:#c3d9f4; }
+  :root[data-theme="dark"] .notice { background:#20344e; color:#ccdff7; border-color:#48638a; border-left-color:#83aef0; }
+  :root[data-theme="dark"] .intake-hero { background:#193b41; border-color:#3e6a72; }
+  :root[data-theme="dark"] .intake-hero h2 { color:#c2eee7; }
+  :root[data-theme="dark"] .intake-hero p, :root[data-theme="dark"] .hero-stamp, :root[data-theme="dark"] .hero-kicker { color:#b3d9db; }
+  :root[data-theme="dark"] .form-sections fieldset { border-top-color:#6095a3; }
+  :root[data-theme="dark"] legend { background:#25444e; }
+  :root[data-theme="dark"] .section-help, :root[data-theme="dark"] .room-location, :root[data-theme="dark"] .room-card .room-features, :root[data-theme="dark"] .client-card .history, :root[data-theme="dark"] .building-heading p, :root[data-theme="dark"] .recommendation ul, :root[data-theme="dark"] .help-content > p, :root[data-theme="dark"] .interest-assistant p, :root[data-theme="dark"] .suggestion-item small { color:var(--muted); }
+  :root[data-theme="dark"] .check-grid label, :root[data-theme="dark"] .criteria-row { background:#203149; color:#c5d8ef; border-color:#3a506c; }
+  :root[data-theme="dark"] .criteria-row:nth-child(even) { background:#182a40; }
+  :root[data-theme="dark"] .check-grid label:has(input:checked) { background:#22483d; color:#b9ecd8; border-color:#5c9c87; }
+  :root[data-theme="dark"] .summary-callout { background:#423820; color:#efd5a3; border-color:#bb974f; }
+  :root[data-theme="dark"] .form-summary, :root[data-theme="dark"] .document-preview, :root[data-theme="dark"] .card-head, :root[data-theme="dark"] .detail-source, :root[data-theme="dark"] .requirement-summary, :root[data-theme="dark"] .help-header, :root[data-theme="dark"] .interest-assistant { background:#1b304a; border-color:#3d5878; }
+  :root[data-theme="dark"] .ai-home { background:linear-gradient(120deg,#192a44,#202d47); }
+  :root[data-theme="dark"] .recommendation, :root[data-theme="dark"] .deal, :root[data-theme="dark"] .suggestion-item { background:#18273c; border-color:#3a526d; }
+  :root[data-theme="dark"] .recommendation.high { border-left-color:#75c7a0; }
+  :root[data-theme="dark"] .recommendation.medium { border-left-color:#d8b269; }
+  :root[data-theme="dark"] .recommendation.low { border-left-color:#e28e9e; }
+  :root[data-theme="dark"] .priority.high { background:#244a3c; color:#acf0c9; }
+  :root[data-theme="dark"] .priority.medium { background:#483b21; color:#f4d99d; }
+  :root[data-theme="dark"] .priority.low { background:#492a36; color:#ffb9c4; }
+  :root[data-theme="dark"] .hotel-building, :root[data-theme="dark"] .stage { background:#172b40; border-color:#43637f; }
+  :root[data-theme="dark"] .slot, :root[data-theme="dark"] .match-row, :root[data-theme="dark"] .client-card .contact { background:#20364e; border-color:#3e5671; }
+  :root[data-theme="dark"] .room-card h3, :root[data-theme="dark"] .client-card h3, :root[data-theme="dark"] .building-heading h2, :root[data-theme="dark"] .help-header h2, :root[data-theme="dark"] .help-step h3, :root[data-theme="dark"] .interest-assistant h3, :root[data-theme="dark"] .preview h3 { color:#b9d7fa; }
+  :root[data-theme="dark"] .home-actions span, :root[data-theme="dark"] .bar-column b { color:#accbff; }
+  :root[data-theme="dark"] .donut-center { background:var(--card); }
+  :root[data-theme="dark"] .donut-center strong { color:#d9e8ff; }
+  :root[data-theme="dark"] .bar-chart { background:repeating-linear-gradient(to top,transparent 0,transparent 44px,#304158 45px,transparent 46px); }
+  :root[data-theme="dark"] .help-example { background:#1c3b36; border-color:#72af9a; }
+  :root[data-theme="dark"] .report-icon, :root[data-theme="dark"] .info-button { background:#294663; color:#c4deff; border-color:#527ba8; }
+  :root[data-theme="dark"] .skeleton { background:#2a3e58; }
 </style>
 </head>
 <body>
@@ -419,6 +488,7 @@
         <input type="search" id="q" placeholder="Buscar licitación, ID o institución..."></label>
       <div class="spacer"></div>
       <div id="status" class="status"><span class="dot"></span><span id="statusText">Conectando...</span></div>
+      <button type="button" id="themeToggle" aria-pressed="false" aria-label="Activar modo oscuro"><span id="themeIcon" aria-hidden="true">☾</span><span id="themeLabel">Modo oscuro</span></button>
       <button id="reload">Actualizar</button>
     </div>
 
@@ -522,7 +592,7 @@
       </section>
       <section data-page="configuracion" hidden>
         <div class="notice"><strong>Configuración tentativa.</strong> Estos campos no modifican las conexiones ni la configuración del sistema.</div>
-        <form id="settingsForm" class="module-grid"><section class="card panel"><h2>Perfil del hotel</h2><div class="fields spaced"><label class="wide">Nombre comercial<input value="Hotel Plaza San Francisco"></label><label>Ciudad<input value="Santiago"></label><label>Área responsable<select><option>Eventos y ventas</option>Reservas</option></select></label><label class="wide">Correo de notificaciones<input type="email" placeholder="licitaciones@hotel.cl"></label></div><button type="submit" class="primary spaced">Simular guardado</button><p id="settingsFeedback" role="status" class="sub"></p></section><section class="card panel"><h2>Preferencias de trabajo</h2><div class="setting-row"><div><strong>Apariencia clara</strong><p class="sub">Fondo claro y contraste legible.</p></div><span class="badge green">Activa</span></div><label class="setting-row"><span>Resumen diario de oportunidades</span><input type="checkbox" checked></label><label class="setting-row"><span>Avisos de cierre próximo</span><input type="checkbox" checked></label><label class="field">Anticipación del aviso<select><option>3 días antes</option>5 días antes</option><option>7 días antes</option></select></label><p class="sub">Las notificaciones se muestran como propuesta y todavía no se envían.</p></section></form>
+        <form id="settingsForm" class="module-grid"><section class="card panel"><h2>Perfil del hotel</h2><div class="fields spaced"><label class="wide">Nombre comercial<input value="Hotel Plaza San Francisco"></label><label>Ciudad<input value="Santiago"></label><label>Área responsable<select><option>Eventos y ventas</option>Reservas</option></select></label><label class="wide">Correo de notificaciones<input type="email" placeholder="licitaciones@hotel.cl"></label></div><button type="submit" class="primary spaced">Simular guardado</button><p id="settingsFeedback" role="status" class="sub"></p></section><section class="card panel"><h2>Preferencias de trabajo</h2><div class="setting-row"><div><strong>Apariencia</strong><p class="sub">Puedes cambiarla desde la barra superior.</p></div><span id="themeAppearance" class="badge green">Modo claro</span></div><label class="setting-row"><span>Resumen diario de oportunidades</span><input type="checkbox" checked></label><label class="setting-row"><span>Avisos de cierre próximo</span><input type="checkbox" checked></label><label class="field">Anticipación del aviso<select><option>3 días antes</option>5 días antes</option><option>7 días antes</option></select></label><p class="sub">Las notificaciones se muestran como propuesta y todavía no se envían.</p></section></form>
       </section>
       <footer id="foot"></footer>
     </div>
@@ -862,7 +932,7 @@ function renderCharts(rows, available = true) {
   const labels = days.map(d=>new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',day:'numeric',month:'short'}).format(d));
   $('publicationChart').innerHTML = '<div class="bar-chart" role="img" aria-label="'+esc(labels.map((d,i)=>d+': '+values[i]+' publicaciones').join('; '))+'">'+values.map((v,i)=>'<div class="bar-column"><b>'+v+'</b><i style="height:'+Math.round(v/max*130)+'px" title="'+esc(labels[i])+': '+v+'"></i></div>').join('')+'</div><div class="chart-labels">'+labels.map(d=>'<span>'+esc(d)+'</span>').join('')+'</div>';
   const passed = rows.filter(esCandidata).length, rejected = rows.length-passed, pct = rows.length ? passed/rows.length*100 : 0;
-  $('filterChart').innerHTML = '<div class="donut-layout"><div class="donut" role="img" aria-label="'+passed+' pasan el filtro; '+rejected+' descartadas" style="background:conic-gradient(#4c78d9 0 '+pct+'%, #e0e7f3 '+pct+'% 100%)"><div class="donut-center"><strong>'+rows.length+'</strong><span class="sub">consultadas</span></div></div><div><div class="legend-line"><i style="background:#4c78d9"></i>Pasan el filtro <b>'+passed+'</b></div><div class="legend-line"><i style="background:#e0e7f3"></i>Descartadas <b>'+rejected+'</b></div><p class="sub">'+(rows.length ? Math.round(pct)+'% de coincidencia inicial' : 'Sin datos todavía')+'</p></div></div>';
+  $('filterChart').innerHTML = '<div class="donut-layout"><div class="donut" role="img" aria-label="'+passed+' pasan el filtro; '+rejected+' descartadas" style="background:conic-gradient(var(--accent) 0 '+pct+'%, var(--chart-muted, #e0e7f3) '+pct+'% 100%)"><div class="donut-center"><strong>'+rows.length+'</strong><span class="sub">consultadas</span></div></div><div><div class="legend-line"><i style="background:var(--accent)"></i>Pasan el filtro <b>'+passed+'</b></div><div class="legend-line"><i style="background:var(--chart-muted, #e0e7f3)"></i>Descartadas <b>'+rejected+'</b></div><p class="sub">'+(rows.length ? Math.round(pct)+'% de coincidencia inicial' : 'Sin datos todavía')+'</p></div></div>';
   const next = rows.filter(r=>esCandidata(r)&&r.fecha_cierre&&new Date(r.fecha_cierre)>new Date()).sort((a,b)=>new Date(a.fecha_cierre)-new Date(b.fecha_cierre)).slice(0,4);
   $('dashboardPreview').innerHTML = next.length ? next.map(r=>'<div class="preview-row"><div><strong>'+esc(r.nombre)+'</strong><span class="sub">'+esc(r.codigo_mp)+' · Cierra '+esc(fecha(r.fecha_cierre))+'</span></div><button data-detail="'+esc(r.id)+'">Ver ficha</button></div>').join('') : '<p class="empty">No hay oportunidades vigentes próximas a cerrar en los datos consultados.</p>';
 }
@@ -1136,6 +1206,21 @@ document.querySelectorAll('[data-help-step]').forEach(tab=>{
 });
 $('helpPrevious').addEventListener('click',()=>showIntakeHelpStep(intakeHelpStep-1,true));
 $('helpNext').addEventListener('click',()=>{if(intakeHelpStep===2)$('intakeHelp').close();else showIntakeHelpStep(intakeHelpStep+1,true);});
+function applyTheme(theme) {
+  const dark = theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('themeToggle').setAttribute('aria-pressed', String(dark));
+  $('themeToggle').setAttribute('aria-label', dark ? 'Activar modo claro' : 'Activar modo oscuro');
+  $('themeIcon').textContent = dark ? '☀' : '☾';
+  $('themeLabel').textContent = dark ? 'Modo claro' : 'Modo oscuro';
+  $('themeAppearance').textContent = dark ? 'Modo oscuro' : 'Modo claro';
+}
+$('themeToggle').addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(theme);
+  try { localStorage.setItem('licing-theme', theme); } catch (_) { /* Sigue funcionando en esta pestaña. */ }
+});
+applyTheme(document.documentElement.dataset.theme);
 pintarIconos();
 navigate();
 renderPipeline();

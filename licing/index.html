@@ -3,97 +3,196 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LICING - Licitaciones</title>
+<title>LICING - Dashboard</title>
 <style>
   :root {
-    --bg: #f5f6f8; --card: #ffffff; --text: #1c2330; --muted: #667085; --line: #e3e6ec;
-    --accent: #1f5eff; --ok: #12805c; --ok-bg: #e2f5ee; --err: #b42318; --err-bg: #fdeceb;
-    --warn: #8a5a00; --warn-bg: #fff3d6;
+    --bg: #f5f7fb; --card: #ffffff; --text: #111827; --muted: #6b7280; --line: #e6e9f0; --hover: #f3f5fa;
+    --navy: #14274e; --navy-active: #22396b; --navy-text: #a9b6d3;
+    --accent: #2f6df6; --accent-bg: #e8f0ff;
+    --ok: #16a34a; --ok-bg: #dcfce7; --warn: #a16207; --warn-bg: #fef3c7; --warn-ring: #f59e0b;
+    --err: #dc2626; --err-bg: #fee2e2; --gray-bg: #eef0f4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0f131a; --card: #171c26; --text: #e8ebf1; --muted: #939bab; --line: #283041;
-      --accent: #6b93ff; --ok: #4cd6a3; --ok-bg: #12352a; --err: #ff8a80; --err-bg: #3a1a18;
-      --warn: #f5c451; --warn-bg: #3a2f12;
+      --bg: #0d1220; --card: #151c2e; --text: #e8ecf5; --muted: #8b95ab; --line: #26304a; --hover: #1b2438;
+      --navy: #0a1020; --navy-active: #1b2a4e;
+      --accent: #6d97ff; --accent-bg: #1a2a52;
+      --ok: #4ade80; --ok-bg: #12351f; --warn: #fcd34d; --warn-bg: #3a2f10; --err: #f87171; --err-bg: #3b1616; --gray-bg: #222b40;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
-  h1 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
-  .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
-            font-size: 13px; font-weight: 600; background: var(--warn-bg); color: var(--warn); }
-  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+         font: 14px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  aside { background: var(--navy); color: var(--navy-text); padding: 24px 24px; display: flex; flex-direction: column;
+          position: sticky; top: 0; height: 100vh; }
+  .logo { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 24px; font-weight: 800; letter-spacing: .5px; }
+  .logo svg.ic { width: 26px; height: 26px; }
+  .hotel { display: inline-flex; align-items: center; gap: 8px; margin: 18px 0 32px; padding: 7px 10px; border-radius: 8px;
+           background: rgba(255,255,255,.08); color: #d6def0; font-size: 12px; font-weight: 600; align-self: flex-start; }
+  .hotel svg.ic { width: 14px; height: 14px; }
+  nav { display: flex; flex-direction: column; gap: 4px; }
+  nav a { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-radius: 8px; color: var(--navy-text);
+          font-weight: 500; text-decoration: none; }
+  nav a.active { background: var(--navy-active); color: #fff; font-weight: 600; }
+  nav a.off { opacity: .55; cursor: not-allowed; }
+  .side-foot { margin-top: auto; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex: none; }
+  .dot.ok { background: #22c55e; } .dot.err { background: #ef4444; }
+
+  /* Main */
+  main { min-width: 0; }
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 14px 32px; background: var(--card);
+            border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .search { flex: 0 1 360px; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line);
+            border-radius: 8px; background: var(--bg); color: var(--muted); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; }
+  .spacer { flex: 1; }
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px;
+            font-weight: 600; background: var(--warn-bg); color: var(--warn); white-space: nowrap; }
+  .status .dot { background: currentColor; }
   .status.ok { background: var(--ok-bg); color: var(--ok); }
   .status.err { background: var(--err-bg); color: var(--err); }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-  .stat b { display: block; font-size: 26px; line-height: 1.2; }
-  .stat span { color: var(--muted); font-size: 13px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-  .tools input[type=search] { flex: 1 1 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
-                              background: var(--bg); color: var(--text); font: inherit; }
-  .tools label { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
-  button { font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line);
-           background: var(--card); color: var(--text); cursor: pointer; }
+  button { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+           padding: 7px 14px; cursor: pointer; font-weight: 500; }
   button:hover { border-color: var(--accent); }
-  .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 760px; }
-  th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }
-  tbody tr { cursor: pointer; }
-  tbody tr:hover { background: var(--bg); }
-  td.num { text-align: right; white-space: nowrap; }
-  .code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg); border: 1px solid var(--line); }
-  .tag.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
-  .tag.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
-  .empty, .msg { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+  .content { padding: 28px 32px 40px; max-width: 1280px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .stat .top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12.5px;
+               font-weight: 600; letter-spacing: .4px; text-transform: uppercase; }
+  .stat .ico { width: 34px; height: 34px; border-radius: 8px; background: var(--gray-bg); display: grid; place-items: center; color: var(--text); }
+  .stat .bottom { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 8px; }
+  .stat b { font-size: 32px; line-height: 1.1; font-weight: 700; }
+  .stat small { color: var(--muted); font-size: 12px; padding-bottom: 4px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .card h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  .card-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; gap: 12px; }
+  .filtros { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 0 20px 14px; color: var(--muted); font-size: 13px; }
+  .filtros select { font: inherit; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .filtros label { display: flex; gap: 6px; align-items: center; }
+
+  .scroll { overflow-x: auto; border-top: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; min-width: 780px; table-layout: fixed; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 11px 12px; background: var(--card); }
+  td { padding: 14px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+  th:first-child, td:first-child { padding-left: 20px; } th:last-child, td:last-child { padding-right: 20px; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--hover); }
+  .cut { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.nom { font-weight: 600; }
+  a.cod { color: var(--accent); font-weight: 600; text-decoration: none; font-size: 13px; white-space: nowrap; }
+  .sub { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--gray-bg); color: var(--muted); white-space: nowrap; }
+  .badge.blue { background: var(--accent-bg); color: var(--accent); }
+  .badge.green { background: var(--ok-bg); color: var(--ok); }
+  .badge.amber { background: var(--warn-bg); color: var(--warn); }
+  .ring { position: relative; width: 34px; height: 34px; }
+  .ring svg { width: 34px; height: 34px; transform: rotate(-90deg); }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+  .msg { padding: 32px 20px; text-align: center; color: var(--muted); border-top: 1px solid var(--line); }
   .msg.err { color: var(--err); text-align: left; white-space: pre-wrap; }
-  dialog { width: min(760px, 94vw); border: 1px solid var(--line); border-radius: 12px; background: var(--card);
-           color: var(--text); padding: 0; }
+
+  .side-col { display: flex; flex-direction: column; gap: 20px; }
+  .panel { padding: 18px 20px 20px; }
+  .rubro { margin-top: 16px; }
+  .rubro .row { display: flex; justify-content: space-between; font-size: 13px; }
+  .rubro .row b { font-weight: 600; } .rubro .row span { color: var(--muted); font-size: 12px; }
+  .bar { height: 7px; border-radius: 999px; background: var(--gray-bg); margin-top: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .act { display: flex; gap: 12px; margin-top: 16px; }
+  .act .dot { margin-top: 6px; background: var(--accent); }
+  .act .dot.warn { background: var(--warn-ring); } .act .dot.bad { background: var(--err); }
+  .act .body { flex: 1; min-width: 0; }
+  .act .head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
+  .act .head span { color: var(--muted); font-weight: 400; font-size: 12px; white-space: nowrap; }
+  .act p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); margin: 14px 0 0; font-size: 13px; }
+  footer { margin-top: 18px; color: var(--muted); font-size: 12px; }
+
+  dialog { width: min(760px, 94vw); border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); padding: 0; }
   dialog::backdrop { background: rgba(0,0,0,.45); }
   .dlg-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
   .dlg-body { padding: 16px 20px 20px; max-height: 70vh; overflow: auto; }
   .dlg-body h3 { margin: 18px 0 6px; font-size: 14px; }
-  .dlg-body table { min-width: 0; }
+  .dlg-body table { min-width: 0; table-layout: auto; }
   .dlg-body th, .dlg-body td { padding: 6px 8px; font-size: 13px; }
-  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; font-size: 14px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
-  footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+  .code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; flex-direction: row; align-items: center; padding: 14px 16px; }
+    aside nav, .hotel, .side-foot { display: none; }
+    .topbar { padding: 12px 16px; flex-wrap: wrap; } .search { flex-basis: 100%; order: 3; }
+    .content { padding: 20px 16px 32px; }
+  }
+  @media (max-width: 520px) { .stats { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>LICING<small>Licitaciones y oportunidades</small></h1>
-    <div id="status" class="status"><span class="dot"></span><span id="statusText">Conectando...</span></div>
-  </header>
+<div class="app">
+  <aside>
+    <div class="logo"><svg class="ic" id="icLogo"></svg>LICING</div>
+    <div class="hotel"><svg class="ic" id="icHotel"></svg>Plaza San Francisco</div>
+    <nav>
+      <a class="active" href="#"><svg class="ic" data-ic="dashboard"></svg>Dashboard</a>
+      <a class="off" title="Próximamente"><svg class="ic" data-ic="briefcase"></svg>Oportunidades</a>
+      <a class="off" title="Próximamente"><svg class="ic" data-ic="cpu"></svg>Análisis IA</a>
+      <a class="off" title="Próximamente"><svg class="ic" data-ic="eye"></svg>Seguimiento</a>
+      <a class="off" title="Próximamente"><svg class="ic" data-ic="file"></svg>Reportes</a>
+      <a class="off" title="Próximamente"><svg class="ic" data-ic="gear"></svg>Configuración</a>
+    </nav>
+    <div class="side-foot"><span class="dot" id="sideDot"></span><span id="sideText">Base de datos</span></div>
+  </aside>
 
-  <section class="stats" id="stats"></section>
-
-  <section class="card">
-    <div class="tools">
-      <input type="search" id="q" placeholder="Buscar por código, nombre u organismo...">
-      <label><input type="checkbox" id="soloValidas"> Solo las que pasan el pre-filtro</label>
+  <main>
+    <div class="topbar">
+      <label class="search"><svg class="ic" data-ic="search"></svg>
+        <input type="search" id="q" placeholder="Buscar licitación, ID o institución..."></label>
+      <div class="spacer"></div>
+      <div id="status" class="status"><span class="dot"></span><span id="statusText">Conectando...</span></div>
       <button id="reload">Actualizar</button>
     </div>
-    <div class="scroll">
-      <table>
-        <thead><tr>
-          <th>Código</th><th>Nombre</th><th>Organismo</th><th>Cierre</th><th class="num">Monto est.</th><th>Estado</th>
-        </tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-    <div id="msg" class="msg" hidden></div>
-  </section>
 
-  <footer id="foot"></footer>
+    <div class="content">
+      <section class="stats" id="stats"></section>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-head"><h2>Oportunidades Prioritarias</h2><button id="btnFiltros">Filtros</button></div>
+          <div class="filtros" id="filtros" hidden>
+            <label>Tipo
+              <select id="fTipo"><option value="">Todos</option><option value="licitacion">Licitación</option>
+                <option value="compra_agil">Compra ágil</option><option value="otro">Otro</option></select></label>
+            <label><input type="checkbox" id="soloValidas"> Solo las que pasan el pre-filtro</label>
+          </div>
+          <div class="scroll">
+            <table>
+              <colgroup><col style="width:140px"><col><col style="width:20%"><col style="width:105px"><col style="width:64px"><col style="width:96px"></colgroup>
+              <thead><tr><th>ID</th><th>Nombre</th><th>Institución</th><th>Monto</th><th title="Confianza del análisis automático de requisitos">Análisis</th><th>Estado</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+            <div id="msg" class="msg" hidden></div>
+          </div>
+        </section>
+
+        <div class="side-col">
+          <section class="card panel"><h2>Oportunidades por Rubro</h2><div id="rubros"></div></section>
+          <section class="card panel"><h2>Actividad Reciente</h2><div id="acts"></div></section>
+        </div>
+      </div>
+      <footer id="foot"></footer>
+    </div>
+  </main>
 </div>
 
 <dialog id="dlg">
@@ -104,21 +203,44 @@
   <div class="dlg-body" id="dBody"></div>
 </dialog>
 
+<script src="/api/config"></script>
 <script>
 // ---------------------------------------------------------------
-// CONFIGURACIÓN: pegar aquí los datos del proyecto Supabase de Licing
-// (Supabase > Project Settings > API). La anon/publishable key es pública
-// por diseño; la seguridad la da RLS (ver supabase_rls_lectura.sql).
+// CONFIGURACIÓN: se lee de las variables de entorno SUPABASE_URL y
+// SUPABASE_ANON_KEY a través de /api/config (ver .env.example).
+// La anon/publishable key es pública por diseño; la seguridad la da RLS
+// (ver supabase_rls_lectura.sql).
 // ---------------------------------------------------------------
-const SUPABASE_URL = "https://pdqyxqlhjbqnxjctchiw.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXl4cWxoamJxbnhqY3RjaGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzODExNTksImV4cCI6MjEwNTk1NzE1OX0.w61Wu_FLzdZjmffhVZc8v-VzoxxAcoCEO_2JIjQRESs  ";
+const { SUPABASE_URL = "", SUPABASE_KEY = "" } = window.LICING_CONFIG || {};
 
 const $ = id => document.getElementById(id);
-const configured = !SUPABASE_URL.includes("TU-PROYECTO") && !SUPABASE_KEY.startsWith("TU-");
+const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 let all = [];
 
-const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY };
+// ---------- Iconos ----------
+const ICONS = {
+  logo: '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>',
+  hotel: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  cpu: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  plus: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  star: '<path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9z"/>',
+  alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+  chart: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+};
+const ic = n => '<svg class="ic" viewBox="0 0 24 24">' + ICONS[n] + "</svg>";
+function pintarIconos() {
+  document.querySelectorAll("svg[data-ic]").forEach(s => { s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICONS[s.dataset.ic]; });
+  [["icLogo", "logo"], ["icHotel", "hotel"]].forEach(([id, n]) => { const s = $(id); s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICONS[n]; });
+}
 
+// ---------- Utilidades ----------
+const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY };
 async function api(path, extra = {}) {
   const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { headers: { ...H, ...extra } });
   if (!res.ok) {
@@ -128,90 +250,150 @@ async function api(path, extra = {}) {
   }
   return res;
 }
-
 async function count(table) {
   const res = await api(table + "?select=id", { Prefer: "count=exact", Range: "0-0" });
   return Number((res.headers.get("content-range") || "*/0").split("/")[1]) || 0;
 }
-
 function setStatus(kind, text) {
   $("status").className = "status " + kind;
   $("statusText").textContent = text;
+  $("sideDot").className = "dot " + kind;
+  $("sideText").textContent = kind === "ok" ? "Base de datos conectada" : kind === "err" ? "Sin conexión" : "Conectando...";
 }
-
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clp = n => n == null ? "-" : new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 const fecha = d => d ? new Date(d).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "-";
-
+function hace(d) {
+  const s = Math.max(0, (Date.now() - new Date(d)) / 1000);
+  if (s < 60) return "Hace un momento";
+  if (s < 3600) return "Hace " + Math.floor(s / 60) + " min";
+  if (s < 86400) return "Hace " + Math.floor(s / 3600) + " h";
+  return "Hace " + Math.floor(s / 86400) + " d";
+}
 function showMsg(text, isErr) {
   const m = $("msg");
-  m.hidden = !text; m.textContent = text || "";
-  m.className = "msg" + (isErr ? " err" : "");
+  m.hidden = !text; m.textContent = text || ""; m.className = "msg" + (isErr ? " err" : "");
+}
+
+// ---------- Datos derivados ----------
+const DIA = 86400000;
+const esCandidata = r => !r.descartada_filtro;
+const confianza = r => { const c = r.requisito_extraido?.[0]?.confianza_nlp; return c == null ? null : Math.round(c * 100); };
+const esNueva = r => Date.now() - new Date(r.creado_en) < DIA;
+
+const RUBROS = [
+  ["Alojamiento", ["Alojamiento"]],
+  ["Banquetes & Eventos", ["Coffee break", "Almuerzo", "Cena", "Cóctel"]],
+  ["Salones de Reunión", ["Arriendo de salón"]],
+];
+function rubros(rows) {
+  return RUBROS.map(([nombre, servicios]) => [nombre, rows.filter(r => (r.requisito_extraido || [])
+    .some(q => (q.servicios_req || []).some(s => servicios.includes(s.servicio)))).length]);
+}
+
+function stat(n, titulo, icono, nota) {
+  return '<div class="stat"><div class="top">' + esc(titulo) + '<span class="ico">' + ic(icono) + "</span></div>" +
+    '<div class="bottom"><b>' + n + "</b><small>" + esc(nota) + "</small></div></div>";
+}
+
+function renderStats(rows, total) {
+  const cand = rows.filter(esCandidata);
+  const pronto = cand.filter(r => r.fecha_cierre && new Date(r.fecha_cierre) - Date.now() > 0 && new Date(r.fecha_cierre) - Date.now() < 3 * DIA).length;
+  $("stats").innerHTML =
+    stat(rows.filter(esNueva).length, "Nuevas hoy", "plus", "últimas 24 h") +
+    stat(cand.length, "Relevantes", "star", "de " + total + " totales") +
+    stat(pronto, "Cierran pronto", "alert", "en 3 días o menos") +
+    stat(rows.filter(r => r.requisito_extraido?.length).length, "Analizadas", "chart", "con requisitos extraídos");
+}
+
+function renderRubros(rows) {
+  const data = rubros(rows), max = Math.max(1, ...data.map(d => d[1]));
+  $("rubros").innerHTML = data.map(([n, c]) =>
+    '<div class="rubro"><div class="row"><b>' + esc(n) + "</b><span>" + c + " licitaciones</span></div>" +
+    '<div class="bar"><i style="width:' + Math.round(c / max * 100) + '%"></i></div></div>').join("");
+}
+
+function renderActs(runs) {
+  $("acts").innerHTML = runs.length ? runs.map(e => {
+    const tono = e.estado === "error" ? "bad" : e.estado === "en_curso" ? "warn" : "";
+    const titulo = e.estado === "error" ? "Sincronización con error" : e.estado === "en_curso" ? "Sincronización en curso" : "Sincronización completada";
+    const detalle = e.error ? e.error.split("\n")[0] : e.n_obtenidas + " encontradas, " + e.n_nuevas + " nuevas (" + (e.disparo === "cron" ? "automática" : "manual") + ")";
+    return '<div class="act"><span class="dot ' + tono + '"></span><div class="body"><div class="head">' + titulo +
+      "<span>" + hace(e.fin || e.inicio) + "</span></div><p>" + esc(detalle) + "</p></div></div>";
+  }).join("") : '<p class="empty">Sin sincronizaciones aún.</p>';
+}
+
+function anillo(v) {
+  if (v == null) return '<span class="sub">-</span>';
+  const color = v >= 70 ? "var(--ok)" : v >= 40 ? "var(--warn-ring)" : "var(--muted)", C = 2 * Math.PI * 14;
+  return '<div class="ring"><svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="14" fill="none" stroke="var(--gray-bg)" stroke-width="3.5"/>' +
+    '<circle cx="17" cy="17" r="14" fill="none" stroke="' + color + '" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="' +
+    (C * v / 100).toFixed(1) + " " + C.toFixed(1) + '"/></svg><span>' + v + "</span></div>";
+}
+
+function badge(r) {
+  if (r.descartada_filtro) return '<span class="badge" title="' + esc(r.motivo_descarte) + '">Descartada</span>';
+  const e = String(r.estado_mp || "").toLowerCase();
+  if (esNueva(r) && e === "publicada") return '<span class="badge blue">Nueva</span>';
+  if (e === "publicada") return '<span class="badge amber">Abierta</span>';
+  if (e.includes("adjudic") || e === "proveedor_seleccionado") return '<span class="badge green">' + esc(r.estado_mp) + "</span>";
+  return '<span class="badge">' + esc(r.estado_mp || "-") + "</span>";
+}
+
+function render() {
+  const q = $("q").value.trim().toLowerCase(), solo = $("soloValidas").checked, tipo = $("fTipo").value;
+  const ahora = Date.now();
+  const orden = r => (esCandidata(r) ? 0 : 4) + (r.fecha_cierre && new Date(r.fecha_cierre) >= ahora ? 0 : 2);
+  const list = all.filter(r =>
+    (!solo || esCandidata(r)) && (!tipo || r.tipo === tipo) &&
+    (!q || [r.codigo_mp, r.nombre, r.organismo?.nombre, r.organismo?.unidad_compra].some(v => (v || "").toLowerCase().includes(q))))
+    .sort((a, b) => orden(a) - orden(b) || (new Date(a.fecha_cierre || 8.64e15) - new Date(b.fecha_cierre || 8.64e15)));
+  $("rows").innerHTML = list.slice(0, 100).map(r =>
+    '<tr data-id="' + r.id + '"><td><a class="cod" href="#">' + esc(r.codigo_mp) + '</a><div class="sub">' +
+    esc(r.tipo === "compra_agil" ? "compra ágil" : r.tipo) + "</div></td>" +
+    '<td class="nom cut" title="' + esc(r.nombre) + '">' + esc(r.nombre) + "</td>" +
+    '<td class="cut" title="' + esc(r.organismo?.nombre) + '">' + esc(r.organismo?.unidad_compra || r.organismo?.nombre || "-") +
+      '<div class="sub cut">' + esc(r.organismo?.region) + "</div></td>" +
+    "<td>" + clp(r.monto_estimado) + '<div class="sub">cierra ' + (r.fecha_cierre ? new Date(r.fecha_cierre).toLocaleDateString("es-CL") : "-") + "</div></td>" +
+    "<td>" + anillo(confianza(r)) + "</td><td>" + badge(r) + "</td></tr>").join("");
+  showMsg(list.length ? (list.length > 100 ? "Mostrando 100 de " + list.length + ". Usa el buscador o los filtros." : "")
+    : all.length ? "Sin resultados para el filtro." : "Conectado, pero aún no hay licitaciones cargadas.");
+  if (list.length && list.length <= 100) showMsg("");
 }
 
 async function load() {
-  $("rows").innerHTML = "";
-  showMsg("");
+  $("rows").innerHTML = ""; showMsg("");
   if (!configured) {
     setStatus("err", "Sin configurar");
-    showMsg("Falta configurar SUPABASE_URL y SUPABASE_KEY al inicio del script de index.html.", true);
+    showMsg("Falta configurar SUPABASE_URL y SUPABASE_ANON_KEY en el .env (o en las variables de entorno de Vercel).", true);
     return;
   }
   setStatus("", "Conectando...");
   const t0 = performance.now();
   try {
-    const [rows, nLic, nOrg, nItem, nReq] = await Promise.all([
-      api("licitacion?select=id,codigo_mp,tipo,nombre,descripcion,fecha_publicacion,fecha_cierre,monto_estimado,moneda,estado_mp,url,descartada_filtro,motivo_descarte,n_oferentes,organismo(nombre,unidad_compra,region,comuna)&order=fecha_publicacion.desc.nullslast&limit=500").then(r => r.json()),
-      count("licitacion"), count("organismo"), count("licitacion_item"), count("requisito_extraido"),
+    const [rows, total, runs] = await Promise.all([
+      api("licitacion?select=id,codigo_mp,tipo,nombre,descripcion,fecha_publicacion,fecha_cierre,monto_estimado,moneda,estado_mp,url,descartada_filtro,motivo_descarte,n_oferentes,creado_en,organismo(nombre,unidad_compra,region,comuna),requisito_extraido(confianza_nlp,n_asistentes,servicios_req)&order=fecha_publicacion.desc.nullslast&limit=500").then(r => r.json()),
+      count("licitacion"),
+      api("ejecucion_busqueda?select=inicio,fin,estado,disparo,n_obtenidas,n_nuevas,error&order=id.desc&limit=5").then(r => r.json()).catch(() => []),
     ]);
-    const ms = Math.round(performance.now() - t0);
     all = rows;
-    setStatus("ok", "Conectado a Supabase (" + ms + " ms)");
-    $("stats").innerHTML = [
-      [nLic, "Licitaciones"], [rows.filter(r => !r.descartada_filtro).length, "Pasan el pre-filtro"],
-      [nOrg, "Organismos"], [nItem, "Ítems"], [nReq, "Requisitos extraídos"],
-    ].map(([n, l]) => '<div class="stat"><b>' + n + "</b><span>" + l + "</span></div>").join("");
-    const ult = await api("ejecucion_busqueda?select=fin,estado,disparo,n_nuevas&order=id.desc&limit=1").then(r => r.json()).catch(() => []);
+    setStatus("ok", "Conectado a Supabase (" + Math.round(performance.now() - t0) + " ms)");
+    renderStats(rows, total); renderRubros(rows); renderActs(runs); render();
     $("foot").textContent = "Origen: " + new URL(SUPABASE_URL).host + " - actualizado " + new Date().toLocaleTimeString("es-CL") +
-      (ult[0] ? " - última sincronización: " + fecha(ult[0].fin) + " (" + ult[0].estado + ", " + ult[0].n_nuevas + " nuevas)" : " - sin sincronizaciones aún");
-    render();
+      (total > rows.length ? " - se muestran las " + rows.length + " más recientes de " + total : "");
   } catch (e) {
     setStatus("err", "Sin conexión");
-    $("stats").innerHTML = "";
+    $("stats").innerHTML = ""; $("rubros").innerHTML = ""; $("acts").innerHTML = "";
     showMsg("No se pudo leer la base de datos.\n" + e.message +
       "\n\nRevisa: URL y key correctas, que el script SQL se haya ejecutado y que existan las políticas de lectura (supabase_rls_lectura.sql).", true);
   }
 }
 
-function render() {
-  const q = $("q").value.trim().toLowerCase();
-  const solo = $("soloValidas").checked;
-  const list = all.filter(r =>
-    (!solo || !r.descartada_filtro) &&
-    (!q || [r.codigo_mp, r.nombre, r.organismo?.nombre].some(v => (v || "").toLowerCase().includes(q))));
-  $("rows").innerHTML = list.map(r =>
-    '<tr data-id="' + r.id + '">' +
-    '<td class="code">' + esc(r.codigo_mp) + '<br><span class="tag">' + esc(r.tipo === "compra_agil" ? "compra ágil" : r.tipo) + "</span></td>" +
-    "<td>" + esc(r.nombre) + "</td>" +
-    "<td>" + esc(r.organismo?.nombre) + '<br><small style="color:var(--muted)">' + esc(r.organismo?.region) + "</small></td>" +
-    "<td>" + fecha(r.fecha_cierre) + "</td>" +
-    '<td class="num">' + clp(r.monto_estimado) + "</td>" +
-    '<td><span class="tag">' + esc(r.estado_mp) + "</span> " +
-      (r.descartada_filtro ? '<span class="tag warn" title="' + esc(r.motivo_descarte) + '">descartada</span>' : '<span class="tag ok">candidata</span>') + "</td>" +
-    "</tr>").join("");
-  if (!list.length && !$("msg").textContent) showMsg(all.length ? "Sin resultados para el filtro." : "Conectado, pero aún no hay licitaciones cargadas.");
-  else if (list.length) showMsg("");
-}
-
 async function detail(id) {
   const r = all.find(x => x.id == id);
   if (!r) return;
-  $("dCode").textContent = r.codigo_mp;
-  $("dName").textContent = r.nombre;
-  $("dBody").innerHTML = "Cargando...";
-  $("dlg").showModal();
+  $("dCode").textContent = r.codigo_mp; $("dName").textContent = r.nombre;
+  $("dBody").innerHTML = "Cargando..."; $("dlg").showModal();
   try {
     const [items, reqs] = await Promise.all([
       api("licitacion_item?licitacion_id=eq." + id + "&order=correlativo").then(x => x.json()),
@@ -231,26 +413,29 @@ async function detail(id) {
       "</dl>" +
       "<h3>Descripción</h3><p>" + esc(r.descripcion) + "</p>" +
       "<h3>Ítems (" + items.length + ")</h3>" +
-      '<table><thead><tr><th>#</th><th>Producto</th><th>Descripción</th><th>Adjudicado a</th><th class="num">Monto unit.</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>#</th><th>Producto</th><th>Descripción</th><th>Adjudicado a</th><th>Monto unit.</th></tr></thead><tbody>' +
       items.map(i => "<tr><td>" + i.correlativo + "</td><td>" + esc(i.nombre_producto) + "</td><td>" + esc(i.descripcion) +
-        "</td><td>" + esc(i.adj_nombre_proveedor || "-") + '</td><td class="num">' + clp(i.adj_monto_unitario) + "</td></tr>").join("") +
+        "</td><td>" + esc(i.adj_nombre_proveedor || "-") + "</td><td>" + clp(i.adj_monto_unitario) + "</td></tr>").join("") +
       "</tbody></table>" +
       "<h3>Requisitos extraídos</h3>" +
       (reqs.length ? reqs.map(q =>
         "<p><b>" + esc(q.tipo_evento || "evento sin clasificar") + "</b> - " + esc(q.n_asistentes ?? "?") + " asistentes - confianza " +
         esc(q.confianza_nlp ?? "-") + "<br>" +
-        (q.servicios_req || []).map(s => '<span class="tag">' + esc(s.servicio) + (s.personas ? " " + esc(s.personas) + " pers." : "") +
+        (q.servicios_req || []).map(s => '<span class="badge">' + esc(s.servicio) + (s.personas ? " " + esc(s.personas) + " pers." : "") +
           (s.habitaciones ? " " + esc(s.habitaciones) + " hab." : "") + "</span> ").join("") + "</p>").join("") : "<p>Sin requisitos.</p>");
   } catch (e) {
     $("dBody").textContent = "Error: " + e.message;
   }
 }
 
-$("rows").addEventListener("click", e => { const tr = e.target.closest("tr"); if (tr) detail(tr.dataset.id); });
+$("rows").addEventListener("click", e => { e.preventDefault(); const tr = e.target.closest("tr"); if (tr) detail(tr.dataset.id); });
 $("dClose").addEventListener("click", () => $("dlg").close());
+$("btnFiltros").addEventListener("click", () => { $("filtros").hidden = !$("filtros").hidden; });
 $("q").addEventListener("input", render);
 $("soloValidas").addEventListener("change", render);
+$("fTipo").addEventListener("change", render);
 $("reload").addEventListener("click", load);
+pintarIconos();
 load();
 </script>
 </body>

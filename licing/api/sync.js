@@ -164,7 +164,7 @@ function normCompraAgil(d, regionObjetivo) {
       descripcion: (d.descripcion || "").trim() || null,
       fecha_publicacion: f.fecha_publicacion || null, fecha_cierre: f.fecha_cierre || null,
       monto_estimado: num(p.monto_disponible_clp ?? p.presupuesto_estimado), moneda: "CLP", estado_mp: estado,
-      url: null, json_raw: d, descartada_filtro: motivos.length > 0, motivo_descarte: motivos.join("; ") || null,
+      url: "https://buscador.mercadopublico.cl/ficha?code=" + encodeURIComponent(d.codigo), json_raw: d, descartada_filtro: motivos.length > 0, motivo_descarte: motivos.join("; ") || null,
       fecha_adjudicacion: null, n_oferentes: num(d.resumen?.total_ofertas_recibidas), url_acta: null,
     },
     items,

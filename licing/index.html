@@ -12,14 +12,6 @@
     --ok: #16a34a; --ok-bg: #dcfce7; --warn: #a16207; --warn-bg: #fef3c7; --warn-ring: #f59e0b;
     --err: #dc2626; --err-bg: #fee2e2; --gray-bg: #eef0f4;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0d1220; --card: #151c2e; --text: #e8ecf5; --muted: #8b95ab; --line: #26304a; --hover: #1b2438;
-      --navy: #0a1020; --navy-active: #1b2a4e;
-      --accent: #6d97ff; --accent-bg: #1a2a52;
-      --ok: #4ade80; --ok-bg: #12351f; --warn: #fcd34d; --warn-bg: #3a2f10; --err: #f87171; --err-bg: #3b1616; --gray-bg: #222b40;
-    }
-  }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 14px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -136,6 +128,270 @@
     .content { padding: 20px 16px 32px; }
   }
   @media (max-width: 520px) { .stats { grid-template-columns: 1fr; } }
+  /* Paleta clara permanente y vistas de los módulos. */
+  :root { color-scheme: light; --bg: #f5f7fb; --card: #fff; --text: #24334b; --muted: #62718a; --line: #e1e7f0; --accent: #315fce; --ok: #16815b; --ok-bg: #e4f5ed; }
+  [hidden] { display: none !important; }
+  aside { background: #fff; border-right: 1px solid var(--line); padding: 28px 18px; color: var(--muted); }
+  .logo { color: #234574; padding: 0 12px; }
+  .hotel { background: #f0f4fa; color: #5b6c86; margin-left: 12px; }
+  nav a { color: #63728b; font-size: 13px; padding: 13px 12px; }
+  nav a.active { color: #2b58c5; background: #eaf0fe; box-shadow: inset 3px 0 #416fe0; }
+  nav a:hover { background: #f0f4fa; color: var(--accent); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  nav a:hover, .button:hover { text-decoration: none; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #89a9f4; outline-offset: 3px; }
+  .content { max-width: 1600px; margin: auto; }
+  .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+  .eyebrow { font-size: 10px; letter-spacing: 1.7px; font-weight: 700; color: #6f819c; margin: 0 0 8px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -.8px; color: #203656; }
+  .page-heading p:not(.eyebrow) { margin: 6px 0 0; color: var(--muted); }
+  .button { display: inline-block; padding: 10px 16px; border-radius: 8px; font-weight: 600; white-space: nowrap; }
+  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .primary:hover { background: #244faa; color: #fff; }
+  .overview-note { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+  .card, .stat { box-shadow: 0 3px 14px #23395704; }
+  .stat .ico { background: #edf2ff; color: var(--accent); }
+  .stat:nth-child(2) .ico { background: #e8f6ef; color: #16815b; }
+  .stat:nth-child(3) .ico { background: #fff3df; color: #a26913; }
+  .stat:nth-child(4) .ico { background: #f1ecff; color: #8760bf; }
+  .chart-grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .section-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .section-title a { font-size: 12px; font-weight: 600; }
+  .chart-placeholder { min-height: 235px; }
+  .bar-chart { height: 188px; display: flex; align-items: end; gap: 15px; padding: 22px 8px 0; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to top, transparent 0, transparent 44px, #eef2f8 45px, transparent 46px); }
+  .bar-column { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: end; height: 100%; min-width: 0; }
+  .bar-column b { color: #4a6285; font-size: 11px; margin-bottom: 5px; }
+  .bar-column i { width: min(44px, 85%); background: #7396e5; border-radius: 5px 5px 0 0; display: block; }
+  .bar-column:last-child i { background: #315fce; }
+  .chart-labels { display: flex; gap: 15px; padding: 10px 8px; color: var(--muted); font-size: 10px; }
+  .chart-labels span { flex: 1; text-align: center; }
+  .donut-layout { display: flex; align-items: center; justify-content: center; gap: 24px; min-height: 230px; flex-wrap: wrap; }
+  .donut { width: 156px; height: 156px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .donut-center { width: 120px; height: 120px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .donut-center strong { font-size: 30px; color: #203656; }
+  .legend-line { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 12px; }
+  .legend-line i { height: 9px; width: 9px; border-radius: 3px; }
+  .legend-line b { margin-left: 10px; }
+  .preview-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 18px; padding: 17px 0; border-bottom: 1px solid var(--line); }
+  .preview-row:last-child { border-bottom: 0; }
+  .preview-row strong { display: block; font-size: 13px; margin-bottom: 5px; }
+  .preview-row button { font-size: 12px; align-self: center; }
+  .notice { background: #eef3ff; border: 1px solid #dce6fc; border-radius: 10px; padding: 14px 18px; color: #465f86; margin-bottom: 24px; font-size: 13px; }
+  .module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .report-grid p, .steps p, .document-preview p { color: var(--muted); font-size: 13px; }
+  .report-icon { background: #edf2ff; color: var(--accent); border-radius: 12px; width: 46px; height: 46px; display: grid; place-items: center; font-size: 26px; margin-bottom: 20px; }
+  .spaced { margin-top: 22px; }
+  .form-layout { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 22px; align-items: start; }
+  .form-sections { display: grid; gap: 22px; }
+  fieldset { min-width: 0; margin: 0; }
+  legend { padding: 0 8px; font-size: 15px; font-weight: 700; color: #29496f; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .fields label, .field { display: flex; flex-direction: column; gap: 7px; font-size: 12px; font-weight: 600; color: #536580; }
+  .field { margin: 20px 0; }
+  .wide { grid-column: 1 / -1; }
+  input:not([type=checkbox]), select, textarea { font: inherit; color: var(--text); border: 1px solid #d6deea; border-radius: 7px; background: #fff; padding: 10px 12px; min-width: 0; width: 100%; }
+  input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
+  textarea { resize: vertical; }
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+  .check-grid label { display: flex; align-items: center; gap: 8px; color: #51637f; font-size: 12px; }
+  .form-summary { position: sticky; top: 100px; }
+  .form-summary h2 { margin: 18px 0; }
+  .form-summary ol { padding-left: 20px; color: var(--muted); line-height: 1.8; font-size: 13px; }
+  .form-summary button { width: 100%; margin-top: 10px; }
+  .preview { margin-top: 22px; border-color: #92b1ec; }
+  .document-preview { border: 1px dashed #b9cae5; border-radius: 10px; padding: 25px; text-align: center; margin: 20px 0; background: #f9fbff; }
+  .document-symbol { display: block; font-size: 30px; color: var(--accent); margin-bottom: 10px; }
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; padding-top: 20px; }
+  .skeleton { background: #edf1f7; height: 13px; border-radius: 5px; margin-top: 22px; }
+  .skeleton.short { width: 65%; }
+  .pipeline { display: grid; grid-template-columns: repeat(5,minmax(165px,1fr)); gap: 14px; overflow-x: auto; padding-bottom: 12px; }
+  .stage { background: #eaf0f7; border-radius: 12px; padding: 14px; min-height: 250px; }
+  .stage h2 { margin: 0 0 16px; font-size: 12px; display: flex; justify-content: space-between; }
+  .deal { background: #fff; border: 1px solid #dce4ef; border-radius: 9px; padding: 14px; margin-bottom: 12px; }
+  .deal p { font-size: 12px; font-weight: 600; }
+  .deal button { font-size: 11px; width: 100%; padding: 6px; }
+  .task-row, .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .task-row { justify-content: start; }
+  .task-row p, .setting-row p { margin: 3px 0 0; }
+  .search input { border: 0; padding: 0; background: transparent; }
+  .filtros select { width: auto; }
+  @media(max-width:1100px) { .form-layout { grid-template-columns: 1fr; } .form-summary { position: static; } .chart-grid { grid-template-columns: 1fr 1fr; } .donut-layout { gap: 10px; } }
+  @media(max-width:860px) { aside { flex-wrap: wrap; gap: 12px; } aside nav { display: flex; flex-direction: row; width: 100%; overflow-x: auto; } nav a { white-space: nowrap; padding: 10px; } nav a svg { display: none; } .page-heading { align-items: start; } .page-heading .button { font-size: 12px; } .chart-grid,.module-grid,.report-grid { grid-template-columns: 1fr; } .side-foot { display: none; } }
+  @media(max-width:520px) { .fields,.check-grid,.steps { grid-template-columns: 1fr; } .page-heading { flex-direction: column; } h1 { font-size: 26px; } .kv { grid-template-columns: 1fr; } .kv dd { margin-bottom: 10px; } .chart-labels { gap: 5px; } .bar-chart { gap: 5px; } .status { white-space: normal; font-size: 11px; } }
+  /* Contraste y movimiento: base clara con azul profundo, turquesa y acentos cálidos. */
+  :root { --bg: #eaf0f7; --line: #cfdae8; --accent: #2459bd; --muted: #53667f; }
+  body { background: radial-gradient(ellipse at 100% 0, #d9e8fc 0, transparent 55%), var(--bg); }
+  aside { background: #e0e9f5; border-right-color: #c0cfe2; }
+  .logo { color: #14365e; }
+  .hotel { background: #ccdaed; color: #2c486c; }
+  nav a { color: #3b5575; transition: background .18s ease, color .18s ease, transform .18s ease; }
+  nav a.active { background: #234c82; color: #fff; box-shadow: 0 5px 14px #214b8226; }
+  nav a:hover { background: #cadbf1; transform: translateX(3px); }
+  nav a.active:hover { background: #1a3e6d; color: #fff; }
+  .topbar { background: #f3f7fc; border-bottom-color: #c9d7e8; }
+  .page-heading { background: linear-gradient(110deg,#173b67,#245d8d); padding: 26px; border-radius: 16px; box-shadow: 0 8px 22px #234d781a; }
+  .page-heading h1 { color: #fff; }
+  .page-heading .eyebrow { color: #b8d7f3; }
+  .page-heading p:not(.eyebrow) { color: #d3e2f1; }
+  .page-heading .primary { background: #f1cb83; color: #26374c; border-color: #f1cb83; box-shadow: 0 4px 12px #10274040; }
+  .page-heading .primary:hover { background: #ffdda0; }
+  button, .button { transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  button { border-color: #9fb7d8; background: #eaf1fc; color: #234c82; font-weight: 600; }
+  button:hover { background: #d9e7fc; border-color: #3968aa; box-shadow: 0 4px 10px #244a7d1a; transform: translateY(-2px); }
+  button:active, .button:active { transform: translateY(0); box-shadow: none; }
+  .primary { background: #2459bd; color: #fff; border-color: #2459bd; box-shadow: 0 4px 10px #2459bd29; }
+  .primary:hover { background: #194798; border-color: #194798; color: #fff; }
+  .card { border-color: #ccd8e7; box-shadow: 0 5px 16px #29497209; }
+  .card-head { background: #edf3fb; border-radius: 12px 12px 0 0; }
+  .stat { border-top: 3px solid #497bd4; background: linear-gradient(135deg,#fff,#eaf1ff); }
+  .stat:nth-child(2) { border-top-color: #258477; background: linear-gradient(135deg,#fff,#e6f4ef); }
+  .stat:nth-child(3) { border-top-color: #ba8128; background: linear-gradient(135deg,#fff,#fff2df); }
+  .stat:nth-child(4) { border-top-color: #8163b4; background: linear-gradient(135deg,#fff,#f0eafa); }
+  .stat, .report-grid .card { transition: transform .2s ease, box-shadow .2s ease; }
+  .stat:hover, .report-grid .card:hover { transform: translateY(-3px); box-shadow: 0 9px 20px #29497216; }
+  .notice { background: #e4edfc; color: #324e78; border-color: #bfcee9; border-left: 4px solid #4a77be; }
+  .form-sections { gap: 28px; }
+  .form-sections fieldset { border-top: 3px solid #468a99; padding: 22px; }
+  legend { background: #e4eff3; border-radius: 7px; padding: 6px 12px; color: #235667; }
+  .fields label, .field { color: #304c6d; }
+  input:not([type=checkbox]), select, textarea { background: #f6f9fd; border-color: #b9cbe0; transition: border-color .18s ease, background .18s ease; }
+  input:not([type=checkbox]):focus, select:focus, textarea:focus { background: #fff; border-color: #4278bc; }
+  .search input { background: transparent; }
+  .check-grid label { padding: 11px; border-radius: 8px; background: #f0f5fb; border: 1px solid #d2dfef; color: #3a5475; }
+  .check-grid label:has(input:checked) { background: #dceee9; border-color: #78afa0; color: #225b4e; }
+  .intake-hero { display: flex; align-items: center; gap: 25px; padding: 28px; margin-bottom: 20px; border-radius: 14px; background: #d9eae9; border: 1px solid #aecfcd; }
+  .intake-hero > div:first-child { flex: 1; }
+  .hero-kicker { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #2f6869; }
+  .intake-hero h2 { font-size: 23px; letter-spacing: -.5px; color: #1a4e55; margin: 8px 0; }
+  .intake-hero p { color: #385f67; margin: 0; max-width: 700px; }
+  .hero-stamp { display: flex; flex-direction: column; gap: 6px; border-left: 2px solid #91b9b9; padding-left: 25px; color: #26565b; white-space: nowrap; }
+  .hero-stamp span { font-size: 12px; }
+  .section-help { color: #5a6f83; margin: 0 0 20px; font-size: 13px; }
+  .field-heading { font-size: 13px; color: #294a68; margin: 16px 0 8px; }
+  .form-summary { background: #edf3fc; border-top: 4px solid #315f99; }
+  .summary-callout { background: #fff0d7; border-left: 3px solid #b6853c; padding: 12px; color: #70521f; font-size: 12px; border-radius: 4px; }
+  .criteria-matrix { display: grid; gap: 8px; }
+  .criteria-row { display: grid; grid-template-columns: 1fr 210px; align-items: center; gap: 15px; padding: 12px 15px; border-radius: 8px; background: #edf3fa; color: #314e6c; font-size: 13px; }
+  .criteria-row:nth-child(even) { background: #f7f9fc; }
+  .preview h3 { color: #265b70; border-bottom: 1px solid #ccdae7; padding-bottom: 9px; }
+  .preview dd { overflow-wrap: anywhere; white-space: pre-wrap; }
+  [data-page]:not([hidden]) { animation: page-enter .28s ease-out; }
+  .bar-column i { transform-origin: bottom; animation: bar-grow .6s ease-out; background: linear-gradient(#4b85d5,#285eb9); }
+  .bar i { transform-origin: left; animation: bar-grow-x .6s ease-out; }
+  @keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes bar-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media(max-width:860px) { .intake-hero { flex-direction: column; align-items: start; } .hero-stamp { border-left: 0; border-top: 1px solid #91b9b9; padding: 14px 0 0; } }
+  @media(max-width:520px) { .page-heading,.intake-hero { padding: 20px; } .criteria-row { grid-template-columns: 1fr; gap: 8px; } .intake-hero h2 { font-size: 21px; } }
+  @media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+  .detail-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .detail-source { padding: 14px 20px; background: #edf3fb; border-bottom: 1px solid var(--line); }
+  .detail-source p { margin: 8px 0 0; }
+  .requirement-summary { margin: 12px 0; padding: 16px; background: #f1f6fc; border: 1px solid #d4e0ef; border-radius: 10px; }
+  .requirement-summary .kv { margin-top: 0; }
+  .requirement-summary p { margin-bottom: 0; }
+  .home-actions { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+  .home-actions a,.home-actions button { display:flex; align-items:center; justify-content:center; gap:9px; padding:15px 10px; border:1px solid #b9cce4; border-radius:10px; background:#f5f9ff; color:#294f7d; font-size:12px; font-weight:650; text-decoration:none; }
+  .home-actions span { font-size:20px; color:#3067b5; }
+  .home-actions a:hover { background:#dae8fb; }
+  .ai-home { border-top:4px solid #5270c8; background:linear-gradient(120deg,#f8faff,#edf1fb); margin-bottom:30px; padding:24px; }
+  .ai-home h2 { font-size:22px; margin:6px 0; }
+  .ai-home .section-help { margin:10px 0 20px; max-width:920px; }
+  .ai-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  .ai-toolbar label { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .ai-toolbar select { width:auto; }
+  .priority-legend { display:flex; gap:8px; flex-wrap:wrap; }
+  .priority { display:inline-block; padding:5px 9px; border-radius:6px; font-size:11px; font-weight:700; }
+  .priority.high { color:#176245; background:#dff2e7; }
+  .priority.medium { color:#82560a; background:#fff0cc; }
+  .priority.low { color:#a43540; background:#fbe6e9; }
+  .recommendation-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .recommendation { background:#fff; border:1px solid #ccd8e8; border-left:4px solid #398264; padding:20px; border-radius:12px; display:flex; flex-direction:column; }
+  .recommendation.medium { border-left-color:#bc8e2e; }
+  .recommendation.low { border-left-color:#bc5661; }
+  .recommendation h3 { font-size:16px; margin:13px 0 5px; }
+  .recommendation .sub { margin:4px 0 8px; }
+  .recommendation ul { padding-left:18px; font-size:12px; line-height:1.7; color:#4c617c; flex:1; }
+  .recommendation .button { font-size:12px; align-self:flex-start; background:#e8f0fc; border:1px solid #b5cae8; }
+  .rec-meta { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .live-heading { margin:10px 0 18px; }
+  .live-heading h2 { font-size:18px; }
+  .room-grid,.client-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .room-card h3,.client-card h3 { margin:0 0 8px; color:#284d74; }
+  .room-card .room-features { font-size:12px; color:#5c7089; min-height:65px; }
+  .slot { display:flex; flex-direction:column; gap:5px; padding:12px; border:1px solid #d9e3ef; border-radius:8px; margin-top:9px; font-size:12px; background:#f6f9fd; }
+  .slot .priority { align-self:flex-start; }
+  .client-card .history { padding-left:17px; font-size:12px; line-height:1.8; color:#51677f; }
+  .client-card .contact { padding:12px; background:#edf3fc; border-radius:8px; font-size:12px; }
+  .agenda-date { display:flex; flex-direction:column; gap:7px; font-size:12px; }
+  .match-row { padding:16px; border:1px solid #ccd9e7; border-radius:9px; margin:10px 0; background:#f6f9fd; }
+  .match-row p { margin:8px 0 0; font-size:13px; }
+  @media(max-width:1200px) { .home-actions { grid-template-columns:repeat(3,1fr); } .room-grid,.client-grid { grid-template-columns:1fr; } }
+  @media(max-width:650px) { .recommendation-grid { grid-template-columns:1fr; } .home-actions { grid-template-columns:repeat(2,1fr); } .ai-home { padding:18px; } .ai-home h2 { font-size:19px; } }
+  .dashboard-workspace { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; align-items:start; }
+  .dashboard-main { min-width:0; }
+  .dashboard-main > .grid { grid-template-columns:1fr; }
+  .dashboard-main .side-col { display:grid; grid-template-columns:1fr 1fr; }
+  .dashboard-workspace .ai-home { margin:0; padding:16px; border-radius:12px; }
+  .dashboard-workspace .ai-home h2 { font-size:17px; margin:4px 0; }
+  .dashboard-workspace .ai-home .hero-kicker { font-size:9px; letter-spacing:1px; }
+  .dashboard-workspace .ai-home .section-help { font-size:12px; margin:10px 0 12px; }
+  .dashboard-workspace .ai-toolbar { gap:10px; margin-bottom:12px; }
+  .dashboard-workspace .priority-legend { gap:4px; }
+  .dashboard-workspace .priority { font-size:10px; padding:4px 7px; }
+  .dashboard-workspace .ai-toolbar label { width:100%; }
+  .dashboard-workspace .ai-toolbar select { flex:1; min-width:0; font-size:11px; padding:7px; }
+  .dashboard-workspace .recommendation-grid { grid-template-columns:1fr; gap:10px; max-height:470px; overflow-y:auto; padding-right:4px; scrollbar-width:thin; }
+  .dashboard-workspace .recommendation { padding:12px; border-left-width:3px; }
+  .dashboard-workspace .recommendation h3 { font-size:13px; margin:9px 0 4px; }
+  .dashboard-workspace .recommendation .sub,.dashboard-workspace .recommendation ul { font-size:11px; }
+  .dashboard-workspace .recommendation ul { margin:6px 0 10px; line-height:1.5; }
+  .dashboard-workspace .recommendation .badge { font-size:10px; padding:3px 6px; }
+  .dashboard-workspace .recommendation .button { font-size:11px; padding:7px 9px; white-space:normal; }
+  .dashboard-workspace .ai-home > a { font-size:12px; }
+  @media(max-width:1200px) { .dashboard-main .chart-grid { grid-template-columns:1fr; } .dashboard-main .side-col { grid-template-columns:1fr; } .dashboard-workspace { grid-template-columns:minmax(0,1fr) 280px; } }
+  @media(max-width:1000px) { .dashboard-workspace { grid-template-columns:1fr; } .dashboard-main .chart-grid { grid-template-columns:1fr 1fr; } }
+  @media(max-width:650px) { .dashboard-main .chart-grid { grid-template-columns:1fr; } }
+  .hotel-building { border:1px solid #b4c9dd; border-top:4px solid #2a587d; border-radius:14px; background:#e1ebf4; padding:20px; margin:20px 0; }
+  .building-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .building-heading h2 { margin:5px 0; color:#234e73; font-size:21px; }
+  .building-heading p { margin:0; color:#486581; font-size:13px; }
+  .hotel-building .room-card { border-top:3px solid #7599b9; }
+  .room-location { font-size:11px; color:#526c86; margin:0 0 8px; }
+  .page-title-row { display:flex; align-items:center; gap:12px; }
+  .info-button { display:grid; place-items:center; width:30px; height:30px; padding:0; border-radius:50%; background:#e5efff; border:1px solid #b5cdee; color:#214c82; font-family:Georgia,serif; font-weight:700; font-size:19px; flex:none; }
+  .info-button:hover { background:#fff; box-shadow:0 0 0 4px #b8d3ff26; }
+  .intake-help { width:min(700px,94vw); max-height:90vh; padding:0; border-radius:16px; overflow:auto; }
+  .intake-help[open] { animation:help-appear .24s ease-out; }
+  .intake-help::backdrop { background:#142b4db3; backdrop-filter:blur(3px); }
+  .help-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:22px; background:#e8f0fb; border-bottom:1px solid #c6d6eb; }
+  .help-header h2 { margin:4px 0 0; font-size:21px; color:#224d79; }
+  .help-content { padding:22px; }
+  .help-content > p { margin-top:0; color:#536a82; }
+  .help-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:20px 0; }
+  .help-tabs button { font-size:12px; padding:10px 6px; }
+  .help-tabs button[aria-selected=true] { background:#28599b; color:white; border-color:#28599b; }
+  .help-step:not([hidden]) { animation:page-enter .25s ease-out; }
+  .help-step h3 { font-size:19px; color:#234f73; margin:0 0 10px; }
+  .help-example { margin:16px 0; padding:16px; background:#eaf3f0; border-left:4px solid #458876; border-radius:8px; }
+  .help-example p { margin:8px 0 0; }
+  .help-example ul { padding-left:20px; margin-bottom:0; line-height:1.8; }
+  .help-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid #dae3ef; padding-top:16px; margin-top:20px; }
+  .help-controls button:disabled { opacity:.45; cursor:default; transform:none; }
+  @keyframes help-appear { from { opacity:0; transform:translateY(12px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+  @media(max-width:520px) { .help-header,.help-content { padding:16px; } .help-tabs button { font-size:11px; } .help-header h2 { font-size:18px; } }
+  .interest-assistant { margin-top:20px; padding:18px; border:1px solid #b9cce8; border-radius:12px; background:#eaf1fc; }
+  .interest-assistant h3 { margin:0; font-size:16px; color:#284f7f; }
+  .interest-assistant p { font-size:12px; color:#526a86; }
+  .suggestion-list { display:grid; gap:9px; margin-top:14px; }
+  .suggestion-item { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; padding:12px; border-radius:8px; border:1px solid #d0def0; }
+  .suggestion-item strong { display:block; font-size:13px; }
+  .suggestion-item small { display:block; margin-top:4px; color:#597089; }
+  .suggestion-item button { flex:none; font-size:12px; }
+  .suggestion-item button:disabled { opacity:.6; cursor:default; transform:none; }
+  @media(max-width:520px) { .suggestion-item { align-items:start; flex-direction:column; } }
 </style>
 </head>
 <body>
@@ -143,13 +399,16 @@
   <aside>
     <div class="logo"><svg class="ic" id="icLogo"></svg>LICING</div>
     <div class="hotel"><svg class="ic" id="icHotel"></svg>Plaza San Francisco</div>
-    <nav>
-      <a class="active" href="#"><svg class="ic" data-ic="dashboard"></svg>Dashboard</a>
-      <a class="off" title="Próximamente"><svg class="ic" data-ic="briefcase"></svg>Oportunidades</a>
-      <a class="off" title="Próximamente"><svg class="ic" data-ic="cpu"></svg>Análisis IA</a>
-      <a class="off" title="Próximamente"><svg class="ic" data-ic="eye"></svg>Seguimiento</a>
-      <a class="off" title="Próximamente"><svg class="ic" data-ic="file"></svg>Reportes</a>
-      <a class="off" title="Próximamente"><svg class="ic" data-ic="gear"></svg>Configuración</a>
+    <nav aria-label="Módulos de Licing">
+      <a href="#dashboard" data-view="dashboard"><svg class="ic" data-ic="dashboard"></svg>Dashboard</a>
+      <a href="#oportunidades" data-view="oportunidades"><svg class="ic" data-ic="briefcase"></svg>Oportunidades</a>
+      <a href="#formulario" data-view="formulario"><svg class="ic" data-ic="file"></svg>Perfil del hotel</a>
+      <a href="#disponibilidad" data-view="disponibilidad"><svg class="ic" data-ic="hotel"></svg>Salones y disponibilidad</a>
+      <a href="#clientes" data-view="clientes"><svg class="ic" data-ic="star"></svg>Clientes</a>
+      <a href="#analisis" data-view="analisis"><svg class="ic" data-ic="file"></svg>Bases y documentos</a>
+      <a href="#seguimiento" data-view="seguimiento"><svg class="ic" data-ic="eye"></svg>Seguimiento</a>
+      <a href="#reportes" data-view="reportes"><svg class="ic" data-ic="chart"></svg>Reportes</a>
+      <a href="#configuracion" data-view="configuracion"><svg class="ic" data-ic="gear"></svg>Configuración</a>
     </nav>
     <div class="side-foot"><span class="dot" id="sideDot"></span><span id="sideText">Base de datos</span></div>
   </aside>
@@ -164,11 +423,46 @@
     </div>
 
     <div class="content">
+      <header class="page-heading"><div><p class="eyebrow">PLAZA SAN FRANCISCO / GESTIÓN COMERCIAL</p><div class="page-title-row"><h1 id="pageTitle" tabindex="-1">Dashboard</h1><button type="button" id="intakeInfo" class="info-button" aria-label="Cómo funcionará el formulario del perfil del hotel" aria-haspopup="dialog" aria-controls="intakeHelp" title="Cómo funciona este formulario" hidden>i</button></div><p id="pageDescription">Una mirada a las oportunidades del hotel.</p></div><a class="button primary" href="#formulario">+ Definir criterios</a></header>
+      <section data-page="dashboard" id="dashboardPage">
+      <div class="home-actions" aria-label="Acciones principales">
+        <a href="#formulario" aria-label="Completar el formulario del perfil del hotel"><span aria-hidden="true">✎</span>Completar perfil</a>
+        <button id="homeSearch"><span>＋</span>Nueva búsqueda</button><button id="homeFilters"><span>≡</span>Aplicar filtros</button>
+        <a href="#oportunidades"><span>↗</span>Ver resultados</a><a href="#disponibilidad"><span>▦</span>Disponibilidad</a><a href="#clientes"><span>◎</span>Clientes</a><a href="#reportes"><span>▥</span>Reportes</a>
+      </div>
+      <div class="section-title live-heading"><h2>Indicadores y resultados consultados</h2><span class="badge">Datos de Supabase · independientes de la demostración</span></div>
+      <div class="overview-note"><span class="badge blue">Panel de oportunidades</span><span>Indicadores sobre las últimas 500 licitaciones consultadas.</span></div>
       <section class="stats" id="stats"></section>
 
+      <div class="dashboard-workspace">
+      <div class="dashboard-main">
+      <div class="chart-grid">
+        <section class="card panel"><div class="section-title"><h2>Publicaciones de la semana</h2><span class="sub">Últimos 7 días · hora de Chile</span></div><div id="publicationChart" class="chart-placeholder">Cargando indicadores…</div></section>
+        <section class="card panel"><h2>Resultado del pre-filtro</h2><div id="filterChart" class="chart-placeholder">Cargando indicadores…</div></section>
+      </div>
       <div class="grid">
+        <section class="card panel"><div class="section-title"><h2>Próximas a cerrar</h2><a href="#oportunidades">Ver todas →</a></div><div id="dashboardPreview"><p class="empty">Cargando oportunidades…</p></div></section>
+
+        <div class="side-col">
+          <section class="card panel"><h2>Oportunidades por Rubro</h2><div id="rubros"></div></section>
+          <section class="card panel"><h2>Actividad Reciente</h2><div id="acts"></div></section>
+        </div>
+      </div>
+      </div>
+      <section class="ai-home card panel" aria-labelledby="aiHomeTitle">
+        <div class="section-title"><div><span class="hero-kicker">RECOMENDACIONES</span><h2 id="aiHomeTitle">Asistente IA</h2></div><span class="badge blue">Demo</span></div>
+        <p class="section-help">Qué revisar primero, según disponibilidad y relación con el cliente.</p>
+        <div class="ai-toolbar"><div class="priority-legend"><span class="priority high">● Alta</span><span class="priority medium">● Media</span><span class="priority low">● Baja</span></div><label>Mostrar <select id="recommendationFilter"><option value="">Todas las prioridades</option><option value="high">Alta prioridad</option><option value="medium">Prioridad media</option><option value="low">Baja prioridad</option></select></label></div>
+        <div id="recommendations" class="recommendation-grid" aria-live="polite" role="region" aria-label="Recomendaciones de ejemplo" tabindex="0"></div>
+        <p class="sub">Datos ficticios · sin IA real. Confirmar disponibilidad con el equipo.</p>
+        <a href="#analisis">Revisar bases y documentos →</a>
+      </section>
+      </div>
+      </section>
+      <section data-page="oportunidades" hidden>
+        <div class="overview-note">Consulta las oportunidades, busca por nombre o institución y abre una ficha para ver su detalle.</div>
         <section class="card">
-          <div class="card-head"><h2>Oportunidades Prioritarias</h2><button id="btnFiltros">Filtros</button></div>
+          <div class="card-head"><h2>Explorar oportunidades</h2><button id="btnFiltros">Filtros</button></div>
           <div class="filtros" id="filtros" hidden>
             <label>Tipo
               <select id="fTipo"><option value="">Todos</option><option value="licitacion">Licitación</option>
@@ -184,22 +478,92 @@
             <div id="msg" class="msg" hidden></div>
           </div>
         </section>
-
-        <div class="side-col">
-          <section class="card panel"><h2>Oportunidades por Rubro</h2><div id="rubros"></div></section>
-          <section class="card panel"><h2>Actividad Reciente</h2><div id="acts"></div></section>
-        </div>
-      </div>
+      </section>
+      <section data-page="disponibilidad" hidden>
+        <div class="notice"><strong>Un hotel, un edificio.</strong> Todos los salones pertenecen al Hotel Plaza San Francisco. Los nombres A, B y C, las capacidades, el equipamiento y las reservas son ejemplos pendientes de validar con la encargada de eventos.</div>
+        <div class="section-title card panel"><div><h2>Agenda por día y módulo</h2><p class="sub">Mañana 09:00–13:00 · Tarde 14:00–18:00 · Jornada 09:00–18:00</p></div><label class="agenda-date">Fecha de ejemplo<select id="agendaDate"><option value="2026-10-05">5 de octubre de 2026</option><option value="2026-10-06">6 de octubre de 2026</option></select></label></div>
+        <section class="hotel-building" aria-labelledby="buildingTitle">
+          <div class="building-heading"><div><span class="hero-kicker">HOTEL → ESPACIOS INTERIORES</span><h2 id="buildingTitle">Hotel Plaza San Francisco</h2><p>Agenda de los salones del mismo edificio, por día, horario y módulo.</p></div><span class="badge blue">Edificio único · espacios de ejemplo</span></div>
+          <div id="roomAgenda" class="room-grid spaced"></div>
+          <p class="sub">La ocupación se consulta por salón: una reserva en un espacio no implica que todo el hotel esté ocupado. Distribución y recursos compartidos pendientes de confirmar con el hotel.</p>
+        </section>
+        <section class="card panel spaced"><div class="section-title"><h2>¿Qué salón podría atender la solicitud?</h2><span class="badge blue">Comprobación simulada</span></div><p class="sub">Se compara la fecha y el intervalo completo, incluidos montaje y desmontaje, con las reservas del salón.</p><label class="field">Solicitud de ejemplo<select id="matchRequest"></select></label><div id="matchResult" aria-live="polite"></div></section>
+      </section>
+      <section data-page="clientes" hidden>
+        <div class="notice"><strong>Cartera ficticia para validar el diseño.</strong> Ilustra organizaciones, contactos recurrentes e historial comercial. No contiene datos de clientes reales.</div>
+        <div class="module-grid"><section class="card panel"><h2>Cómo se reconocería a un cliente</h2><p>La organización se contrastaría por RUT o identificador verificado; los contactos se vincularían a una ficha confirmada por el equipo.</p><p class="sub">La coincidencia de nombre por sí sola requiere revisión. No se asumiría una relación por un nombre similar.</p></section><section class="card panel"><h2>Relación previa y prioridad</h2><p>Un cliente recurrente o un contacto conocido puede dar prioridad adicional a una oportunidad compatible.</p><p class="sub">La relación comercial no resuelve conflictos de horario, capacidad insuficiente ni falta de equipamiento.</p></section></div>
+        <div id="clientCards" class="client-grid spaced"></div>
+      </section>
+      <section data-page="formulario" hidden>
+        <div class="intake-hero"><div><span class="hero-kicker">CONOZCAMOS TU HOTEL</span><h2>¿Qué hace que un evento calce con el hotel?</h2><p>La encargada de eventos define la oferta, las restricciones y los criterios para evaluar solicitudes de Mercado Público.</p></div><div class="hero-stamp"><strong>Oferta + requisitos</strong><span>+ disponibilidad real</span></div></div>
+        <div class="notice"><strong>Prototipo para conversar con el cliente.</strong> Complete lo que conozca y deje pendiente lo que deba confirmarse. El resumen no guarda datos, reserva espacios ni determina compatibilidad automáticamente.</div>
+        <form id="criteriaForm">
+          <div class="form-layout"><div id="intakeSections" class="form-sections"></div>
+            <div class="form-summary card panel"><span class="badge blue">Ficha del cliente</span><h2>De la solicitud al encaje</h2><ol><li><strong>Oferta:</strong> espacios, capacidades y servicios.</li><li><strong>Solicitud:</strong> evento, asistentes y horarios.</li><li><strong>Agenda:</strong> disponibilidad por confirmar.</li><li><strong>Decisión:</strong> criterios y revisión humana.</li></ol><div class="summary-callout">Una coincidencia de palabras no confirma que el hotel pueda atender el evento.</div><p class="sub">* Obligatorio para generar el resumen. El resto puede quedar por confirmar.</p><button type="submit" class="primary">Ver resumen del perfil →</button><button type="reset">Restablecer formulario</button><p class="sub">Prototipo sin guardado. Al recargar se pierde lo completado.</p></div>
+          </div>
+          <section id="criteriaPreview" class="card panel preview" aria-live="polite" hidden></section>
+        </form>
+      </section>
+      <section data-page="analisis" hidden>
+        <div class="notice"><strong>Demostración con datos de ejemplo.</strong> Este módulo ilustra la revisión de bases; no ejecuta un modelo de IA ni carga documentos.</div>
+        <div class="module-grid"><section class="card panel"><span class="badge blue">Paso 1</span><h2>Seleccionar oportunidad</h2><label class="field">Licitación de ejemplo<select id="analysisChoice"><option>Servicio de alojamiento para delegación</option>Seminario y coffee break para 80 personas</option></select></label><div class="document-preview"><span class="document-symbol">↥</span><strong>Bases técnicas y administrativas</strong><p>En la versión final podrás adjuntar archivos PDF y revisar sus requisitos.</p><span class="badge">Carga de archivos · próximamente</span></div><button class="primary" id="simulateAnalysis">Simular análisis</button></section>
+        <section class="card panel"><div class="section-title"><h2>Resumen de revisión</h2><span class="badge amber">Validación humana</span></div><div id="analysisResult"><p class="empty">Selecciona un ejemplo y simula el análisis para explorar el resultado esperado.</p><div class="skeleton"></div><div class="skeleton short"></div></div></section></div>
+        <section class="card panel spaced"><h2>Cómo funcionará</h2><div class="steps"><div><b>01 · Leer bases</b><p>Identificar servicios, fechas y presupuesto.</p></div><div><b>02 · Contrastar</b><p>Comparar requisitos con la capacidad del hotel.</p></div><div><b>03 · Validar</b><p>Confirmar alertas antes de tomar una decisión.</p></div></div></section>
+      </section>
+      <section data-page="seguimiento" hidden>
+        <div class="notice"><strong>Tablero de ejemplo.</strong> Simula el avance comercial de una oportunidad. Los cambios se restablecen al recargar.</div>
+        <div id="pipeline" class="pipeline"></div>
+        <section class="card panel spaced"><h2>Próximas acciones · ejemplo</h2><div class="task-row"><span class="badge amber">Por coordinar</span><div><strong>Confirmar disponibilidad de salón</strong><p class="sub">Equipo de eventos · antes de preparar la oferta.</p></div></div><div class="task-row"><span class="badge blue">Documentación</span><div><strong>Revisar antecedentes administrativos</strong><p class="sub">Responsable de licitaciones · antes de postular.</p></div></div></section>
+      </section>
+      <section data-page="reportes" hidden>
+        <div class="notice"><strong>Reportes tentativos.</strong> La vista previa utiliza datos de ejemplo; no genera documentos oficiales.</div>
+        <div class="report-grid"><section class="card panel"><div class="report-icon">↗</div><h2>Resumen comercial</h2><p>Oportunidades detectadas, calificadas y resultados del período.</p><button data-report="Resumen comercial">Ver ejemplo</button></section><section class="card panel"><div class="report-icon">◎</div><h2>Rendimiento por servicio</h2><p>Distribución de alojamiento, salones y banquetería.</p><button data-report="Rendimiento por servicio">Ver ejemplo</button></section><section class="card panel"><div class="report-icon">≡</div><h2>Motivos de descarte</h2><p>Razones para excluir oportunidades y ajustar los criterios.</p><button data-report="Motivos de descarte">Ver ejemplo</button></section></div>
+        <section class="card panel spaced" id="reportPreview" aria-live="polite"><h2>Vista previa de reporte</h2><p class="empty">Selecciona un reporte para revisar su estructura.</p></section>
+      </section>
+      <section data-page="configuracion" hidden>
+        <div class="notice"><strong>Configuración tentativa.</strong> Estos campos no modifican las conexiones ni la configuración del sistema.</div>
+        <form id="settingsForm" class="module-grid"><section class="card panel"><h2>Perfil del hotel</h2><div class="fields spaced"><label class="wide">Nombre comercial<input value="Hotel Plaza San Francisco"></label><label>Ciudad<input value="Santiago"></label><label>Área responsable<select><option>Eventos y ventas</option>Reservas</option></select></label><label class="wide">Correo de notificaciones<input type="email" placeholder="licitaciones@hotel.cl"></label></div><button type="submit" class="primary spaced">Simular guardado</button><p id="settingsFeedback" role="status" class="sub"></p></section><section class="card panel"><h2>Preferencias de trabajo</h2><div class="setting-row"><div><strong>Apariencia clara</strong><p class="sub">Fondo claro y contraste legible.</p></div><span class="badge green">Activa</span></div><label class="setting-row"><span>Resumen diario de oportunidades</span><input type="checkbox" checked></label><label class="setting-row"><span>Avisos de cierre próximo</span><input type="checkbox" checked></label><label class="field">Anticipación del aviso<select><option>3 días antes</option>5 días antes</option><option>7 días antes</option></select></label><p class="sub">Las notificaciones se muestran como propuesta y todavía no se envían.</p></section></form>
+      </section>
       <footer id="foot"></footer>
     </div>
   </main>
 </div>
 
+<dialog id="intakeHelp" class="intake-help" aria-labelledby="intakeHelpTitle" aria-describedby="intakeHelpIntro">
+  <div class="help-header"><div><span class="hero-kicker">GUÍA DEL FORMULARIO</span><h2 id="intakeHelpTitle">De los datos del hotel a una recomendación</h2></div><button type="button" id="closeIntakeHelp" autofocus>Cerrar</button></div>
+  <div class="help-content">
+    <p id="intakeHelpIntro">Este formulario recoge lo que la encargada de eventos sabe del hotel. Así funcionaría en el producto final:</p>
+    <div class="help-tabs" role="tablist" aria-label="Pasos del funcionamiento">
+      <button type="button" id="helpTab0" role="tab" aria-controls="helpStep0" aria-selected="true" data-help-step="0">1 · Oferta del hotel</button>
+      <button type="button" id="helpTab1" role="tab" aria-controls="helpStep1" aria-selected="false" tabindex="-1" data-help-step="1">2 · Solicitud</button>
+      <button type="button" id="helpTab2" role="tab" aria-controls="helpStep2" aria-selected="false" tabindex="-1" data-help-step="2">3 · Recomendación</button>
+    </div>
+    <section id="helpStep0" class="help-step" role="tabpanel" aria-labelledby="helpTab0" tabindex="0">
+      <h3>La encargada define qué puede ofrecer el hotel</h3><p>Registra los salones del único edificio, capacidad por montaje, equipos, servicios y condiciones obligatorias o negociables.</p>
+      <div class="help-example"><strong>Ejemplo ficticio · Salón A</strong><ul><li>Hasta 100 personas en montaje auditorio.</li><li>Proyector, audio y servicio de coffee break.</li><li>Disponibilidad: consultar la agenda del hotel por día y horario.</li></ul></div>
+      <p>También puede escribir palabras y frases de interés o pedir sugerencias según la ficha: por ejemplo, “alojamiento” puede dar lugar a “hospedaje” y “pernoctación”. La encargada revisa, añade y edita los términos antes de utilizarlos.</p>
+      <p class="sub">En el producto final se guardaría esta ficha en Licing y el LLM ayudaría a proponer términos. La disponibilidad requeriría una agenda actualizada por el equipo o una integración con el sistema de reservas.</p>
+    </section>
+    <section id="helpStep1" class="help-step" role="tabpanel" aria-labelledby="helpTab1" tabindex="0" hidden>
+      <h3>Mercado Público aporta lo que pide el cliente</h3><p>La licitación y sus bases aportarían los requisitos. El futuro LLM ayudaría a identificar y resumir los datos, dejando por confirmar lo que no esté claro.</p>
+      <div class="help-example"><strong>Solicitud ficticia · Seminario</strong><ul><li>80 asistentes en montaje auditorio.</li><li>5 de octubre, de 14:00 a 18:00.</li><li>Proyector y coffee break; tiempo de montaje por confirmar.</li></ul></div>
+      <p class="sub">Son datos de la solicitud, distintos del catálogo del hotel. El equipo podría revisar la ficha oficial y las bases para validarlos.</p>
+    </section>
+    <section id="helpStep2" class="help-step" role="tabpanel" aria-labelledby="helpTab2" tabindex="0" hidden>
+      <h3>El LLM recomendaría qué oportunidades revisar</h3><p>Licing contrastaría requisitos, capacidad, equipamiento, historial de clientes y disponibilidad. El LLM explicaría el interés de la oportunidad en el dashboard.</p>
+      <div class="help-example"><span class="priority medium">● Prioridad media · ejemplo</span><p>“El Salón A tiene capacidad para 80 personas y ofrece los servicios solicitados. Falta confirmar la agenda y el tiempo de montaje.”</p></div>
+      <p>La encargada verifica las bases y la agenda antes de decidir. Una recomendación no confirma una reserva ni garantiza una adjudicación.</p>
+    </section>
+    <div class="notice"><strong>Estado actual:</strong> el formulario genera un resumen sin guardar datos. El LLM y la conexión con la agenda aún no están implementados. Todos los ejemplos de esta guía son ficticios.</div>
+    <div class="help-controls"><button type="button" id="helpPrevious" disabled>Anterior</button><span id="helpProgress" class="sub" role="status">Paso 1 de 3</span><button type="button" id="helpNext" class="primary">Siguiente →</button></div>
+  </div>
+</dialog>
 <dialog id="dlg">
   <div class="dlg-head">
     <div><div class="code" id="dCode"></div><strong id="dName"></strong></div>
     <button id="dClose">Cerrar</button>
   </div>
+  <div id="dSource" class="detail-source"></div>
   <div class="dlg-body" id="dBody"></div>
 </dialog>
 
@@ -364,7 +728,7 @@ function render() {
 async function load() {
   $("rows").innerHTML = ""; showMsg("");
   if (!configured) {
-    setStatus("err", "Sin configurar");
+    setStatus("err", "Sin configurar"); renderCharts([], false);
     showMsg("Falta configurar SUPABASE_URL y SUPABASE_ANON_KEY en el .env (o en las variables de entorno de Vercel).", true);
     return;
   }
@@ -378,7 +742,7 @@ async function load() {
     ]);
     all = rows;
     setStatus("ok", "Conectado a Supabase (" + Math.round(performance.now() - t0) + " ms)");
-    renderStats(rows, total); renderRubros(rows); renderActs(runs); render();
+    renderStats(rows, total); renderRubros(rows); renderActs(runs); render(); renderCharts(rows);
     $("foot").textContent = "Origen: " + new URL(SUPABASE_URL).host + " - actualizado " + new Date().toLocaleTimeString("es-CL") +
       (total > rows.length ? " - se muestran las " + rows.length + " más recientes de " + total : "");
   } catch (e) {
@@ -389,10 +753,41 @@ async function load() {
   }
 }
 
+function officialOpportunityUrl(r) {
+  const code = String(r.codigo_mp || '').trim();
+  // Las cotizaciones COT tienen su propia ficha pública, distinta de una licitación.
+  if (/^\d+-\d+-COT\d+$/i.test(code)) return 'https://buscador.mercadopublico.cl/ficha?code=' + encodeURIComponent(code);
+  try {
+    const url = new URL(r.url);
+    if (url.protocol === 'https:' && (url.hostname === 'mercadopublico.cl' || url.hostname.endsWith('.mercadopublico.cl')) && !url.username && !url.password) return url.href;
+  } catch (_) {}
+  if (/^\d+-\d+-[A-Z]+\d+$/i.test(code) && r.tipo === 'licitacion') return 'https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idlicitacion=' + encodeURIComponent(code);
+  return null;
+}
+function requirementsSummary(reqs) {
+  if (!reqs.length) return '<p>No hay requisitos identificados automáticamente. Revisa las bases en la ficha de Mercado Público.</p>';
+  return reqs.map(q => {
+    const attendees = q.n_asistentes != null && Number(q.n_asistentes) > 0;
+    const services = Array.isArray(q.servicios_req) ? q.servicios_req : [];
+    const review = !q.tipo_evento || !attendees || !services.length
+      ? 'Información incompleta; confirmar en las bases.'
+      : 'Datos detectados automáticamente; confirmar en las bases.';
+    return '<section class="requirement-summary"><dl class="kv">' +
+      '<dt>Tipo de evento detectado</dt><dd>' + esc(q.tipo_evento || 'No identificado') + '</dd>' +
+      '<dt>Cantidad de asistentes</dt><dd>' + (attendees ? esc(q.n_asistentes) + ' personas' : 'No identificada') + '</dd>' +
+      '<dt>Servicios detectados</dt><dd>' + (services.length ? services.map(s => '<span class="badge blue">' + esc(s.servicio || 'Servicio sin clasificar') +
+        (s.personas ? ' · ' + esc(s.personas) + ' personas' : '') + (s.habitaciones ? ' · ' + esc(s.habitaciones) + ' habitaciones' : '') + '</span>').join(' ') : 'No identificados') + '</dd></dl>' +
+      '<p><strong>Revisión:</strong> ' + review + '</p></section>';
+  }).join('');
+}
 async function detail(id) {
   const r = all.find(x => x.id == id);
   if (!r) return;
   $("dCode").textContent = r.codigo_mp; $("dName").textContent = r.nombre;
+  const officialUrl = officialOpportunityUrl(r);
+  $('dSource').innerHTML = officialUrl
+    ? '<a class="button primary" href="' + esc(officialUrl) + '" target="_blank" rel="noopener noreferrer">Abrir en Mercado Público ↗</a><p class="sub">Ficha oficial · se abre en una pestaña nueva.</p>'
+    : '<p class="sub">No hay un enlace oficial disponible para este registro.</p>';
   $("dBody").innerHTML = "Cargando..."; $("dlg").showModal();
   try {
     const [items, reqs] = await Promise.all([
@@ -409,7 +804,6 @@ async function detail(id) {
       "<dt>Monto estimado</dt><dd>" + clp(r.monto_estimado) + "</dd>" +
       "<dt>Oferentes</dt><dd>" + esc(r.n_oferentes ?? "-") + "</dd>" +
       (r.motivo_descarte ? "<dt>Motivo descarte</dt><dd>" + esc(r.motivo_descarte) + "</dd>" : "") +
-      (/^https?:\/\//.test(r.url || "") ? '<dt>Mercado Público</dt><dd><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Ver ficha</a></dd>' : "") +
       "</dl>" +
       "<h3>Descripción</h3><p>" + esc(r.descripcion) + "</p>" +
       "<h3>Ítems (" + items.length + ")</h3>" +
@@ -418,11 +812,7 @@ async function detail(id) {
         "</td><td>" + esc(i.adj_nombre_proveedor || "-") + "</td><td>" + clp(i.adj_monto_unitario) + "</td></tr>").join("") +
       "</tbody></table>" +
       "<h3>Requisitos extraídos</h3>" +
-      (reqs.length ? reqs.map(q =>
-        "<p><b>" + esc(q.tipo_evento || "evento sin clasificar") + "</b> - " + esc(q.n_asistentes ?? "?") + " asistentes - confianza " +
-        esc(q.confianza_nlp ?? "-") + "<br>" +
-        (q.servicios_req || []).map(s => '<span class="badge">' + esc(s.servicio) + (s.personas ? " " + esc(s.personas) + " pers." : "") +
-          (s.habitaciones ? " " + esc(s.habitaciones) + " hab." : "") + "</span> ").join("") + "</p>").join("") : "<p>Sin requisitos.</p>");
+      requirementsSummary(reqs);
   } catch (e) {
     $("dBody").textContent = "Error: " + e.message;
   }
@@ -431,11 +821,324 @@ async function detail(id) {
 $("rows").addEventListener("click", e => { e.preventDefault(); const tr = e.target.closest("tr"); if (tr) detail(tr.dataset.id); });
 $("dClose").addEventListener("click", () => $("dlg").close());
 $("btnFiltros").addEventListener("click", () => { $("filtros").hidden = !$("filtros").hidden; });
-$("q").addEventListener("input", render);
+$("q").addEventListener("input", () => { if (location.hash !== "#oportunidades") location.hash = "oportunidades"; render(); });
 $("soloValidas").addEventListener("change", render);
 $("fTipo").addEventListener("change", render);
 $("reload").addEventListener("click", load);
+const PAGES = {
+  dashboard: ["Dashboard · Inicio", "Busca, prioriza y coordina las oportunidades desde un solo lugar."],
+  oportunidades: ["Oportunidades", "Explora las licitaciones y revisa su información de origen."],
+  formulario: ["Perfil del hotel", "La oferta y los criterios del cliente, como punto de partida."],
+  analisis: ["Bases y documentos", "Explora la revisión documental que complementaría las recomendaciones del inicio."],
+  disponibilidad: ["Salones del hotel", "Hotel Plaza San Francisco · espacios dentro de un único edificio."],
+  clientes: ["Clientes e historial", "Reconoce relaciones previas y prioriza oportunidades con contexto comercial."],
+  seguimiento: ["Seguimiento", "Acompaña cada oportunidad hasta su decisión comercial."],
+  reportes: ["Reportes", "Una propuesta de indicadores para el equipo comercial."],
+  configuracion: ["Configuración", "Preferencias y perfil de trabajo del hotel."]
+};
+function navigate(focus = false) {
+  const key = Object.hasOwn(PAGES, location.hash.slice(1)) ? location.hash.slice(1) : "dashboard";
+  document.querySelectorAll('[data-page]').forEach(p => p.hidden = p.dataset.page !== key);
+  document.querySelectorAll('[data-view]').forEach(a => {
+    a.classList.toggle('active', a.dataset.view === key);
+    if (a.dataset.view === key) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+  });
+  $('pageTitle').textContent = PAGES[key][0];
+  $('pageDescription').textContent = PAGES[key][1];
+  $('intakeInfo').hidden = key !== 'formulario';
+  document.title = 'LICING · ' + PAGES[key][0];
+  if (focus) { $('pageTitle').focus({preventScroll:true}); window.scrollTo(0,0); }
+}
+window.addEventListener('hashchange', () => navigate(true));
+function renderCharts(rows, available = true) {
+  if (!available) {
+    ['publicationChart','filterChart','dashboardPreview'].forEach(id => $(id).innerHTML = '<p class="empty">No se pudieron cargar los datos. Pulsa Actualizar para volver a intentar.</p>');
+    return;
+  }
+  const dayKey = d => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  const days = Array.from({length:7},(_,i)=>new Date(Date.now()-(6-i)*DIA));
+  const values = days.map(d=>rows.filter(r=>r.fecha_publicacion && dayKey(new Date(r.fecha_publicacion))===dayKey(d)).length);
+  const max = Math.max(1,...values);
+  const labels = days.map(d=>new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',day:'numeric',month:'short'}).format(d));
+  $('publicationChart').innerHTML = '<div class="bar-chart" role="img" aria-label="'+esc(labels.map((d,i)=>d+': '+values[i]+' publicaciones').join('; '))+'">'+values.map((v,i)=>'<div class="bar-column"><b>'+v+'</b><i style="height:'+Math.round(v/max*130)+'px" title="'+esc(labels[i])+': '+v+'"></i></div>').join('')+'</div><div class="chart-labels">'+labels.map(d=>'<span>'+esc(d)+'</span>').join('')+'</div>';
+  const passed = rows.filter(esCandidata).length, rejected = rows.length-passed, pct = rows.length ? passed/rows.length*100 : 0;
+  $('filterChart').innerHTML = '<div class="donut-layout"><div class="donut" role="img" aria-label="'+passed+' pasan el filtro; '+rejected+' descartadas" style="background:conic-gradient(#4c78d9 0 '+pct+'%, #e0e7f3 '+pct+'% 100%)"><div class="donut-center"><strong>'+rows.length+'</strong><span class="sub">consultadas</span></div></div><div><div class="legend-line"><i style="background:#4c78d9"></i>Pasan el filtro <b>'+passed+'</b></div><div class="legend-line"><i style="background:#e0e7f3"></i>Descartadas <b>'+rejected+'</b></div><p class="sub">'+(rows.length ? Math.round(pct)+'% de coincidencia inicial' : 'Sin datos todavía')+'</p></div></div>';
+  const next = rows.filter(r=>esCandidata(r)&&r.fecha_cierre&&new Date(r.fecha_cierre)>new Date()).sort((a,b)=>new Date(a.fecha_cierre)-new Date(b.fecha_cierre)).slice(0,4);
+  $('dashboardPreview').innerHTML = next.length ? next.map(r=>'<div class="preview-row"><div><strong>'+esc(r.nombre)+'</strong><span class="sub">'+esc(r.codigo_mp)+' · Cierra '+esc(fecha(r.fecha_cierre))+'</span></div><button data-detail="'+esc(r.id)+'">Ver ficha</button></div>').join('') : '<p class="empty">No hay oportunidades vigentes próximas a cerrar en los datos consultados.</p>';
+}
+$('dashboardPreview').addEventListener('click',e=>{const b=e.target.closest('[data-detail]');if(b)detail(b.dataset.detail);});
+// La misma definición genera las preguntas y el resumen para no omitir respuestas.
+const INTAKE_GROUPS = [
+  {title:'01 · Conocer la oferta del hotel', help:'¿Quién evalúa las solicitudes y qué eventos puede atender el hotel?', fields:[
+    ['responsable','Encargada o encargado de eventos','text','Nombre y apellido',true],
+    ['perfil','Nombre de esta ficha','text','Ej. Oferta de eventos del hotel',true],
+    ['cargo','Cargo o área','text','Ej. Coordinación de eventos'],
+    ['tipos_evento','Tipos de eventos que pueden recibir','textarea','Seminarios, capacitaciones, congresos, reuniones…'],
+    ['eventos_excluidos','¿Qué solicitudes no atienden?','textarea','Eventos o condiciones fuera de la oferta del hotel.']
+  ]},
+  {title:'02 · Salones, asistentes y montaje', help:'Complete un salón y montaje de referencia. La capacidad puede cambiar según la distribución.', fields:[
+    ['salon','Salón o espacio de referencia','text','Nombre del salón'],
+    ['montaje','Montaje disponible','select',['Auditorio','Escuela','U','Banquete','Cóctel','Directorio','Otro']],
+    ['capacidad_min','Capacidad mínima operativa (personas)','number','Si aplica'],
+    ['capacidad_max','Capacidad máxima para este montaje (personas)','number','Por confirmar con el hotel'],
+    ['caracteristicas','Características del salón','textarea','Superficie, accesibilidad, luz natural, climatización, acústica, divisiones…'],
+    ['otros_salones','Otros salones, montajes y capacidades','textarea','Salón / montaje / capacidad. Indique combinaciones posibles y restricciones.']
+  ]},
+  {title:'03 · Equipamiento y servicios adicionales', help:'Marque lo que el hotel puede ofrecer. Lo que no marque queda pendiente de confirmar.', fields:[
+    ['equipamiento','Equipamiento disponible','checks',['Proyector y pantalla','Audio y micrófonos','Internet / Wi-Fi','Videoconferencia','Iluminación','Mobiliario']],
+    ['servicios','Servicios adicionales','checks',['Alojamiento','Coffee break','Almuerzo o cena','Banquetería','Estacionamiento','Apoyo técnico']],
+    ['condiciones_servicios','Cantidades, costos y condiciones','textarea','¿Qué está incluido? ¿Qué depende de terceros? Indique cantidades y necesidades alimentarias que pueden atender.'],
+    ['otros_servicios','Otros equipos o servicios','textarea','Streaming, traducción, transporte u otros.']
+  ]},
+  {title:'04 · Fechas, horarios y disponibilidad', help:'Defina cómo se confirma la agenda del hotel. No se presupone disponibilidad.', fields:[
+    ['modulos','Módulos que ofrece el hotel','text','Ej. mañana, tarde, jornada completa'],
+    ['duracion_modulo','Duración habitual por módulo','text','Ej. media jornada: 4 horas'],
+    ['fuente_agenda','Fuente para consultar disponibilidad','select',['Calendario de eventos del hotel','Sistema de reservas','Planilla de disponibilidad','Consulta directa al equipo','Otro']],
+    ['validador_agenda','¿Quién confirma la disponibilidad?','text','Cargo o persona responsable'],
+    ['anticipacion','Anticipación mínima (días)','number','Ej. 7'],
+    ['montaje_tiempo','Tiempo de montaje y desmontaje','text','Ej. 1 hora antes y 1 hora después'],
+    ['restricciones_agenda','Fechas bloqueadas y restricciones horarias','textarea','Días no disponibles, eventos simultáneos, horarios límite, temporadas…']
+  ]},
+  {title:'05 · Solicitud de referencia (opcional)', help:'Use un evento de ejemplo para precisar qué información se necesita. No representa una reserva confirmada.', fields:[
+    ['evento_solicitado','Tipo de evento solicitado','text','Ej. Seminario'],
+    ['asistentes','Cantidad de asistentes solicitada','number','Ej. 80'],
+    ['fecha_evento','Fecha de inicio del evento','date'],['fecha_fin','Fecha de término del evento','date'],
+    ['hora_inicio','Hora de inicio','time'],['hora_fin','Hora de término','time'],
+    ['duracion','Duración total solicitada (horas)','number','Ej. 8'],
+    ['modulo_solicitado','Horario o módulo solicitado','text','Ej. jornada completa'],
+    ['requisitos_solicitados','Salón, equipos y servicios requeridos','textarea','Detalle lo solicitado y sus cantidades para compararlo con la oferta del hotel.']
+  ]},
+  {title:'06 · Criterios que importan al evaluar', help:'Indique qué es obligatorio, qué se puede negociar y qué no influye en la decisión. Sin respuestas predeterminadas.', matrix:true, fields:[
+    ['descarte','¿Qué condición obliga a descartar una solicitud?','textarea','Ej. No disponer del salón en la fecha solicitada.'],
+    ['negociable','¿Qué se puede adaptar o negociar?','textarea','Montaje, menú, fecha, equipamiento…'],
+    ['faltantes','¿Qué hacer si falta información?','select',['Solicitar aclaración y dejar pendiente','Revisar manualmente con el equipo','Descartar solo si falta un requisito obligatorio']]
+  ]},
+  {title:'07 · Condiciones comerciales y validación', help:'Registre otras restricciones que influyen en la decisión comercial.', fields:[
+    ['minimo','Presupuesto mínimo aceptable (CLP)','number','Si aplica'],
+    ['maximo','Presupuesto máximo de referencia (CLP)','number','Si aplica'],
+    ['notas','Otras condiciones relevantes','textarea','Forma de pago, documentación, cancelaciones, ubicación o requisitos especiales.'],
+    ['validador_final','¿Quién valida la decisión final?','text','Cargo o persona'],
+    ['estado_ficha','Estado del perfil','select',['Borrador por validar con el cliente','Revisado con la encargada de eventos']]
+  ]},
+  {title:'08 · Palabras y frases de interés', help:'Escriba sus términos a mano o incorpore sugerencias revisadas. Separe cada palabra o frase con un salto de línea. Estos criterios orientarían el filtrado y la interpretación del futuro LLM.', interests:true, fields:[
+    ['intereses_palabras','Palabras de interés y sinónimos','textarea','Ej. alojamiento\nhospedaje\nseminario'],
+    ['intereses_frases','Frases que describen oportunidades de interés','textarea','Ej. Organización de seminarios con coffee break'],
+    ['exclusiones_busqueda','Palabras o frases que desea excluir','textarea','Solo exclusiones confirmadas por el equipo. Ej. venta de mobiliario']
+  ]}
+];
+const IMPORTANCE = [['tipo','Tipo de evento'],['asistentes','Cantidad de asistentes'],['salon','Características y montaje del salón'],['equipos','Equipamiento necesario'],['fecha','Fecha y disponibilidad'],['horario','Horario o módulo'],['duracion','Duración'],['servicios','Servicios adicionales'],['presupuesto','Presupuesto']];
+function intakeField([name,label,type,options,required]) {
+  const common=' name="'+name+'"'+(required?' required':'');
+  if(type==='checks')return '<div class="wide"><h3 class="field-heading">'+esc(label)+'</h3><div class="check-grid">'+options.map(v=>'<label><input type="checkbox"'+common+' value="'+esc(v)+'">'+esc(v)+'</label>').join('')+'</div></div>';
+  const input=type==='select'?'<select'+common+'><option value="">Por confirmar</option>'+options.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select>':type==='textarea'?'<textarea'+common+' rows="3" placeholder="'+esc(options||'')+'"></textarea>':'<input'+common+' type="'+type+'" placeholder="'+esc(options||'')+'"'+(type==='number'?' min="'+(['capacidad_max','asistentes'].includes(name)?'1':name==='duracion'?'0.5':'0')+'" step="'+(name==='duracion'?'0.5':'1')+'"':'')+'>';
+  return '<label'+(type==='textarea'?' class="wide"':'')+'>'+esc(label)+(required?' *':'')+input+'</label>';
+}
+function renderIntake() {
+  const matrix='<div class="criteria-matrix">'+IMPORTANCE.map(([k,label])=>'<label class="criteria-row"><span>'+esc(label)+'</span><select name="importancia_'+k+'"><option value="">Por definir</option><option>Obligatorio</option><option>Deseable / negociable</option><option>No relevante</option></select></label>').join('')+'</div>';
+  const interestAssistant='<div class="interest-assistant"><div class="section-title"><h3>Ayuda para encontrar las palabras</h3><span class="badge blue">Futura IA · simulación</span></div><p>En el producto final, el LLM propondría términos según la oferta que complete. Ahora usamos reglas de ejemplo con los servicios, eventos y montaje declarados. Revise cada propuesta antes de añadirla; podrá editarla o borrarla en los campos de arriba.</p><button type="button" id="suggestInterests" class="primary">Sugerir según mi formulario ✦</button><p id="interestStatus" role="status">No se añaden términos automáticamente ni se consultan licitaciones.</p><div id="interestSuggestions" class="suggestion-list"></div></div>';
+  $('intakeSections').innerHTML=INTAKE_GROUPS.map(g=>'<fieldset class="card panel"><legend>'+esc(g.title)+'</legend><p class="section-help">'+esc(g.help)+'</p>'+(g.matrix?matrix:'')+'<div class="fields'+(g.matrix?' spaced':'')+'">'+g.fields.map(intakeField).join('')+'</div>'+(g.interests?interestAssistant:'')+'</fieldset>').join('');
+}
+renderIntake();
+const normalizeInterest=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+const splitInterests=s=>String(s||'').split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean);
+function suggestedInterests(data) {
+  const suggestions=[];
+  const add=(text,target,reason)=>suggestions.push({text,target,reason});
+  const offerTerms={
+    'Alojamiento':[['alojamiento','hospedaje','pernoctación'],'Servicio de alojamiento para delegaciones'],
+    'Coffee break':[['coffee break','pausa café'],'Servicio de coffee break para eventos'],
+    'Almuerzo o cena':[['almuerzo','cena'],'Servicio de alimentación para asistentes a eventos'],
+    'Banquetería':[['banquetería','catering'],'Servicio de banquetería para eventos'],
+    'Estacionamiento':[['estacionamiento'],'Evento con estacionamiento para asistentes'],
+    'Apoyo técnico':[['apoyo técnico'],'Evento con apoyo técnico en sala']
+  };
+  for(const service of data.getAll('servicios')) {
+    const terms=offerTerms[service]; if(!terms)continue;
+    for(const term of terms[0])add(term,'intereses_palabras','Servicio declarado: '+service);
+    add(terms[1],'intereses_frases','Servicio declarado: '+service);
+  }
+  const events={seminario:'seminario',seminarios:'seminario',capacitacion:'capacitación',capacitaciones:'capacitación',congreso:'congreso',congresos:'congreso',reunion:'reunión',reuniones:'reunión',taller:'taller',talleres:'taller'};
+  for(const raw of splitInterests(data.get('tipos_evento'))) {
+    const event=events[normalizeInterest(raw)];if(!event)continue;
+    add(event,'intereses_palabras','Tipo de evento declarado: '+raw);
+    add('Espacio para '+event,'intereses_frases','Tipo de evento declarado: '+raw);
+  }
+  if(data.get('montaje')) {
+    add('salón de eventos','intereses_palabras','Montaje declarado: '+data.get('montaje'));
+    add('Arriendo de salón con montaje '+data.get('montaje'),'intereses_frases','Montaje declarado en la ficha del hotel');
+  }
+  const excluded=splitInterests(data.get('exclusiones_busqueda')).map(normalizeInterest);
+  const seen=new Set();
+  return suggestions.filter(s=>{const key=s.target+':'+normalizeInterest(s.text);if(seen.has(key)||excluded.some(x=>normalizeInterest(s.text).includes(x)))return false;seen.add(key);return true;});
+}
+let interestCandidates=[];
+function renderInterestSuggestions() {
+  const fields=$('criteriaForm').elements;
+  $('interestSuggestions').innerHTML=interestCandidates.map((s,i)=>{
+    const exists=splitInterests(fields[s.target].value).some(t=>normalizeInterest(t)===normalizeInterest(s.text));
+    return '<div class="suggestion-item"><div><strong>'+esc(s.text)+'</strong><small>'+(s.target==='intereses_palabras'?'Palabra / sinónimo':'Frase de interés')+' · '+esc(s.reason)+'</small></div><button type="button" data-add-interest="'+i+'"'+(exists?' disabled':'')+' aria-label="'+esc((exists?'Ya incorporado: ':'Añadir: ')+s.text)+'">'+(exists?'Ya incorporado':'Añadir +')+'</button></div>';
+  }).join('');
+}
+$('suggestInterests').addEventListener('click',()=>{
+  interestCandidates=suggestedInterests(new FormData($('criteriaForm')));
+  renderInterestSuggestions();
+  $('interestStatus').textContent=interestCandidates.length?'Propuestas simuladas según la ficha. Añada solo las que representen al hotel; las exclusiones se respetan y la capacidad y la agenda se verificarían por separado.':'Complete servicios, montaje o tipos de evento (por ejemplo, seminario) para obtener sugerencias. Si ya los completó, revise sus exclusiones. También puede escribir términos manualmente.';
+});
+$('interestSuggestions').addEventListener('click',e=>{
+  const button=e.target.closest('[data-add-interest]');if(!button)return;
+  const suggestion=interestCandidates[Number(button.dataset.addInterest)];if(!suggestion)return;
+  const input=$('criteriaForm').elements[suggestion.target];
+  if(!splitInterests(input.value).some(t=>normalizeInterest(t)===normalizeInterest(suggestion.text)))input.value+=(input.value.trim()?'\n':'')+suggestion.text;
+  $('criteriaPreview').hidden=true;renderInterestSuggestions();
+  $('interestStatus').textContent='Se añadió «'+suggestion.text+'». Puede editarlo o eliminarlo en el campo correspondiente. No se guardó en la base de datos.';
+});
+const interestSources=['servicios','tipos_evento','montaje','exclusiones_busqueda'];
+$('criteriaForm').addEventListener('input',e=>{
+  if(interestSources.includes(e.target.name)){
+    interestCandidates=[];$('interestSuggestions').innerHTML='';
+    $('interestStatus').textContent='Cambió la información de base. Vuelva a generar sugerencias y revise los términos ya incorporados.';
+  }else if(['intereses_palabras','intereses_frases'].includes(e.target.name))renderInterestSuggestions();
+});
+$('criteriaForm').addEventListener('reset',()=>{interestCandidates=[];$('interestSuggestions').innerHTML='';$('interestStatus').textContent='No se añaden términos automáticamente ni se consultan licitaciones.';});
+function validateIntake(f,d) {
+  const fail=(name,message)=>{f.elements[name].setCustomValidity(message);f.elements[name].reportValidity();return false;};
+  ['maximo','capacidad_max','fecha_fin','hora_fin'].forEach(n=>f.elements[n].setCustomValidity(''));
+  for(const [min,max,label] of [['minimo','maximo','El presupuesto máximo'],['capacidad_min','capacidad_max','La capacidad máxima']]) {
+    if(d.get(min)!==''&&d.get(max)!==''&&Number(d.get(max))<Number(d.get(min)))return fail(max,label+' debe ser igual o mayor al mínimo.');
+  }
+  if(d.get('fecha_evento')&&d.get('fecha_fin')&&d.get('fecha_fin')<d.get('fecha_evento'))return fail('fecha_fin','El término no puede ser anterior al inicio del evento.');
+  if(d.get('hora_inicio')&&d.get('hora_fin')&&d.get('hora_fin')<=d.get('hora_inicio')&&(!d.get('fecha_fin')||d.get('fecha_fin')===d.get('fecha_evento')))return fail('hora_fin','Indique una hora posterior o una fecha de término posterior si el evento cruza la medianoche.');
+  return true;
+}
+$('criteriaForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const f=e.currentTarget, d=new FormData(f);
+  if(!validateIntake(f,d))return;
+  const sections=INTAKE_GROUPS.map(g=>{
+    const entries=g.fields.map(([name,label,type])=>[label,type==='checks'?(d.getAll(name).join(', ')||'Por confirmar'):d.get(name)||'Por confirmar']);
+    if(g.matrix)entries.unshift(...IMPORTANCE.map(([k,label])=>[label,d.get('importancia_'+k)||'Por definir']));
+    return '<h3>'+esc(g.title)+'</h3><dl class="kv">'+entries.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl>';
+  }).join('');
+  $('criteriaPreview').innerHTML='<span class="badge blue">Perfil del hotel · no guardada</span><h2 class="spaced">'+esc(d.get('perfil'))+'</h2><p class="sub">Información declarada por el cliente. Pendiente de contrastar con la solicitud y la agenda real.</p>'+sections+'<div class="notice"><strong>Validación humana pendiente.</strong> Este resumen no confirma compatibilidad ni disponibilidad. Antes de participar, el equipo debe revisar capacidades, requisitos y agenda.</div>';
+  $('criteriaPreview').hidden=false;$('criteriaPreview').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+});
+function clearIntakeValidity(){['maximo','capacidad_max','fecha_fin','hora_fin'].forEach(n=>$('criteriaForm').elements[n].setCustomValidity(''));}
+$('criteriaForm').addEventListener('input',()=>{clearIntakeValidity();$('criteriaPreview').hidden=true;});
+$('criteriaForm').addEventListener('reset',()=>{$('criteriaPreview').hidden=true;clearIntakeValidity();});
+$('simulateAnalysis').addEventListener('click',()=>{
+  const event=$('analysisChoice').selectedIndex===1;
+  $('analysisResult').innerHTML='<p><span class="badge blue">Resultado simulado</span></p><h3>'+ (event?'Seminario y coffee break':'Alojamiento de delegación')+'</h3><dl class="kv"><dt>Servicio</dt><dd>'+(event?'Salón, proyección y coffee break':'20 habitaciones por 3 noches')+'</dd><dt>Participantes</dt><dd>'+(event?'80 personas':'40 personas')+'</dd><dt>Presupuesto</dt><dd>Por confirmar en las bases</dd><dt>Documentos</dt><dd>Oferta técnica, económica y antecedentes administrativos</dd></dl><div class="notice"><strong>Pendiente de validar:</strong> disponibilidad, fechas exactas y condiciones de pago.</div><a class="button" href="#formulario">Revisar criterios →</a>';
+});
+const deals=[{name:'Delegación · alojamiento',amount:'$4.800.000',stage:0},{name:'Seminario · salón y catering',amount:'$2.600.000',stage:1},{name:'Jornada · coffee break',amount:'$950.000',stage:2},{name:'Encuentro institucional',amount:'$3.200.000',stage:3}];
+const stages=['Identificada','Calificada','Participada','Adjudicada','Descartada'];
+function renderPipeline(){
+  $('pipeline').innerHTML=stages.map((s,i)=>'<section class="stage"><h2>'+s+'<span>'+deals.filter(d=>d.stage===i).length+'</span></h2>'+deals.map((d,n)=>d.stage===i?'<article class="deal"><span class="badge blue">Ejemplo '+(n+1)+'</span><p>'+esc(d.name)+'</p><p class="sub">'+d.amount+'</p>'+(i<3?'<button data-advance="'+n+'">Avanzar a '+stages[i+1]+'</button>':'<span class="badge green">Resultado de ejemplo</span>')+'</article>':'').join('')+(!deals.some(d=>d.stage===i)?'<p class="sub">Sin oportunidades de ejemplo.</p>':'')+'</section>').join('');
+}
+$('pipeline').addEventListener('click',e=>{const b=e.target.closest('[data-advance]');if(b){deals[Number(b.dataset.advance)].stage++;renderPipeline();}});
+document.querySelectorAll('[data-report]').forEach(b=>b.addEventListener('click',()=>{
+  const name=b.dataset.report;
+  const rows=name==='Resumen comercial'?[['Detectadas',24],['Calificadas',12],['Participadas',6],['Adjudicadas',2]]:name==='Rendimiento por servicio'?[['Alojamiento',12],['Salones',8],['Banquetería',4]]:[['Fuera de región',6],['Servicio no disponible',4],['Plazo insuficiente',3]];
+  const max=Math.max(...rows.map(r=>r[1]));
+  $('reportPreview').innerHTML='<div class="section-title"><h2>'+esc(name)+'</h2><span class="badge amber">Datos de ejemplo</span></div><p class="sub">Período ilustrativo · no corresponde a los registros reales.</p>'+rows.map(([label,v])=>'<div class="rubro"><div class="row"><b>'+label+'</b><span>'+v+' oportunidades</span></div><div class="bar"><i style="width:'+v/max*100+'%"></i></div></div>').join('');
+}));
+$('settingsForm').addEventListener('submit',e=>{e.preventDefault();$('settingsFeedback').textContent='Simulación completada. No se guardaron cambios ni se activaron notificaciones.';});
+// Datos de demostración aislados de las consultas reales a Supabase.
+const DEMO_CLIENTS = [
+  {id:'c1',name:'Instituto Horizonte · ficticio',relation:'Cliente recurrente',known:true,contact:'Contacto A · coordinación de eventos',visits:6,history:['6 eventos anteriores (ejemplo)','Último servicio: seminario y coffee break'],note:'Organización y contacto vinculados en esta simulación.'},
+  {id:'c2',name:'Fundación Encuentro · ficticia',relation:'Contacto conocido',known:true,contact:'Contacto B · administración',visits:2,history:['2 reuniones anteriores (ejemplo)','Contacto con relación comercial previa'],note:'La vinculación del contacto se validaría con la cartera del hotel.'},
+  {id:'c3',name:'Centro Formación Sur · ficticio',relation:'Cliente nuevo',known:false,contact:'Por identificar',visits:0,history:['Sin historial en esta demostración'],note:'Se evalúa por los requisitos de la solicitud; no tiene prioridad por recurrencia.'}
+];
+// Un solo edificio, según el alcance confirmado por el usuario. Inventario tentativo.
+const DEMO_HOTEL = {name:'Hotel Plaza San Francisco', rooms:[
+  {id:'r1',name:'Salón A · ejemplo',features:'Luz natural, climatización y acceso universal',capacity:120,layout:'Auditorio',equipment:['Proyector','Audio','Wi-Fi'],bookings:[{date:'2026-10-05',start:'09:00',end:'13:00',label:'Evento reservado'}]},
+  {id:'r2',name:'Salón B · ejemplo',features:'Espacio divisible, climatización y acceso universal',capacity:80,layout:'Escuela',equipment:['Proyector','Audio','Wi-Fi'],bookings:[{date:'2026-10-05',start:'14:00',end:'18:00',label:'Evento reservado'},{date:'2026-10-06',start:'09:00',end:'13:00',label:'Evento reservado'}]},
+  {id:'r3',name:'Salón C · ejemplo',features:'Mesa central, climatización y aislamiento acústico',capacity:20,layout:'Directorio',equipment:['Pantalla','Wi-Fi','Videoconferencia'],bookings:[]}
+]};
+const DEMO_ROOMS = DEMO_HOTEL.rooms;
+const DEMO_REQUESTS = [
+  {id:'demo1',name:'Seminario y coffee break',client:'c1',date:'2026-10-05',start:'09:30',end:'12:30',module:'Mañana',people:60,layout:'Escuela',equipment:['Proyector','Audio'],setup:30,teardown:30},
+  {id:'demo2',name:'Capacitación de equipo',client:'c3',date:'2026-10-05',start:'14:30',end:'17:30',module:'Tarde',people:90,layout:'Auditorio',equipment:['Proyector','Wi-Fi'],setup:30,teardown:30},
+  {id:'demo3',name:'Congreso de jornada completa',client:'c1',date:'2026-10-05',start:'09:00',end:'18:00',module:'Jornada completa',people:100,layout:'Auditorio',equipment:['Proyector','Audio'],setup:30,teardown:30},
+  {id:'demo4',name:'Reunión de coordinación',client:'c2',date:'2026-10-06',start:'09:30',end:'12:30',module:'Mañana',people:12,layout:'Directorio',equipment:['Videoconferencia'],setup:30,teardown:30}
+];
+const DEMO_MODULES=[['Mañana','09:00','13:00'],['Tarde','14:00','18:00'],['Jornada completa','09:00','18:00']];
+const clockMinutes=t=>Number(t.split(':')[0])*60+Number(t.split(':')[1]);
+const overlapping=(start,end,b)=>start<clockMinutes(b.end)&&end>clockMinutes(b.start);
+const demoDate=d=>d.split('-').reverse().join('/');
+function roomMatch(room,request) {
+  const reasons=[];
+  if(request.people>room.capacity)reasons.push('Capacidad insuficiente: '+room.capacity+' personas para '+request.people+' solicitadas.');
+  if(request.layout!==room.layout)reasons.push('Montaje solicitado: '+request.layout+'; disponible en el ejemplo: '+room.layout+'.');
+  const missing=request.equipment.filter(e=>!room.equipment.includes(e));
+  if(missing.length)reasons.push('Falta equipamiento: '+missing.join(', ')+'.');
+  if(room.bookings.some(b=>b.date===request.date&&overlapping(clockMinutes(request.start)-request.setup,clockMinutes(request.end)+request.teardown,b)))reasons.push('Conflicto de horario, incluyendo montaje y desmontaje.');
+  return {room,reasons,compatible:reasons.length===0};
+}
+function demoRecommendation(request) {
+  const client=DEMO_CLIENTS.find(c=>c.id===request.client), matches=DEMO_ROOMS.map(r=>roomMatch(r,request)),available=matches.filter(m=>m.compatible);
+  const priority=!available.length?'low':client.known?'high':'medium';
+  return {request,client,matches,available,priority};
+}
+const PRIORITIES={high:'Alta prioridad',medium:'Prioridad media',low:'Baja prioridad'};
+function renderRecommendations() {
+  const filter=$('recommendationFilter').value;
+  const records=DEMO_REQUESTS.map(demoRecommendation).sort((a,b)=>['high','medium','low'].indexOf(a.priority)-['high','medium','low'].indexOf(b.priority)).filter(r=>!filter||r.priority===filter);
+  $('recommendations').innerHTML=records.map(({request:r,client,available,priority})=>'<article class="recommendation '+priority+'"><div class="rec-meta"><span class="priority '+priority+'">● '+PRIORITIES[priority]+'</span><span class="badge">'+esc(client.relation)+'</span></div><h3>'+esc(r.name)+'</h3><p class="sub">'+esc(client.name)+'</p><p class="sub">'+demoDate(r.date)+' · '+r.start+'–'+r.end+' · '+r.module+' · '+r.people+' personas</p><ul><li>'+(available.length?'Encaje preliminar: '+esc(available.map(m=>m.room.name).join(', '))+'.':'Sin salón compatible para el intervalo y los requisitos solicitados.')+'</li><li>'+(client.known?(available.length?'Prioridad adicional por relación comercial previa.':'Cliente conocido; la relación previa no elimina el conflicto de disponibilidad.'):'Sin historial previo; revisar condiciones comerciales.')+'</li><li>'+ (available.length?'Capacidad, montaje y equipos coinciden en el ejemplo. Servicios adicionales por confirmar.':'Revisar alternativas de fecha, montaje o capacidad.')+'</li></ul><a class="button" href="#disponibilidad" data-match="'+r.id+'">Ver encaje y disponibilidad →</a></article>').join('')||'<p class="empty">Sin ejemplos para esta prioridad.</p>';
+}
+function renderRoomAgenda() {
+  const date=$('agendaDate').value;
+  $('roomAgenda').innerHTML=DEMO_ROOMS.map(room=>'<article class="card panel room-card"><p class="room-location">'+esc(DEMO_HOTEL.name)+' · espacio interior</p><h3>'+esc(room.name)+'</h3><span class="badge blue">'+room.capacity+' personas · '+room.layout+'</span><p class="room-features">'+esc(room.features)+'<br><strong>Equipos:</strong> '+esc(room.equipment.join(', '))+'</p>'+DEMO_MODULES.map(([label,start,end])=>{
+    const busy=room.bookings.filter(b=>b.date===date&&overlapping(clockMinutes(start),clockMinutes(end),b));
+    return '<div class="slot"><strong>'+label+' · '+start+'–'+end+'</strong><span class="priority '+(busy.length?'low':'high')+'">'+(busy.length?'No disponible en todo el módulo':'Disponible en el ejemplo')+'</span>'+(busy.length?'<span>Reserva: '+busy.map(b=>b.start+'–'+b.end).join(', ')+'</span>':'')+'</div>';
+  }).join('')+'</article>').join('');
+}
+function renderMatch() {
+  const request=DEMO_REQUESTS.find(r=>r.id===$('matchRequest').value)||DEMO_REQUESTS[0];
+  $('matchResult').innerHTML='<p><strong>'+demoDate(request.date)+' · '+request.start+'–'+request.end+' · '+request.module+'</strong></p><p class="sub">'+request.people+' asistentes · '+request.layout+' · '+request.equipment.join(', ')+' · Montaje: '+request.setup+' min antes / desmontaje: '+request.teardown+' min después.</p>'+DEMO_ROOMS.map(room=>{const m=roomMatch(room,request);return '<div class="match-row"><div class="section-title"><strong>'+esc(room.name)+'</strong><span class="priority '+(m.compatible?'high':'low')+'">'+(m.compatible?'Compatible en el ejemplo':'No compatible en el ejemplo')+'</span></div><p>'+esc(m.compatible?'Capacidad, montaje, equipamiento y horario disponibles. Confirmar servicios adicionales y agenda con el equipo antes de reservar.':m.reasons.join(' '))+'</p></div>';}).join('');
+}
+function renderClients() {
+  $('clientCards').innerHTML=DEMO_CLIENTS.map(c=>'<article class="card panel client-card"><span class="badge blue">'+esc(c.relation)+'</span><h3 class="spaced">'+esc(c.name)+'</h3><p>'+c.visits+' servicios anteriores · ejemplo</p><div class="contact"><strong>Contacto</strong><br>'+esc(c.contact)+'</div><ul class="history">'+c.history.map(h=>'<li>'+esc(h)+'</li>').join('')+'</ul><p class="sub">'+esc(c.note)+'</p><span class="priority '+(c.known?'high':'medium')+'">'+(c.known?'Puede aumentar prioridad si hay encaje':'Prioridad según requisitos')+'</span></article>').join('');
+}
+$('recommendationFilter').addEventListener('change',renderRecommendations);
+$('agendaDate').addEventListener('change',renderRoomAgenda);
+$('matchRequest').innerHTML=DEMO_REQUESTS.map(r=>'<option value="'+r.id+'">'+esc(r.name)+' · '+demoDate(r.date)+'</option>').join('');
+$('matchRequest').value=DEMO_REQUESTS[0].id;
+$('matchRequest').addEventListener('change',()=>{const r=DEMO_REQUESTS.find(r=>r.id===$('matchRequest').value);$('agendaDate').value=r.date;renderRoomAgenda();renderMatch();});
+$('recommendations').addEventListener('click',e=>{const a=e.target.closest('[data-match]');if(a){const r=DEMO_REQUESTS.find(r=>r.id===a.dataset.match);$('matchRequest').value=r.id;$('agendaDate').value=r.date;renderRoomAgenda();renderMatch();}});
+$('homeSearch').addEventListener('click',()=>{$('q').value='';$('fTipo').value='';$('soloValidas').checked=false;location.hash='oportunidades';navigate();render();$('q').focus();});
+$('homeFilters').addEventListener('click',()=>{$('filtros').hidden=false;location.hash='oportunidades';navigate();$('fTipo').focus();});
+renderRecommendations();
+renderRoomAgenda();
+renderMatch();
+renderClients();
+let intakeHelpStep = 0;
+function showIntakeHelpStep(step, focusTab = false) {
+  intakeHelpStep = Math.max(0, Math.min(2, step));
+  for (let i=0;i<3;i++) {
+    $('helpStep'+i).hidden = i !== intakeHelpStep;
+    $('helpTab'+i).setAttribute('aria-selected', String(i === intakeHelpStep));
+    $('helpTab'+i).tabIndex = i === intakeHelpStep ? 0 : -1;
+  }
+  $('helpPrevious').disabled = intakeHelpStep === 0;
+  $('helpNext').textContent = intakeHelpStep === 2 ? 'Entendido' : 'Siguiente →';
+  $('helpProgress').textContent = 'Paso '+(intakeHelpStep+1)+' de 3';
+  if (focusTab) $('helpTab'+intakeHelpStep).focus();
+}
+$('intakeInfo').addEventListener('click',()=>{showIntakeHelpStep(0);$('intakeHelp').showModal();});
+$('closeIntakeHelp').addEventListener('click',()=>$('intakeHelp').close());
+$('intakeHelp').addEventListener('close',()=>$('intakeInfo').focus());
+document.querySelectorAll('[data-help-step]').forEach(tab=>{
+  tab.addEventListener('click',()=>showIntakeHelpStep(Number(tab.dataset.helpStep)));
+  tab.addEventListener('keydown',e=>{
+    const steps={ArrowRight:(intakeHelpStep+1)%3,ArrowLeft:(intakeHelpStep+2)%3,Home:0,End:2};
+    if(Object.hasOwn(steps,e.key)){e.preventDefault();showIntakeHelpStep(steps[e.key],true);}
+  });
+});
+$('helpPrevious').addEventListener('click',()=>showIntakeHelpStep(intakeHelpStep-1,true));
+$('helpNext').addEventListener('click',()=>{if(intakeHelpStep===2)$('intakeHelp').close();else showIntakeHelpStep(intakeHelpStep+1,true);});
 pintarIconos();
+navigate();
+renderPipeline();
 load();
 </script>
 </body>

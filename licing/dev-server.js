@@ -9,16 +9,17 @@ catch { console.warn("Aviso: no se pudo leer .env (copia .env.example a .env y c
 
 const sync = require("./api/sync.js");
 const config = require("./api/config.js");
+const datos = require("./api/datos.js");
 const PORT = process.env.PORT || 3000;
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
-  if (url.pathname === "/api/sync") {
-    req.query = Object.fromEntries(url.searchParams);
-    res.status = c => { res.statusCode = c; return res; };
-    res.json = o => { res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(o, null, 2)); };
-    return sync(req, res);
-  }
+  // Helpers equivalentes a los de Vercel
+  req.query = Object.fromEntries(url.searchParams);
+  res.status = c => { res.statusCode = c; return res; };
+  res.json = o => { res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(o, null, 2)); };
+  if (url.pathname === "/api/sync") return sync(req, res);
+  if (url.pathname === "/api/datos") return datos(req, res);
   if (url.pathname === "/api/config") return config(req, res);
   if (url.pathname === "/" || url.pathname === "/index.html") {
     res.setHeader("Content-Type", "text/html; charset=utf-8");

@@ -461,9 +461,61 @@ catch (_) { document.documentElement.dataset.theme = 'light'; }
   :root[data-theme="dark"] .help-example { background:#1c3b36; border-color:#72af9a; }
   :root[data-theme="dark"] .report-icon, :root[data-theme="dark"] .info-button { background:#294663; color:#c4deff; border-color:#527ba8; }
   :root[data-theme="dark"] .skeleton { background:#2a3e58; }
+
+  /* ---------- Login (Licing/Usuarios) ---------- */
+  .login { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 24px 16px;
+           background: radial-gradient(1200px 600px at 10% -10%, var(--navy-active), transparent 60%), var(--navy); }
+  body.locked .login { display: flex; }
+  body.locked .app { display: none; }
+  .login [hidden] { display: none !important; }
+  .login-card { width: 100%; max-width: 400px; background: var(--card); color: var(--text); border-radius: 14px;
+                padding: 32px 28px 24px; box-shadow: 0 24px 60px rgba(4,12,30,.45); }
+  .login-brand { display: flex; align-items: center; gap: 10px; color: var(--navy); font-size: 24px; font-weight: 800; letter-spacing: .5px; }
+  .login-brand svg.ic { width: 26px; height: 26px; }
+  .login-sub { margin: 4px 0 22px; color: var(--muted); font-size: 12.5px; }
+  .login h1 { font-size: 18px; margin: 0 0 16px; color: var(--text); }
+  .login .field { margin: 0 0 14px; }
+  .login-hint { margin: -4px 0 14px; color: var(--muted); font-size: 12.5px; }
+  .login-msg { min-height: 20px; margin: 0 0 12px; font-size: 13px; color: var(--err); }
+  .login-msg.ok { color: var(--ok); }
+  .login-btn { width: 100%; padding: 11px 14px; font-weight: 600; }
+  .login-btn:disabled { opacity: .6; cursor: progress; }
+  .login .login-link { display: block; margin: 12px auto 0; border: 0; background: none !important; box-shadow: none !important; color: var(--accent); padding: 4px; font-size: 13px; }
+  .login-link:hover { text-decoration: underline; }
+  .login-foot { margin: 18px 0 0; text-align: center; color: var(--muted); font-size: 11.5px; }
+  :root[data-theme="dark"] .login-brand { color: #d9e8ff; }
+
+  /* Usuario conectado (barra superior) */
+  .user-chip { display: inline-flex; align-items: center; gap: 10px; padding-left: 14px; border-left: 1px solid var(--line); }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                 background: var(--accent-bg); color: var(--accent); font-weight: 700; font-size: 12.5px; }
+  .user-meta { display: flex; flex-direction: column; line-height: 1.2; }
+  .user-meta b { font-size: 13px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-meta small { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .topbar .search { min-width: 200px; }
+  @media (max-width: 1400px) { #themeLabel { display: none; } }
+  @media (max-width: 1100px) { .user-meta { display: none; } }
+  @media (max-width: 520px) { .user-meta { display: none; } .user-chip { padding-left: 0; border-left: 0; } }
 </style>
 </head>
-<body>
+<body class="locked">
+<div id="login" class="login">
+  <div class="login-card">
+    <div class="login-brand"><svg class="ic" id="icLoginLogo" aria-hidden="true"></svg>LICING</div>
+    <p class="login-sub">Asistente Inteligente de Mercado Público · Plaza San Francisco</p>
+    <form id="loginForm" novalidate>
+      <h1 id="loginTitle">Iniciar sesión</h1>
+      <p id="loginHint" class="login-hint" hidden></p>
+      <label class="field" id="loginEmailWrap">Correo<input type="email" id="loginEmail" autocomplete="username" required></label>
+      <label class="field" id="loginPassWrap">Contraseña<input type="password" id="loginPass" autocomplete="current-password" required></label>
+      <label class="field" id="loginPass2Wrap" hidden>Repetir contraseña<input type="password" id="loginPass2" autocomplete="new-password"></label>
+      <p id="loginMsg" class="login-msg" role="alert" aria-live="polite"></p>
+      <button type="submit" class="primary login-btn" id="loginBtn">Ingresar</button>
+      <button type="button" class="login-link" id="loginSwitch">¿Olvidaste tu contraseña?</button>
+    </form>
+    <p class="login-foot">Acceso solo para cuentas invitadas del hotel.</p>
+  </div>
+</div>
 <div class="app">
   <aside>
     <div class="logo"><svg class="ic" id="icLogo"></svg>LICING</div>
@@ -490,6 +542,11 @@ catch (_) { document.documentElement.dataset.theme = 'light'; }
       <div id="status" class="status"><span class="dot"></span><span id="statusText">Conectando...</span></div>
       <button type="button" id="themeToggle" aria-pressed="false" aria-label="Activar modo oscuro"><span id="themeIcon" aria-hidden="true">☾</span><span id="themeLabel">Modo oscuro</span></button>
       <button id="reload">Actualizar</button>
+      <div class="user-chip" id="userChip" hidden>
+        <span class="user-avatar" id="userAvatar" aria-hidden="true"></span>
+        <span class="user-meta"><b id="userName"></b><small id="userRole"></small></span>
+        <button type="button" id="logout">Salir</button>
+      </div>
     </div>
 
     <div class="content">
@@ -640,15 +697,14 @@ catch (_) { document.documentElement.dataset.theme = 'light'; }
 <script src="/api/config"></script>
 <script>
 // ---------------------------------------------------------------
-// CONFIGURACIÓN: se lee de las variables de entorno SUPABASE_URL y
-// SUPABASE_ANON_KEY a través de /api/config (ver .env.example).
-// La anon/publishable key es pública por diseño; la seguridad la da RLS
-// (ver supabase_rls_lectura.sql).
+// CONFIGURACIÓN: /api/config entrega USUARIOS_URL y la anon key del
+// proyecto Supabase "Licing/Usuarios" (login). Los datos de
+// "Licing/Datos" se leen por /api/datos, que exige sesión válida.
 // ---------------------------------------------------------------
-const { SUPABASE_URL = "", SUPABASE_KEY = "" } = window.LICING_CONFIG || {};
+const { USUARIOS_URL = "", USUARIOS_KEY = "", DATOS_HOST = "" } = window.LICING_CONFIG || {};
 
 const $ = id => document.getElementById(id);
-const configured = Boolean(SUPABASE_URL && SUPABASE_KEY);
+const configured = Boolean(USUARIOS_URL && USUARIOS_KEY);
 let all = [];
 
 // ---------- Iconos ----------
@@ -670,16 +726,196 @@ const ICONS = {
 const ic = n => '<svg class="ic" viewBox="0 0 24 24">' + ICONS[n] + "</svg>";
 function pintarIconos() {
   document.querySelectorAll("svg[data-ic]").forEach(s => { s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICONS[s.dataset.ic]; });
-  [["icLogo", "logo"], ["icHotel", "hotel"]].forEach(([id, n]) => { const s = $(id); s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICONS[n]; });
+  [["icLogo", "logo"], ["icHotel", "hotel"], ["icLoginLogo", "logo"]].forEach(([id, n]) => { const s = $(id); s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICONS[n]; });
+}
+
+// ---------- Sesión (Supabase Auth de Licing/Usuarios) ----------
+const SESION_KEY = "licing-sesion";
+let sesion = null, perfil = null, refrescando = null;
+const ROLES = { encargado_licitaciones: "Encargado de Licitaciones", administrador: "Administrador" };
+
+function leerSesion() { try { return JSON.parse(localStorage.getItem(SESION_KEY)); } catch (_) { return null; } }
+function guardarSesion(s) {
+  sesion = s;
+  try { s ? localStorage.setItem(SESION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESION_KEY); } catch (_) { /* solo en memoria */ }
+}
+function normSesion(d) {
+  return { access_token: d.access_token, refresh_token: d.refresh_token,
+           expires_at: Number(d.expires_at) || Math.floor(Date.now() / 1000) + (Number(d.expires_in) || 3600) };
+}
+function jwtSub(token) {
+  try { return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub; } catch (_) { return null; }
+}
+function errorAuth(d) {
+  const m = d.error_description || d.msg || d.message || d.error || "Error de autenticación";
+  if (/invalid login credentials/i.test(m)) return "Correo o contraseña incorrectos.";
+  if (/email not confirmed/i.test(m)) return "Debes confirmar tu correo antes de ingresar.";
+  if (/should be at least|weak password/i.test(m)) return "La contraseña es muy débil: usa al menos 8 caracteres.";
+  if (/different from the old/i.test(m)) return "La nueva contraseña debe ser distinta de la anterior.";
+  if (/rate limit|too many|security purposes/i.test(m)) return "Demasiados intentos. Espera un momento e inténtalo de nuevo.";
+  return m;
+}
+async function auth(path, { method = "POST", body, token } = {}) {
+  const res = await fetch(USUARIOS_URL + "/auth/v1/" + path, {
+    method,
+    headers: { apikey: USUARIOS_KEY, "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(errorAuth(data));
+  return data;
+}
+function refrescar() {
+  if (!sesion?.refresh_token) return Promise.resolve(null);
+  // Una sola renovación aunque haya varias consultas en paralelo (el refresh token rota)
+  return refrescando ||= auth("token?grant_type=refresh_token", { body: { refresh_token: sesion.refresh_token } })
+    .then(d => { guardarSesion(normSesion(d)); return sesion.access_token; })
+    .catch(() => { guardarSesion(null); return null; })
+    .finally(() => { refrescando = null; });
+}
+async function tokenVigente() {
+  if (!sesion?.access_token) return null;
+  if (sesion.expires_at - 60 > Date.now() / 1000) return sesion.access_token;
+  return refrescar();
+}
+async function cargarPerfil(token) {
+  const id = jwtSub(token);
+  const res = await fetch(USUARIOS_URL + "/rest/v1/usuario?select=id,nombre,email,rol,activo&id=eq." + encodeURIComponent(id),
+    { headers: { apikey: USUARIOS_KEY, Authorization: "Bearer " + token } });
+  if (!res.ok) throw new Error("No se pudo leer tu perfil (HTTP " + res.status + ").");
+  return (await res.json())[0] || null;
+}
+
+// ---------- Pantalla de acceso ----------
+let modoLogin = "login";
+function msgLogin(text, ok = false) { $("loginMsg").textContent = text || ""; $("loginMsg").className = "login-msg" + (ok ? " ok" : ""); }
+function setModo(modo, hint = "") {
+  modoLogin = modo;
+  const t = { login: ["Iniciar sesión", "Ingresar", "¿Olvidaste tu contraseña?"],
+              recuperar: ["Recuperar contraseña", "Enviar enlace", "Volver a iniciar sesión"],
+              nueva: ["Crea tu contraseña", "Guardar e ingresar", ""] }[modo];
+  $("loginTitle").textContent = t[0]; $("loginBtn").textContent = t[1];
+  $("loginSwitch").textContent = t[2]; $("loginSwitch").hidden = !t[2];
+  $("loginEmailWrap").hidden = modo === "nueva";
+  $("loginPassWrap").hidden = modo === "recuperar";
+  $("loginPass2Wrap").hidden = modo !== "nueva";
+  $("loginPass").autocomplete = modo === "nueva" ? "new-password" : "current-password";
+  $("loginPassWrap").firstChild.textContent = modo === "nueva" ? "Nueva contraseña" : "Contraseña";
+  $("loginHint").textContent = hint; $("loginHint").hidden = !hint;
+  $("loginBtn").disabled = !configured;
+  msgLogin("");
+}
+function mostrarLogin(mensaje = "", modo = "login") {
+  document.body.classList.add("locked");
+  $("userChip").hidden = true;
+  setModo(modo);
+  if (mensaje) msgLogin(mensaje);
+  (modo === "nueva" ? $("loginPass") : $("loginEmail")).focus();
+}
+async function entrar() {
+  const token = await tokenVigente();
+  if (!token) return mostrarLogin("Tu sesión expiró. Vuelve a ingresar.");
+  try { perfil = await cargarPerfil(token); }
+  catch (e) { return mostrarLogin(e.message); }
+  if (!perfil || !perfil.activo) {
+    guardarSesion(null);
+    return mostrarLogin(!perfil ? "Tu usuario no tiene perfil en LICING. Contacta al administrador."
+                                : "Tu cuenta está desactivada. Contacta al administrador.");
+  }
+  const iniciales = perfil.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  $("userAvatar").textContent = iniciales || "?";
+  $("userName").textContent = perfil.nombre; $("userName").title = perfil.email;
+  $("userRole").textContent = ROLES[perfil.rol] || perfil.rol;
+  $("userChip").hidden = false;
+  document.body.classList.remove("locked");
+  $("loginPass").value = ""; $("loginPass2").value = "";
+  load();
+}
+$("loginSwitch").addEventListener("click", () => { setModo(modoLogin === "login" ? "recuperar" : "login"); $("loginEmail").focus(); });
+$("loginForm").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const email = $("loginEmail").value.trim().toLowerCase(), pass = $("loginPass").value;
+  if (modoLogin !== "nueva" && !/^\S+@\S+\.\S+$/.test(email)) return msgLogin("Ingresa un correo válido.");
+  if (modoLogin === "login" && !pass) return msgLogin("Ingresa tu contraseña.");
+  if (modoLogin === "nueva") {
+    if (pass.length < 8) return msgLogin("La contraseña debe tener al menos 8 caracteres.");
+    if (pass !== $("loginPass2").value) return msgLogin("Las contraseñas no coinciden.");
+  }
+  $("loginBtn").disabled = true; msgLogin("");
+  try {
+    if (modoLogin === "login") {
+      guardarSesion(normSesion(await auth("token?grant_type=password", { body: { email, password: pass } })));
+      await entrar();
+    } else if (modoLogin === "recuperar") {
+      await auth("recover?redirect_to=" + encodeURIComponent(location.origin + location.pathname), { body: { email } });
+      setModo("login");
+      msgLogin("Si el correo está registrado, te llegará un enlace para crear una nueva contraseña.", true);
+    } else {
+      await auth("user", { method: "PUT", body: { password: pass }, token: await tokenVigente() });
+      await entrar();
+    }
+  } catch (e) { msgLogin(e.message); }
+  finally { $("loginBtn").disabled = !configured; }
+});
+$("logout").addEventListener("click", async () => {
+  const token = sesion?.access_token;
+  guardarSesion(null); perfil = null;
+  if (token) await auth("logout", { token }).catch(() => {});
+  history.replaceState(null, "", location.pathname);
+  location.reload();
+});
+
+// Enlaces de invitación o recuperación: Supabase vuelve con #access_token=...&type=invite|recovery
+function capturarHashAuth() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.has("access_token") && !h.has("error")) return null;
+  history.replaceState(null, "", location.pathname + "#dashboard");
+  if (h.has("error")) {
+    const d = h.get("error_description") || h.get("error");
+    return { error: /expired|invalid/i.test(d) ? "El enlace expiró o ya fue usado. Pide uno nuevo." : d };
+  }
+  guardarSesion(normSesion(Object.fromEntries(h)));
+  return { tipo: h.get("type") };
+}
+const hashAuth = capturarHashAuth();
+
+async function iniciarSesion() {
+  if (!configured) {
+    setModo("login");
+    return msgLogin("Falta configurar USUARIOS_URL y USUARIOS_ANON_KEY en el .env (o en las variables de entorno de Vercel).");
+  }
+  if (hashAuth?.error) return mostrarLogin(hashAuth.error);
+  if (hashAuth && (hashAuth.tipo === "invite" || hashAuth.tipo === "recovery")) {
+    mostrarLogin("", "nueva");
+    return setModo("nueva", hashAuth.tipo === "invite" ? "Bienvenido/a. Define la contraseña con la que entrarás a LICING."
+                                                        : "Escribe tu nueva contraseña.");
+  }
+  if (!hashAuth) sesion = leerSesion();
+  if (sesion) {
+    setModo("login"); msgLogin("Verificando sesión...", true);
+    return entrar();
+  }
+  mostrarLogin();
 }
 
 // ---------- Utilidades ----------
-const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY };
-async function api(path, extra = {}) {
-  const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, { headers: { ...H, ...extra } });
+async function api(path, extra = {}, reintento = true) {
+  const token = await tokenVigente();
+  if (!token) { mostrarLogin("Tu sesión expiró. Vuelve a ingresar."); throw new Error("Sesión expirada"); }
+  const i = path.indexOf("?");
+  const url = "/api/datos?t=" + encodeURIComponent(i < 0 ? path : path.slice(0, i)) +
+              "&q=" + encodeURIComponent(i < 0 ? "" : path.slice(i + 1));
+  const res = await fetch(url, { headers: { ...extra, Authorization: "Bearer " + token } });
+  if (res.status === 401 && reintento && await refrescar()) return api(path, extra, false);
+  if (res.status === 401 || res.status === 403) {
+    const m = (await res.clone().json().catch(() => ({}))).error;
+    if (res.status === 401) guardarSesion(null);
+    mostrarLogin(m || "Debes iniciar sesión.");
+    throw new Error(m || "Sin acceso");
+  }
   if (!res.ok) {
     let detail = "";
-    try { detail = (await res.json()).message || ""; } catch (_) {}
+    try { const j = await res.json(); detail = j.message || j.error || ""; } catch (_) {}
     throw new Error("HTTP " + res.status + (detail ? " - " + detail : ""));
   }
   return res;
@@ -799,7 +1035,7 @@ async function load() {
   $("rows").innerHTML = ""; showMsg("");
   if (!configured) {
     setStatus("err", "Sin configurar"); renderCharts([], false);
-    showMsg("Falta configurar SUPABASE_URL y SUPABASE_ANON_KEY en el .env (o en las variables de entorno de Vercel).", true);
+    showMsg("Falta configurar USUARIOS_URL y USUARIOS_ANON_KEY en el .env (o en las variables de entorno de Vercel).", true);
     return;
   }
   setStatus("", "Conectando...");
@@ -811,15 +1047,15 @@ async function load() {
       api("ejecucion_busqueda?select=inicio,fin,estado,disparo,n_obtenidas,n_nuevas,error&order=id.desc&limit=5").then(r => r.json()).catch(() => []),
     ]);
     all = rows;
-    setStatus("ok", "Conectado a Supabase (" + Math.round(performance.now() - t0) + " ms)");
+    setStatus("ok", "Conectado a Licing/Datos (" + Math.round(performance.now() - t0) + " ms)");
     renderStats(rows, total); renderRubros(rows); renderActs(runs); render(); renderCharts(rows);
-    $("foot").textContent = "Origen: " + new URL(SUPABASE_URL).host + " - actualizado " + new Date().toLocaleTimeString("es-CL") +
+    $("foot").textContent = "Origen: " + (DATOS_HOST || "Licing/Datos") + " - actualizado " + new Date().toLocaleTimeString("es-CL") +
       (total > rows.length ? " - se muestran las " + rows.length + " más recientes de " + total : "");
   } catch (e) {
     setStatus("err", "Sin conexión");
     $("stats").innerHTML = ""; $("rubros").innerHTML = ""; $("acts").innerHTML = "";
     showMsg("No se pudo leer la base de datos.\n" + e.message +
-      "\n\nRevisa: URL y key correctas, que el script SQL se haya ejecutado y que existan las políticas de lectura (supabase_rls_lectura.sql).", true);
+      "\n\nRevisa en el .env / Vercel: SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY de Licing/Datos, y USUARIOS_URL / USUARIOS_ANON_KEY de Licing/Usuarios.", true);
   }
 }
 
@@ -1224,7 +1460,7 @@ applyTheme(document.documentElement.dataset.theme);
 pintarIconos();
 navigate();
 renderPipeline();
-load();
+iniciarSesion();
 </script>
 </body>
 </html>

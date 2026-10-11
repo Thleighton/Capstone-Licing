@@ -41,7 +41,29 @@ licing/
 └── vercel.json
 ```
 
-## Correr en local
+## Correr con Docker (recomendado)
+
+Solo requiere **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (no hace falta instalar Node ni Python).
+
+1. Copia `.env.example` a `.env` (en la raíz) y completa las variables. Pide los valores por interno: nunca van al repo.
+2. Desde la raíz del repo:
+   ```bash
+   docker compose up --build
+   ```
+3. Abrir http://localhost:5173 (app) · http://localhost:8000/api/docs (API).
+
+El código se monta dentro de los contenedores: al guardar un archivo, el frontend y el backend se recargan solos. Comandos útiles:
+
+```bash
+docker compose down                                  # detener
+docker compose up --build -V                         # tras cambiar package.json o requirements (reinstala dependencias)
+docker compose exec -w /app/backend backend pytest   # pruebas del backend
+docker compose logs -f backend                       # ver logs de un servicio
+```
+
+Si el puerto 5173 u 8000 ya está ocupado (por ejemplo, otro `npm run dev` abierto), ciérralo antes de levantar Docker.
+
+## Correr en local (sin Docker)
 
 Requisitos: **Node 20+** y **Python 3.11+**.
 

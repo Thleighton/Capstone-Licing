@@ -1,0 +1,17 @@
+# Secretos: llegan al contenedor con env_file (docker-compose.yml), nunca dentro de la imagen
+.env
+.env.*
+!.env.example
+
+.git
+.vercel
+legacy
+
+**/node_modules
+frontend/dist
+
+**/__pycache__
+**/*.pyc
+.venv
+venv
+**/.pytest_cache

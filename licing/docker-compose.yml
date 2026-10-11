@@ -1,0 +1,41 @@
+# Entorno de desarrollo completo con Docker: `docker compose up --build`
+#   Frontend: http://localhost:5173   ·   API: http://localhost:8000/api/docs
+# Requiere el archivo .env en la raíz (copiar .env.example y completar).
+# El código se monta como volumen: los cambios se recargan solos, sin reconstruir.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      # Windows/macOS no avisan los cambios de archivos al contenedor: se revisan por sondeo.
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app/api
+      - ./backend:/app/backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/salud')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      BACKEND_URL: http://backend:8000
+      VITE_USE_POLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      # node_modules propio del contenedor (Linux): no se mezcla con el de Windows/macOS.
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy

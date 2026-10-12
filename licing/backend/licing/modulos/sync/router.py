@@ -1,9 +1,13 @@
 """GET /api/sync?fuente=todas|licitaciones|compra_agil
 
-Lo invoca Vercel Cron (vercel.json) o se llama a mano:
-    curl -H "Authorization: Bearer $CRON_SECRET" "https://TU-APP.vercel.app/api/sync?fuente=compra_agil"
+Lo invoca Vercel Cron (vercel.json, un cron por fuente) o se llama a mano:
+    curl -H "Authorization: Bearer $CRON_SECRET" "https://TU-APP.vercel.app/api/sync?fuente=licitaciones"
+
+Vercel corta la función a los 60 s (maxDuration). Pasados PRESUPUESTO_SEG no se piden más fichas:
+las que faltan se informan en "pendientes" y entran en la próxima ejecución.
 """
 import asyncio
+import time
 from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
@@ -18,6 +22,9 @@ from .normalizacion import norm, norm_compra_agil, norm_licitacion, region_codig
 from .requisitos import extraer_requisitos
 
 router = APIRouter(tags=["sync"])
+
+# Segundos para pedir fichas; el resto de los 60 s queda para la ficha en curso y cerrar la ejecución.
+PRESUPUESTO_SEG = 40
 
 
 def _ahora() -> str:
@@ -53,14 +60,23 @@ async def codigos_existentes(client: httpx.AsyncClient, codigos: list[str]) -> s
 
 
 # ---------- Fuentes ----------
-async def sync_licitaciones(client, crit: dict, ejec_id: int, maximo: int, stats: dict) -> None:
+def sin_tiempo(limite: float, restantes: int, stats: dict) -> bool:
+    if time.monotonic() < limite:
+        return False
+    stats["pendientes"] += restantes
+    return True
+
+
+async def sync_licitaciones(client, crit: dict, ejec_id: int, maximo: int, limite: float, stats: dict) -> None:
     kws = [norm(k) for k in crit["keywords"]]
     lista = (await get_licitaciones(client, "estado=activas")).get("Listado") or []
     candidatas = [l for l in lista if any(k in norm(l.get("Nombre")) for k in kws)]
     stats["obtenidas"] += len(candidatas)
     existentes = await codigos_existentes(client, [l["CodigoExterno"] for l in candidatas])
     nuevas = [l for l in candidatas if l["CodigoExterno"] not in existentes][:maximo]
-    for c in nuevas:
+    for idx, c in enumerate(nuevas):
+        if sin_tiempo(limite, len(nuevas) - idx, stats):
+            break
         try:
             await asyncio.sleep(0.4)  # la API rechaza peticiones simultáneas
             det = ((await get_licitaciones(client, "codigo=" + quote(c["CodigoExterno"], safe=""))).get("Listado") or [None])[0]
@@ -75,7 +91,7 @@ async def sync_licitaciones(client, crit: dict, ejec_id: int, maximo: int, stats
             stats["errores"].append(f"{c['CodigoExterno']}: {e}")
 
 
-async def sync_compra_agil(client, crit: dict, ejec_id: int, maximo: int, stats: dict) -> None:
+async def sync_compra_agil(client, crit: dict, ejec_id: int, maximo: int, limite: float, stats: dict) -> None:
     reg = region_codigo(crit["region"]) if crit["region"] else None
     vistos: dict[str, dict] = {}
     for kw in crit["keywords"]:
@@ -93,7 +109,9 @@ async def sync_compra_agil(client, crit: dict, ejec_id: int, maximo: int, stats:
     stats["obtenidas"] += len(vistos)
     existentes = await codigos_existentes(client, list(vistos))
     nuevos = [c for c in vistos if c not in existentes][:maximo]
-    for codigo in nuevos:
+    for idx, codigo in enumerate(nuevos):
+        if sin_tiempo(limite, len(nuevos) - idx, stats):
+            break
         try:
             det = await get_compra_agil(client, "/v2/compra-agil/" + quote(codigo, safe=""))
             n = norm_compra_agil(det, crit["region"])
@@ -108,6 +126,7 @@ async def sync_compra_agil(client, crit: dict, ejec_id: int, maximo: int, stats:
 # ---------- Handler ----------
 @router.get("/api/sync")
 async def sincronizar(request: Request, fuente: str = "todas"):
+    limite = time.monotonic() + PRESUPUESTO_SEG
     secret = env("CRON_SECRET")
     if not secret or request.headers.get("authorization") != f"Bearer {secret}":
         return JSONResponse({"error": "No autorizado"}, status_code=401)
@@ -116,7 +135,7 @@ async def sincronizar(request: Request, fuente: str = "todas"):
         return JSONResponse({"error": "Faltan variables de entorno", "faltan": faltan}, status_code=500)
 
     maximo = int(env("MAX_DETALLES", "30") or 30)
-    stats = {"obtenidas": 0, "nuevas": 0, "filtradas": 0, "errores": []}
+    stats = {"obtenidas": 0, "nuevas": 0, "filtradas": 0, "pendientes": 0, "errores": []}
     ejec_id = None
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         try:
@@ -133,12 +152,12 @@ async def sincronizar(request: Request, fuente: str = "todas"):
 
             if fuente in ("todas", "licitaciones"):
                 try:
-                    await sync_licitaciones(client, crit, ejec_id, maximo, stats)
+                    await sync_licitaciones(client, crit, ejec_id, maximo, limite, stats)
                 except Exception as e:  # noqa: BLE001
                     stats["errores"].append("licitaciones: " + str(e))
             if fuente in ("todas", "compra_agil"):
                 try:
-                    await sync_compra_agil(client, crit, ejec_id, maximo, stats)
+                    await sync_compra_agil(client, crit, ejec_id, maximo, limite, stats)
                 except Exception as e:  # noqa: BLE001
                     stats["errores"].append("compra_agil: " + str(e))
 

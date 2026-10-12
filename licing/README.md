@@ -86,8 +86,9 @@ Requisitos: **Node 20+** y **Python 3.11+**.
 
 Sincronizar a mano (con el backend corriendo):
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:8000/api/sync?fuente=compra_agil"
+curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:8000/api/sync?fuente=licitaciones"
 ```
+Cada llamada pide fichas durante 40 s como máximo (Vercel corta a los 60 s); las que faltan aparecen en `pendientes` y entran en la siguiente.
 
 ## Pruebas
 
@@ -98,6 +99,6 @@ cd frontend && npm run build  # verifica que el frontend compile
 
 ## Despliegue (Vercel)
 
-`vercel.json` ya define: build del frontend (`frontend/dist`), la función Python `api/index.py` con todas las rutas `/api/*`, y el cron diario de `/api/sync` (11:00 UTC). Las variables de entorno son las mismas de `.env.example` (Settings → Environment Variables).
+`vercel.json` ya define: build del frontend (`frontend/dist`), la función Python `api/index.py` con todas las rutas `/api/*`, y dos crons diarios de `/api/sync`: `fuente=licitaciones` (11:00 UTC) y `fuente=compra_agil` (12:00 UTC), cada uno con sus 60 s. Las variables de entorno son las mismas de `.env.example` (Settings → Environment Variables); **sin `CRON_SECRET` el cron recibe 401 y no sincroniza nada**.
 
 > Antes del primer deploy con esta estructura, en Vercel → Settings → General deja **Root Directory vacío** y **Framework Preset = Other** (vercel.json manda).

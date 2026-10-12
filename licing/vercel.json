@@ -11,6 +11,7 @@
     { "source": "/api/:path*", "destination": "/api/index" }
   ],
   "crons": [
-    { "path": "/api/sync", "schedule": "0 11 * * *" }
+    { "path": "/api/sync?fuente=licitaciones", "schedule": "0 11 * * *" },
+    { "path": "/api/sync?fuente=compra_agil", "schedule": "0 12 * * *" }
   ]
 }

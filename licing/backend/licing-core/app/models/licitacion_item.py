@@ -1,0 +1,48 @@
+from decimal import Decimal
+
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from ..database import Base
+
+
+class LicitacionItem(Base):
+    __tablename__ = "licitacion_item"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "licitacion_id",
+            "correlativo",
+            name="uq_licitacion_item_correlativo",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )
+
+    licitacion_id: Mapped[int] = mapped_column(
+        ForeignKey("licitacion.id"),
+        nullable=False,
+        index=True,
+    )
+
+    correlativo: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    codigo_producto: Mapped[str | None] = mapped_column(String(50))
+    nombre_producto: Mapped[str | None] = mapped_column(Text)
+    descripcion: Mapped[str | None] = mapped_column(Text)
+
+    cantidad: Mapped[Decimal | None] = mapped_column(Numeric())
+    unidad_medida: Mapped[str | None] = mapped_column(Text)

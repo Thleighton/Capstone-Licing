@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: licing_db
+    environment:
+      POSTGRES_USER: licing
+      POSTGRES_PASSWORD: licing
+      POSTGRES_DB: licing
+    ports:
+      - "5432:5432"
+    volumes:
+      - licing_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U licing -d licing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    container_name: licing_api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://licing:licing@db:5432/licing
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  licing_pgdata:

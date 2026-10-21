@@ -7,7 +7,13 @@ from ..database import get_db
 from ..models.raw import RawMercadoPublico
 from ..services.mercado_publico import MercadoPublicoClient
 from ..services.normalizacion import normalizar_licitacion
-from ..services.persistencia import guardar_licitacion, guardar_items
+from ..services.ingesta_lote import (
+    planificar_ingesta,
+    ejecutar_ingesta_lote,
+    EjecucionEnCursoError,
+)
+from ..services.procesamiento import procesar_detalle_guardado
+
 router = APIRouter(prefix="/ingesta", tags=["Ingesta"])
 
 
@@ -232,33 +238,10 @@ def procesar_licitacion_guardada(
         )
 
     try:
-        datos = normalizar_licitacion(registro.respuesta)
-        cantidad_declarada = datos["cantidad_items_declarada"]
-        cantidad_observada = datos["cantidad_items_observada"]
-
-        if (
-            not isinstance(cantidad_declarada, int)
-            or isinstance(cantidad_declarada, bool)
-            or cantidad_declarada < 0
-            or cantidad_declarada != cantidad_observada
-        ):
-            raise ValueError(
-                "No se procesa el detalle: la cantidad de ítems "
-                "declarada falta o no coincide con la lista recibida."
-            )
-
-        licitacion_id = guardar_licitacion(
+        resultado = procesar_detalle_guardado(
             db=db,
-            raw_id=registro.id,
-            datos=datos,
+            registro=registro,
         )
-
-        items_procesados = guardar_items(
-            db=db,
-            licitacion_id=licitacion_id,
-            items=datos["items"],
-        )
-
 
         db.commit()
 
@@ -273,10 +256,99 @@ def procesar_licitacion_guardada(
         db.rollback()
         raise
 
-    return {
-        "licitacion_id": licitacion_id,
-        "codigo_externo": datos["codigo_externo"],
-        "raw_id": registro.id,
-        "procesado": True,
-        "items_procesados": items_procesados,
-    }
+    return resultado
+
+@router.get("/licitaciones/lote/plan")
+async def ver_plan_ingesta(
+    limite: int = Query(default=5, ge=1, le=20),
+    db: Session = Depends(get_db),
+):
+    client = MercadoPublicoClient()
+
+    try:
+        return await planificar_ingesta(
+            db=db,
+            client=client,
+            limite=limite,
+        )
+
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Mercado Público respondió con estado HTTP "
+                f"{exc.response.status_code}."
+            ),
+        ) from exc
+
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo conectar con Mercado Público.",
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=str(exc),
+        ) from exc
+
+    finally:
+        await client.cerrar()
+
+@router.post("/licitaciones/lote/ejecutar")
+async def ejecutar_lote(
+    limite: int = Query(default=1, ge=1, le=5),
+    db: Session = Depends(get_db),
+):
+    client = MercadoPublicoClient()
+
+    try:
+        return await ejecutar_ingesta_lote(
+            db=db,
+            client=client,
+            limite_detalles=limite,
+        )
+    except EjecucionEnCursoError as exc:
+        db.rollback()
+        raise HTTPException(
+           status_code=409,
+           detail=str(exc),
+        ) from exc
+
+    except httpx.HTTPStatusError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "No se pudo obtener el listado de activas. "
+                "Mercado Público respondió con estado HTTP "
+                f"{exc.response.status_code}."
+            ),
+        ) from exc
+
+    except httpx.RequestError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=502,
+            detail="Falló la conexión al consultar Mercado Público.",
+        ) from exc
+
+    except ValueError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=502,
+            detail=str(exc),
+        ) from exc
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        await client.cerrar()
+
+        

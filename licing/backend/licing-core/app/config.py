@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,11 +9,20 @@ class Settings(BaseSettings):
     )
 
     mp_ticket: str
+
     mp_base_url: str = (
         "https://api.mercadopublico.cl/servicios/v1/publico"
     )
+
     database_url: str
+
     max_raw_items: int = 20
+
+    mp_pausa_detalles_segundos: float = Field(
+        default=5.0,
+        gt=0,
+        le=300,
+    )
 
 
 settings = Settings()

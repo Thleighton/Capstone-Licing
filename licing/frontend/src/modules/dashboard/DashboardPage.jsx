@@ -2,17 +2,17 @@ import { useLicitaciones } from "../../core/data/LicitacionesProvider";
 import { irA } from "../../core/router/useHashRoute";
 import ActividadReciente from "./components/ActividadReciente";
 import AsistenteIA from "./components/AsistenteIA";
-import { PublicacionesSemana, ResultadoPrefiltro } from "./components/Graficos";
+import { PublicacionesSemana, EstadoVigencia } from "./components/Graficos";
 import Indicadores from "./components/Indicadores";
 import ProximasACerrar from "./components/ProximasACerrar";
-import Rubros from "./components/Rubros";
+import Estados from "./components/Estados";
 
 export default function DashboardPage() {
-  const { rows, total, runs, status, error, abrirFicha, setQ, setFiltros } = useLicitaciones();
+  const { dashboard, runs, status, error, abrirFicha, setQ, setFiltros } = useLicitaciones();
   const estado = status.kind; // "" cargando | ok | err
 
   const nuevaBusqueda = () => {
-    setQ(""); setFiltros({ tipo: "", soloValidas: false });
+    setQ(""); setFiltros({ region: "", soloAbiertas: false });
     irA("oportunidades");
     setTimeout(() => document.querySelector(".search input")?.focus(), 0);
   };
@@ -27,21 +27,21 @@ export default function DashboardPage() {
         <a href="#oportunidades"><span>↗</span>Ver resultados</a><a href="#disponibilidad"><span>▦</span>Disponibilidad</a>
         <a href="#clientes"><span>◎</span>Clientes</a><a href="#reportes"><span>▥</span>Reportes</a>
       </div>
-      <div className="section-title live-heading"><h2>Indicadores y resultados consultados</h2><span className="badge">Datos de Supabase · independientes de la demostración</span></div>
-      <div className="overview-note"><span className="badge blue">Panel de oportunidades</span><span>Indicadores sobre las últimas 500 licitaciones consultadas.</span></div>
-      {error ? <div className="msg err">{error}</div> : estado === "ok" && <Indicadores rows={rows} total={total} />}
+      <div className="section-title live-heading"><h2>Indicadores de licitaciones</h2><span className="badge">Datos guardados · independientes de la demostración</span></div>
+      <div className="overview-note"><span className="badge blue">Panel de oportunidades</span><span>Indicadores sobre todas las licitaciones guardadas. La compatibilidad comercial está pendiente de evaluar.</span></div>
+      {error ? <div className="msg err">{error}</div> : estado === "ok" && dashboard && <Indicadores resumen={dashboard} />}
 
       <div className="dashboard-workspace">
         <div className="dashboard-main">
           <div className="chart-grid">
-            <section className="card panel"><div className="section-title"><h2>Publicaciones de la semana</h2><span className="sub">Últimos 7 días · hora de Chile</span></div><PublicacionesSemana rows={rows} estado={estado} /></section>
-            <section className="card panel"><h2>Resultado del pre-filtro</h2><ResultadoPrefiltro rows={rows} estado={estado} /></section>
+            <section className="card panel"><div className="section-title"><h2>Publicaciones de la semana</h2><span className="sub">Últimos 7 días · hora de Chile</span></div><PublicacionesSemana datos={dashboard?.publicaciones || []} estado={estado} /></section>
+            <section className="card panel"><h2>Vigencia de las licitaciones</h2><EstadoVigencia resumen={dashboard} estado={estado} /></section>
           </div>
           <div className="grid">
             <section className="card panel"><div className="section-title"><h2>Próximas a cerrar</h2><a href="#oportunidades">Ver todas →</a></div>
-              <ProximasACerrar rows={rows} estado={estado} abrirFicha={abrirFicha} /></section>
+              <ProximasACerrar rows={dashboard?.proximas || []} estado={estado} abrirFicha={abrirFicha} /></section>
             <div className="side-col">
-              <section className="card panel"><h2>Oportunidades por Rubro</h2>{estado === "ok" && <Rubros rows={rows} />}</section>
+              <section className="card panel"><h2>Estados en Mercado Público</h2>{estado === "ok" && <Estados datos={dashboard?.estados || []} />}</section>
               <section className="card panel"><h2>Actividad Reciente</h2>{estado === "ok" && <ActividadReciente runs={runs} />}</section>
             </div>
           </div>

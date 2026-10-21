@@ -2,10 +2,13 @@
 .env
 .env.*
 !.env.example
+!.env.supabase.example
+backups/
 .vercel
 
 # Frontend
 node_modules
+.npm-cache/
 frontend/dist
 
 # Python

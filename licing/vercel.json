@@ -5,13 +5,9 @@
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
-    "api/index.py": { "maxDuration": 60, "includeFiles": "backend/licing/**" }
+    "api/index.py": { "maxDuration": 60, "includeFiles": "backend/licing-core/app/**" }
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" }
-  ],
-  "crons": [
-    { "path": "/api/sync?fuente=licitaciones", "schedule": "0 11 * * *" },
-    { "path": "/api/sync?fuente=compra_agil", "schedule": "0 12 * * *" }
   ]
 }

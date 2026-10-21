@@ -1,5 +1,3 @@
-import { esCandidata, esNueva } from "../../../core/data/licitaciones";
-import { DIA } from "../../../core/ui/format";
 import Icon from "../../../core/ui/Icon";
 
 function Stat({ n, titulo, icono, nota }) {
@@ -11,15 +9,13 @@ function Stat({ n, titulo, icono, nota }) {
   );
 }
 
-export default function Indicadores({ rows, total }) {
-  const cand = rows.filter(esCandidata);
-  const pronto = cand.filter(r => r.fecha_cierre && new Date(r.fecha_cierre) - Date.now() > 0 && new Date(r.fecha_cierre) - Date.now() < 3 * DIA).length;
+export default function Indicadores({ resumen }) {
   return (
     <section className="stats">
-      <Stat n={rows.filter(esNueva).length} titulo="Nuevas hoy" icono="plus" nota="últimas 24 h" />
-      <Stat n={cand.length} titulo="Relevantes" icono="star" nota={"de " + total + " totales"} />
-      <Stat n={pronto} titulo="Cierran pronto" icono="alert" nota="en 3 días o menos" />
-      <Stat n={rows.filter(r => r.requisito_extraido?.length).length} titulo="Analizadas" icono="chart" nota="con requisitos extraídos" />
+      <Stat n={resumen.nuevas} titulo="Incorporadas hoy" icono="plus" nota="últimas 24 h" />
+      <Stat n={resumen.abiertas} titulo="Abiertas" icono="star" nota="según el último detalle guardado" />
+      <Stat n={resumen.cierran_pronto} titulo="Cierran pronto" icono="alert" nota="en 3 días o menos" />
+      <Stat n={resumen.total} titulo="Guardadas" icono="chart" nota="total de licitaciones" />
     </section>
   );
 }

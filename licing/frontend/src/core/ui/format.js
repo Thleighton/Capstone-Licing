@@ -4,10 +4,17 @@ export const DIA = 86400000;
 export const clp = n =>
   n == null ? "-" : new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 
-export const fecha = d =>
-  d ? new Date(d).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : "-";
+export function dinero(n, moneda) {
+  if (n == null) return "-";
+  if (!moneda) return new Intl.NumberFormat("es-CL").format(n) + " (moneda sin informar)";
+  try { return new Intl.NumberFormat("es-CL", { style: "currency", currency: moneda, maximumFractionDigits: moneda === "CLP" ? 0 : 2 }).format(n); }
+  catch (_) { return new Intl.NumberFormat("es-CL").format(n) + " " + moneda; }
+}
 
-export const fechaCorta = d => (d ? new Date(d).toLocaleDateString("es-CL") : "-");
+export const fecha = d =>
+  d ? new Date(d).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" }) : "-";
+
+export const fechaCorta = d => (d ? new Date(d).toLocaleDateString("es-CL", { timeZone: "America/Santiago" }) : "-");
 
 export function hace(d) {
   const s = Math.max(0, (Date.now() - new Date(d)) / 1000);

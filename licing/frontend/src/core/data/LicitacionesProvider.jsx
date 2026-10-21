@@ -1,56 +1,48 @@
-// Estado compartido de las licitaciones leídas desde "Licing/Datos".
-// Lo usan el Dashboard, Oportunidades y la barra superior (búsqueda y estado de conexión).
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { contar, datosJson } from "../api/client";
-import { getConfig } from "../api/config";
-import { SELECT_EJECUCIONES, SELECT_LICITACIONES } from "./licitaciones";
-
+// Consultas autenticadas a Core; filtros y paginación en el servidor.
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { apiJson } from "../api/client";
 const Ctx = createContext(null);
 export const useLicitaciones = () => useContext(Ctx);
-
+const LIMITE = 100;
 export function LicitacionesProvider({ children }) {
-  const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [runs, setRuns] = useState([]);
+  const [rows, setRows] = useState([]), [total, setTotal] = useState(0);
+  const [dashboard, setDashboard] = useState(null), [runs, setRuns] = useState([]);
   const [status, setStatus] = useState({ kind: "", text: "Conectando..." });
-  const [error, setError] = useState("");
-  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(""), [cargando, setCargando] = useState(true);
   const [actualizado, setActualizado] = useState(null);
-  // Búsqueda y filtros (la barra superior escribe aquí; Oportunidades los aplica)
-  const [q, setQ] = useState("");
-  const [filtros, setFiltros] = useState({ tipo: "", soloValidas: false, visibles: false });
-  // Ficha de detalle abierta (cualquier módulo puede abrirla)
-  const [fichaId, setFichaId] = useState(null);
-
+  const [q, escribirQ] = useState("");
+  const [filtros, escribirFiltros] = useState({ soloAbiertas: false, region: "", visibles: false });
+  const [pagina, setPagina] = useState(0), [fichaId, setFichaId] = useState(null);
+  const peticion = useRef(0);
   const cargar = useCallback(async () => {
-    setError(""); setCargando(true);
-    setStatus({ kind: "", text: "Conectando..." });
-    const t0 = performance.now();
+    const id = ++peticion.current;
+    setError(""); setCargando(true); setStatus({ kind: "", text: "Consultando..." });
     try {
-      const [r, t, e] = await Promise.all([
-        datosJson(SELECT_LICITACIONES),
-        contar("licitacion"),
-        datosJson(SELECT_EJECUCIONES).catch(() => []),
+      const parametros = new URLSearchParams({ q, region: filtros.region, solo_abiertas: String(filtros.soloAbiertas), limite: String(LIMITE), offset: String(pagina * LIMITE) });
+      const [listado, resumen, ejecuciones] = await Promise.all([
+        apiJson("/api/licitaciones?" + parametros), apiJson("/api/dashboard"), apiJson("/api/ingestas"),
       ]);
-      setRows(r); setTotal(t); setRuns(e); setActualizado(new Date());
-      setStatus({ kind: "ok", text: "Conectado a Licing/Datos (" + Math.round(performance.now() - t0) + " ms)" });
+      if (id !== peticion.current) return;
+      setRows(listado.items); setTotal(listado.total); setDashboard(resumen); setRuns(ejecuciones);
+      setActualizado(new Date()); setStatus({ kind: "ok", text: "Conectado" });
     } catch (e) {
-      setRows([]); setRuns([]);
-      setStatus({ kind: "err", text: "Sin conexión" });
-      setError("No se pudo leer la base de datos.\n" + e.message +
-        "\n\nRevisa en el .env / Vercel: SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY de Licing/Datos, y USUARIOS_URL / USUARIOS_ANON_KEY de Licing/Usuarios.");
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  const value = {
-    rows, total, runs, status, error, cargando, actualizado, cargar,
-    q, setQ, filtros, setFiltros: p => setFiltros(f => ({ ...f, ...p })),
+      if (id !== peticion.current) return;
+      setRows([]); setTotal(0); setDashboard(null); setRuns([]); setActualizado(null);
+      setStatus({ kind: "err", text: "Sin conexión" }); setError("No se pudieron consultar las licitaciones. " + e.message);
+    } finally { if (id === peticion.current) setCargando(false); }
+  }, [q, filtros.region, filtros.soloAbiertas, pagina]);
+  useEffect(() => {
+    setCargando(true);
+    const timer = setTimeout(cargar, 250);
+    return () => { clearTimeout(timer); peticion.current++; };
+  }, [cargar]);
+  return <Ctx.Provider value={{
+    rows, total, dashboard, runs, status, error, cargando, actualizado, cargar, pagina, setPagina, limite: LIMITE,
+    q, setQ: texto => { escribirQ(texto); setPagina(0); },
+    filtros, setFiltros: cambios => {
+      escribirFiltros(f => ({ ...f, ...cambios }));
+      if ("region" in cambios || "soloAbiertas" in cambios) setPagina(0);
+    },
     fichaId, abrirFicha: setFichaId, cerrarFicha: () => setFichaId(null),
-    datosHost: getConfig().DATOS_HOST,
-  };
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  }}>{children}</Ctx.Provider>;
 }

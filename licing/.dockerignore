@@ -2,12 +2,16 @@
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 .git
 .vercel
 legacy
 
 **/node_modules
+**/.npm-cache
 frontend/dist
 
 **/__pycache__
@@ -15,3 +19,4 @@ frontend/dist
 .venv
 venv
 **/.pytest_cache
+backups

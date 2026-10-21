@@ -1,4 +1,4 @@
-// Sesión con Supabase Auth del proyecto "Licing/Usuarios" (sin SDK, vía REST).
+// Sesión con Supabase Auth del proyecto Usuarios/Licitaciones (vía REST).
 // Mismo comportamiento que tenía el index.html original.
 import { getConfig } from "../api/config";
 

@@ -1,104 +1,137 @@
-# LICING — Asistente Inteligente de Mercado Público
+# LICING
 
-Aplicación web para el equipo de eventos del Hotel Plaza San Francisco: obtiene licitaciones y compras ágiles de Mercado Público, las filtra, analiza sus bases y acompaña la decisión comercial.
+Frontend React con un único backend FastAPI basado en LICING Core. El proyecto Supabase **Usuarios/Licitaciones** reúne Auth, perfiles y PostgreSQL para licitaciones. También se conserva PostgreSQL local como entorno de desarrollo.
 
-- **Frontend:** React + Vite (`frontend/`), un módulo por carpeta.
-- **Backend:** Python + FastAPI (`backend/licing/`), cumple RNF-03. Se publica en Vercel como función serverless (`api/index.py`).
-- **Datos:** dos proyectos Supabase — *Licing/Usuarios* (login y perfiles) y *Licing/Datos* (licitaciones). El navegador nunca recibe la `service_role`.
-
-Reparto de módulos y forma de trabajo: ver **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+El alojamiento de React y Core es **Vercel**: sigue **[la guía de despliegue](docs/VERCEL.md)**, que incluye la preparación de Supabase. Docker es opcional para desarrollo y pruebas locales; los Compose no forman parte de producción.
 
 ## Estructura
 
-```
+```text
 licing/
-├── api/index.py                  ← entrada del backend en Vercel (no tocar)
-├── backend/
-│   ├── licing/
-│   │   ├── main.py               ← registra los routers de cada módulo
-│   │   ├── core/                 ← auth, config, cliente Supabase (compartido)
-│   │   └── modulos/
-│   │       ├── config_publica.py ← GET /api/config
-│   │       ├── datos.py          ← GET /api/datos (lectura segura de Licing/Datos)
-│   │       ├── sync/             ← GET /api/sync (E1: Mercado Público → Supabase)
-│   │       ├── analisis.py       ← /api/analisis/* (E4/E5)
-│   │       └── plantilla.py      ← ejemplo para módulos nuevos
-│   └── tests/                    ← pytest
-├── frontend/
-│   └── src/
-│       ├── App.jsx               ← arma login + layout + módulos (no se toca para agregar módulos)
-│       ├── core/                 ← auth, cliente API, layout, router, UI compartida
-│       ├── shared/demo/          ← datos ficticios (salones, clientes, solicitudes)
-│       ├── styles/global.css     ← estilos del prototipo original
-│       └── modules/
-│           ├── index.jsx         ← REGISTRO de módulos (orden del menú)
-│           ├── _plantilla/       ← copiar para crear un módulo
-│           ├── dashboard/  oportunidades/  perfil-hotel/  disponibilidad/
-│           └── clientes/  analisis/  seguimiento/  reportes/  configuracion/
-├── supabase/migrations/          ← SQL versionado
-├── legacy/                       ← versión anterior (index.html + api Node), solo referencia
-├── requirements.txt              ← dependencias Python (Vercel)
-└── vercel.json
+├── frontend/                    # React + Vite y módulos existentes
+├── backend/licing-core/
+│   ├── app/
+│   │   ├── main.py              # Única aplicación FastAPI
+│   │   ├── auth.py              # Validación de sesión, perfil activo y roles
+│   │   ├── api/                 # Configuración pública, consultas e ingesta
+│   │   ├── models/              # Tablas existentes de Core
+│   │   └── services/            # Descarga, normalización y persistencia de Core
+│   ├── alembic/                 # Migraciones existentes
+│   ├── tests/
+│   └── docker-compose.yml      # Solo Core + PostgreSQL
+├── api/index.py                 # Entrada de Core para Vercel o uvicorn
+├── supabase/migrations/         # Solo usuarios y perfiles
+└── docker-compose.yml          # React + Core + PostgreSQL
 ```
 
-## Correr con Docker (recomendado)
+## Configuración
 
-Solo requiere **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (no hace falta instalar Node ni Python).
+1. Copia `.env.example` a `.env` dentro de `licing/`, si todavía no existe.
+2. Completa `USUARIOS_URL` y `USUARIOS_ANON_KEY` del mismo proyecto Supabase Usuarios/Licitaciones.
+3. Completa `MP_TICKET` y `DATABASE_URL`. Puedes conservar estos valores en `backend/licing-core/.env`: ese archivo tiene prioridad sobre `licing/.env` y no se modifica al actualizar el código. Las variables del proceso tienen prioridad sobre ambos archivos.
+4. La tabla `public.usuario`, sus políticas RLS y Supabase Auth se conservan. Sus migraciones están en `supabase/migrations/`.
 
-1. Copia `.env.example` a `.env` (en la raíz) y completa las variables. Pide los valores por interno: nunca van al repo.
-2. Desde la raíz del repo:
-   ```bash
-   docker compose up --build
-   ```
-3. Abrir http://localhost:5173 (app) · http://localhost:8000/api/docs (API).
+El navegador recibe únicamente la configuración pública del proyecto para el login. Las credenciales de PostgreSQL y el ticket de Mercado Público permanecen en el servidor. Ya no se necesitan `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ni `CRON_SECRET` del backend retirado.
 
-El código se monta dentro de los contenedores: al guardar un archivo, el frontend y el backend se recargan solos. Comandos útiles:
+## Docker
 
-```bash
-docker compose down                                  # detener
-docker compose up --build -V                         # tras cambiar package.json o requirements (reinstala dependencias)
-docker compose exec -w /app/backend backend pytest   # pruebas del backend
-docker compose logs -f backend                       # ver logs de un servicio
+Desde `licing/`:
+
+```powershell
+docker compose up --build
 ```
 
-Si el puerto 5173 u 8000 ya está ocupado (por ejemplo, otro `npm run dev` abierto), ciérralo antes de levantar Docker.
+App: http://localhost:5173 · API: http://localhost:8000/api/docs
 
-## Correr en local (sin Docker)
+El Compose principal usa el mismo nombre de proyecto, contenedores y volumen predeterminado que el Compose original de Core (`licing-core`, `licing_db`, `licing_api` y `licing-core_licing_pgdata`). Si levantaste Core con un nombre de proyecto personalizado, usa el mismo `docker compose -p <nombre>` al pasar al Compose principal para reutilizar su volumen.
 
-Requisitos: **Node 20+** y **Python 3.11+**.
+Ejecuta un solo Compose a la vez. Para cambiar desde el Compose de Core puedes detenerlo con `docker compose down` desde su carpeta, sin borrar volúmenes, y levantar el principal. Nunca uses `down -v` si quieres conservar sus datos.
 
-1. Copia `.env.example` a `.env` (en la raíz) y completa las variables. Si ya tenías `.env`, sirve el mismo.
-2. Backend (terminal 1, desde la raíz):
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate            # Windows  (macOS/Linux: source .venv/bin/activate)
-   pip install -r backend/requirements-dev.txt
-   uvicorn api.index:app --reload --port 8000
-   ```
-   Documentación interactiva de la API: http://localhost:8000/api/docs
-3. Frontend (terminal 2):
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Abrir http://localhost:5173 — Vite reenvía `/api/*` al backend del puerto 8000.
+La API aplica `alembic upgrade head` antes de arrancar. Se conservan los modelos y migraciones de almacenamiento de Core. Una migración adicional habilita RLS en sus tablas para compartir proyecto con Auth. El código se monta como volumen y se recarga al editarlo.
 
-Sincronizar a mano (con el backend corriendo):
-```bash
-curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:8000/api/sync?fuente=licitaciones"
+## Local sin Docker
+
+Requiere Python 3.12, Node y un PostgreSQL accesible. Si PostgreSQL está en Docker, usa `localhost` en el `DATABASE_URL` local; dentro de Compose se utiliza `db`.
+
+Desde `licing/`:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 ```
-Cada llamada pide fichas durante 40 s como máximo (Vercel corta a los 60 s); las que faltan aparecen en `pendientes` y entran en la siguiente.
+
+Desde `licing/backend/licing-core/`, con ese entorno activado:
+
+```powershell
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
+
+En otra terminal, desde `licing/frontend/`:
+
+```powershell
+npm ci
+npm run dev
+```
+
+También puedes ejecutar `uvicorn api.index:app --reload --port 8000` desde `licing/`: sirve la misma aplicación Core.
+
+## API y permisos
+
+| Ruta | Uso | Acceso |
+|---|---|---|
+| GET /api/config | Configuración pública del login | Público |
+| GET /health, /api/salud | Salud de la aplicación | Público |
+| GET /api/licitaciones | Listado con q, region, solo_abiertas, limite y offset | Usuario activo |
+| GET /api/licitaciones/{id} | Detalle e ítems normalizados | Usuario activo |
+| GET /api/dashboard | Indicadores de toda la base y próximos cierres | Usuario activo |
+| GET /api/ingestas | Últimas ejecuciones | Usuario activo |
+| /api/ingesta/licitaciones/... | Rutas originales de descarga y procesamiento de Core | Administrador |
+
+Las rutas originales `/ingesta/...` siguen disponibles con los mismos permisos para compatibilidad. Envía el token de Supabase Usuarios/Licitaciones como `Authorization: Bearer <token>`. El frontend lo adjunta y renueva automáticamente.
+
+Los administradores tienen un botón **Obtener licitaciones** que ejecuta un lote de un detalle. La ingesta conserva los límites, la pausa entre descargas y el bloqueo de Core. No hay un cron automático configurado en esta versión.
+
+Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem es inválido, se revierten la licitación y sus ítems, se conserva la respuesta original y se continúa con los siguientes códigos. El historial registra el resultado parcial y sus errores.
+
+## Datos y pantallas
+
+- Oportunidades consulta todas las páginas del listado mediante la API, con búsqueda y filtros en el servidor.
+- Las fichas muestran código, organismo, estado, montos con su moneda, fechas e ítems de Core.
+- Las fechas originales sin zona se interpretan como hora de Chile al responder; no se modifica el almacenamiento de Core.
+- Dashboard calcula totales, incorporaciones de las últimas 24 horas, abiertas, próximos cierres y publicaciones sobre toda la base. Estar abierta no representa compatibilidad comercial.
+- Las pantallas de perfil, disponibilidad, clientes, seguimiento y reportes conservan su demostración. El análisis de bases utiliza ejemplos locales, sin depender del backend retirado.
+- Compra Ágil, filtros comerciales, requisitos extraídos e IA no forman parte del Core actual.
+- El lote de Core busca códigos nuevos. Actualizar periódicamente detalles de licitaciones ya guardadas queda pendiente.
+
+Los datos anteriores de Supabase Datos no se migran automáticamente: el esquema de Core es distinto. El destino actual es el proyecto único Usuarios/Licitaciones; las tablas creadas manualmente deben verificarse antes de registrarlas en Alembic.
 
 ## Pruebas
 
-```bash
-cd backend && pytest          # backend
-cd frontend && npm run build  # verifica que el frontend compile
+Desde `licing/backend/licing-core/`, con las dependencias de desarrollo instaladas:
+
+```powershell
+python -m pytest -q
 ```
 
-## Despliegue (Vercel)
+Sin `TEST_DATABASE_URL`, se ejecutan las pruebas de autenticación, permisos y normalización; las de PostgreSQL se omiten. Las pruebas nunca usan el `DATABASE_URL` de tus archivos `.env`.
 
-`vercel.json` ya define: build del frontend (`frontend/dist`), la función Python `api/index.py` con todas las rutas `/api/*`, y dos crons diarios de `/api/sync`: `fuente=licitaciones` (11:00 UTC) y `fuente=compra_agil` (12:00 UTC), cada uno con sus 60 s. Las variables de entorno son las mismas de `.env.example` (Settings → Environment Variables); **sin `CRON_SECRET` el cron recibe 401 y no sincroniza nada**.
+Para integración, prepara un PostgreSQL separado con un nombre de base que contenga `test`. En esa terminal configura ambas variables con su URL:
 
-> Antes del primer deploy con esta estructura, en Vercel → Settings → General deja **Root Directory vacío** y **Framework Preset = Other** (vercel.json manda).
+```powershell
+$env:TEST_DATABASE_URL = 'postgresql+psycopg://usuario:clave@localhost:55439/licing_test'
+$env:DATABASE_URL = $env:TEST_DATABASE_URL
+$env:MP_TICKET = 'test'
+python -m alembic upgrade head
+python -m pytest -q
+```
+
+Desde `licing/frontend/`: `npm run build`.
+
+## Vercel
+
+La guía principal está en **[docs/VERCEL.md](docs/VERCEL.md)**. En el proyecto Vercel usa Root Directory `licing` y Framework Preset `Other`.
+
+`api/index.py` importa Core y `vercel.json` empaqueta su código. Configura `DATABASE_URL` de un PostgreSQL accesible desde el despliegue, `MP_TICKET`, `USUARIOS_URL` y `USUARIOS_ANON_KEY`.
+
+Aplica las migraciones de Core antes del despliegue, desde un entorno conectado a esa base. Mantén los lotes pequeños para respetar el límite de ejecución de la función. Vercel no inicia el PostgreSQL local de Docker.

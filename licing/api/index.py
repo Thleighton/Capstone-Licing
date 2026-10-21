@@ -1,9 +1,7 @@
-# Punto de entrada del backend en Vercel. Todas las rutas /api/* llegan aquí
-# (ver "rewrites" en vercel.json) y las atiende la app FastAPI de backend/licing.
-# En local: `uvicorn api.index:app --reload --port 8000` desde la raíz del repo.
+# Entrada única: en local y en Vercel se sirve el mismo backend Core.
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", "licing-core"))
 
-from licing.main import app  # noqa: E402,F401
+from app.main import app  # noqa: E402,F401

@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { ROLES } from "../auth/session";
 import { useLicitaciones } from "../data/LicitacionesProvider";
 import { useTheme } from "../ui/ThemeProvider";
+import BotonIngesta from "./BotonIngesta";
 
 export default function Topbar() {
   const { perfil, logout } = useAuth();
@@ -23,6 +24,7 @@ export default function Topbar() {
         <span aria-hidden="true">{dark ? "☀" : "☾"}</span><span id="themeLabel">{dark ? "Modo claro" : "Modo oscuro"}</span>
       </button>
       <button type="button" onClick={cargar}>Actualizar</button>
+      {perfil?.rol === "administrador" && <BotonIngesta />}
       {perfil && (
         <div className="user-chip">
           <span className="user-avatar" aria-hidden="true">{iniciales || "?"}</span>

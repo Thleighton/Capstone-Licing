@@ -1,7 +1,7 @@
 -- =====================================================================
 -- LICING - Base de datos de USUARIOS
--- Ejecutar en el SQL Editor del proyecto Supabase "Licing/Usuarios"
--- (proyecto separado de "Licing/Datos", que guarda licitaciones y criterios).
+-- Ejecutar en el SQL Editor del proyecto Supabase "Usuarios/Licitaciones"
+-- Las licitaciones se guardan en PostgreSQL mediante el backend LICING Core.
 --
 -- Qué implementa (fuentes en Drive / proyecto):
 --   * Modelo relacional Fase 1: Usuario(id, nombre, email, rol), referenciado
@@ -18,11 +18,9 @@
 --   * Rol principal = encargado_licitaciones (único perfil de los RF).
 --     Se agrega 'administrador' solo para dar de alta / desactivar cuentas
 --     (C.U. de administración pendiente de validar con el cliente).
---   * Usuarios y Datos son proyectos distintos: no hay FK entre ellos.
---     En Datos, las columnas usuario_id (criterio_busqueda, historial, etc.)
---     guardan el uuid de este proyecto como valor simple (sin FK).
---     El backend (api/ en Vercel) valida la sesión contra Usuarios y consulta
---     Datos con service_role. sync.js no se ve afectado.
+--   * Supabase Auth, los perfiles y las tablas de Core comparten proyecto.
+--     Core valida la sesión contra Supabase y exige un perfil activo antes
+--     de consultar licitaciones. Las ingestas requieren rol administrador.
 --
 -- El script es re-ejecutable (IF NOT EXISTS / OR REPLACE / DROP POLICY IF EXISTS).
 -- =====================================================================
@@ -290,8 +288,6 @@ COMMIT;
 -- 3) Desactivar Authentication > Providers > Email > "Allow new users to sign up"
 --    para que solo entren cuentas invitadas (uso interno del hotel).
 --
--- PASO SIGUIENTE (en Licing/Datos, cuando index.html tenga login):
---   ALTER TABLE criterio_busqueda ADD COLUMN IF NOT EXISTS usuario_id uuid; -- sin FK
---   y mover las lecturas del dashboard a una ruta api/ que verifique el token
---   de Licing/Usuarios (supabase.auth.getUser) antes de consultar Datos.
+-- Configurar USUARIOS_URL y USUARIOS_ANON_KEY en licing/.env para conectar
+-- el frontend React y la validación de sesiones del backend Core.
 -- =====================================================================

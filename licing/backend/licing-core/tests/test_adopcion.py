@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 
-from app.adopcion import REVISION_RLS, registrar_esquema, verificar_esquema
+from app.adopcion import REVISION_ACTUAL, registrar_esquema, verificar_esquema
 
 
 def test_verificacion_sin_modificaciones(integration_db):
@@ -27,7 +27,7 @@ def test_adopta_tablas_manuales_y_conserva_datos_y_usuarios(integration_db):
 
     registrar_esquema(connection)
 
-    assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION_RLS
+    assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION_ACTUAL
     assert connection.execute(text("SELECT nombre FROM licitacion WHERE codigo_externo='TEST-ADOPCION'")).scalar_one() == "Registro existente"
     assert connection.execute(text("SELECT nombre FROM usuario")).scalar_one() == "Cuenta existente"
     assert connection.execute(text("SELECT count(*) FROM pg_policies WHERE tablename='usuario' AND policyname='perfil_existente'")).scalar_one() == 1
@@ -95,3 +95,4 @@ def test_roles_publicos_no_leen_ni_escriben_core(integration_db, rol):
         with connection.begin_nested():
             connection.execute(text("INSERT INTO licitacion (id,codigo_externo,raw_id) VALUES (999999999,'TEST-BLOQUEADO',:id)"), {"id": raw_id})
     connection.execute(text("RESET ROLE"))
+

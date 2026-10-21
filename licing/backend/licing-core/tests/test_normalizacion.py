@@ -77,3 +77,19 @@ def test_procesa_varios_items():
     assert resultado["cantidad_items_declarada"] == 2
     assert resultado["cantidad_items_observada"] == 2
     assert resultado["items"][1]["nombre_producto"] == "Producto B"
+
+
+def test_conserva_contexto_sin_inferir_fechas_o_montos():
+    original = {"MontoEstimado": None, "VisibilidadMonto": 0, "Estimacion": 2, "SubContratacion": 0,
+        "Fechas": {"FechaInicio": "2026-10-01T10:00:00", "FechaFinal": "2026-10-03T10:00:00"},
+        "TiempoDuracionContrato": "24", "UnidadTiempoDuracionContrato": 4,
+        "Items": {"Cantidad": 1, "Listado": [{"Correlativo": 1, "CodigoCategoria": "90110000", "Categoria": "Alojamiento"}]}}
+    salida = normalizar_licitacion(original)
+    assert salida["monto_estimado"] is None and salida["visibilidad_monto"] == 0
+    assert salida["fechas_fuente"] == original["Fechas"]
+    assert salida["fecha_cierre"] is None
+    assert salida["condiciones_fuente"]["SubContratacion"] == 0
+    assert salida["condiciones_fuente"]["TiempoDuracionContrato"] == "24"
+    assert salida["items"][0]["codigo_categoria"] == "90110000"
+    salida["fechas_fuente"]["FechaInicio"] = "cambio"
+    assert original["Fechas"]["FechaInicio"] != "cambio"

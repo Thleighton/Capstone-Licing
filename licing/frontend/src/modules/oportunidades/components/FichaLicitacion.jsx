@@ -23,14 +23,19 @@ export default function FichaLicitacion() {
     <div className="dlg-body">{!actual ? "Cargando..." : actual.error ? <p role="alert">Error: {actual.error}</p> : <>
       <dl className="kv">
         <dt>Organismo</dt><dd>{r.nombre_organismo || "-"}</dd><dt>Unidad compradora</dt><dd>{r.nombre_unidad || "-"}</dd>
-        <dt>Ubicación</dt><dd>{[r.comuna_comprador, r.region_comprador].filter(Boolean).join(", ") || "-"}</dd>
+        <dt>Ubicación del comprador</dt><dd>{[r.comuna_comprador, r.region_comprador].filter(Boolean).join(", ") || "No informada"}</dd>
+        <dt>Tipo</dt><dd>{r.tipo || "No informado"}</dd>
         <dt>Estado</dt><dd>{r.estado || "-"}</dd><dt>Publicación</dt><dd>{fecha(r.fecha_publicacion)}</dd>
         <dt>Cierre</dt><dd>{fecha(r.fecha_cierre)}</dd><dt>Monto estimado</dt><dd>{dinero(r.monto_estimado, r.moneda)}</dd>
+        <dt>Tipo de estimación</dt><dd>{{1: "Presupuesto disponible", 2: "Precio referencial", 3: "No es posible estimar"}[r.estimacion] || "No informado"}</dd>
+        <dt>Visibilidad del monto</dt><dd>{r.visibilidad_monto === 1 ? "Público" : r.visibilidad_monto === 0 ? "No publicado" : "No informada"}</dd>
       </dl>
       <h3>Descripción</h3><p>{r.descripcion || "Sin descripción"}</p><h3>Ítems ({actual.items.length})</h3>
-      <table><thead><tr><th>#</th><th>Producto</th><th>Descripción</th><th>Cantidad</th><th>Unidad</th></tr></thead>
-        <tbody>{actual.items.map(i => <tr key={i.id}><td>{i.correlativo}</td><td>{i.nombre_producto || i.codigo_producto || "-"}</td><td>{i.descripcion || "-"}</td><td>{i.cantidad ?? "-"}</td><td>{i.unidad_medida || "-"}</td></tr>)}</tbody>
+      <div className="scroll"><table><thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th>Descripción</th><th>Cantidad</th><th>Unidad</th></tr></thead>
+        <tbody>{actual.items.map(i => <tr key={i.id}><td>{i.correlativo}</td><td>{i.nombre_producto || "-"}<div className="sub">{i.codigo_producto}</div></td><td>{i.categoria || "No informada"}<div className="sub">{i.codigo_categoria}</div></td><td>{i.descripcion || "-"}</td><td>{i.cantidad ?? "-"}</td><td>{i.unidad_medida || "-"}</td></tr>)}</tbody>
       </table><p className="sub">La compatibilidad con el hotel y los requisitos deben revisarse en las bases.</p>
+      </div>
     </>}</div>
   </Dialog>;
 }
+

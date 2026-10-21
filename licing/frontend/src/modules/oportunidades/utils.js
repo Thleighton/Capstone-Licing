@@ -4,10 +4,11 @@ export function officialOpportunityUrl(r) {
   // Las cotizaciones COT tienen su propia ficha pública, distinta de una licitación.
   if (/^\d+-\d+-COT\d+$/i.test(code)) return "https://buscador.mercadopublico.cl/ficha?code=" + encodeURIComponent(code);
   try {
-    const url = new URL(r.url);
+    const url = new URL(r.url_oficial || r.url);
     if (url.protocol === "https:" && (url.hostname === "mercadopublico.cl" || url.hostname.endsWith(".mercadopublico.cl")) && !url.username && !url.password) return url.href;
   } catch (_) { /* url inválida */ }
   if (/^\d+-\d+-[A-Z]+\d+$/i.test(code))
-    return "https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idlicitacion=" + encodeURIComponent(code);
+    return "https://www.mercadopublico.cl/fichaLicitacion.html?idLicitacion=" + encodeURIComponent(code);
   return null;
 }
+

@@ -101,7 +101,9 @@ Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem
 - Las fechas originales sin zona se interpretan como hora de Chile al responder; no se modifica el almacenamiento de Core.
 - Dashboard calcula totales, incorporaciones de las últimas 24 horas, abiertas, próximos cierres y publicaciones sobre toda la base. Estar abierta no representa compatibilidad comercial.
 - Las pantallas de perfil, disponibilidad, clientes, seguimiento y reportes conservan su demostración. El análisis de bases utiliza ejemplos locales, sin depender del backend retirado.
-- Compra Ágil, filtros comerciales, requisitos extraídos e IA no forman parte del Core actual.
+- El contexto de la API y las categorías de los ítems se conservan para futuras búsquedas. Véase [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md).
+- Se pueden registrar versiones de documentos, texto y hechos extraídos mediante la API. No se almacenan PDF ni se ejecuta extracción o IA automáticamente.
+- Compra Ágil y filtros comerciales o semánticos todavía no forman parte del Core actual.
 - El lote de Core busca códigos nuevos. Actualizar periódicamente detalles de licitaciones ya guardadas queda pendiente.
 
 Los datos anteriores de Supabase Datos no se migran automáticamente: el esquema de Core es distinto. El destino actual es el proyecto único Usuarios/Licitaciones; las tablas creadas manualmente deben verificarse antes de registrarlas en Alembic.
@@ -135,3 +137,4 @@ La guía principal está en **[docs/VERCEL.md](docs/VERCEL.md)**. En el proyecto
 `api/index.py` importa Core y `vercel.json` empaqueta su código. Configura `DATABASE_URL` de un PostgreSQL accesible desde el despliegue, `MP_TICKET`, `USUARIOS_URL` y `USUARIOS_ANON_KEY`.
 
 Aplica las migraciones de Core antes del despliegue, desde un entorno conectado a esa base. Mantén los lotes pequeños para respetar el límite de ejecución de la función. Vercel no inicia el PostgreSQL local de Docker.
+

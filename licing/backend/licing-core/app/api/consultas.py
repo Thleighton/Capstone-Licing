@@ -4,7 +4,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from ..models.ejecucion_ingesta import EjecucionIngesta
 from ..models.licitacion import Licitacion
 from ..models.licitacion_item import LicitacionItem
 from ..models.raw import RawMercadoPublico
+from ..services.enlaces import ficha_oficial
 
 CHILE = ZoneInfo("America/Santiago")
 router = APIRouter(prefix="/api", tags=["Consultas"], dependencies=[Depends(usuario_actual)])
@@ -35,6 +36,14 @@ class LicitacionResumen(BaseModel):
     nombre_unidad: str | None
     region_comprador: str | None
     comuna_comprador: str | None
+    tipo: str | None
+    estimacion: int | None
+    visibilidad_monto: int | None
+
+    @computed_field
+    @property
+    def url_oficial(self) -> str | None:
+        return ficha_oficial(self.codigo_externo)
 
     @field_validator("fecha_publicacion", "fecha_cierre")
     @classmethod
@@ -53,6 +62,22 @@ class ItemResumen(BaseModel):
     descripcion: str | None
     cantidad: Decimal | None
     unidad_medida: str | None
+    codigo_categoria: str | None
+    categoria: str | None
+    estado_fuente: int | None
+    adjudicacion_fuente: dict | None
+
+
+class LicitacionDetalle(LicitacionResumen):
+    codigo_tipo: int | None
+    justificacion_monto: str | None
+    direccion_comprador: str | None
+    direccion_entrega: str | None
+    direccion_visita: str | None
+    fechas_fuente: dict | None
+    condiciones_fuente: dict | None
+    normalizacion_version: str | None
+    normalizado_en: datetime | None
 
 
 def _ahora_chile():
@@ -103,7 +128,7 @@ def detalle_licitacion(licitacion_id: int, response: Response, db: Session = Dep
         LicitacionItem.licitacion_id == fila.id,
     ).order_by(LicitacionItem.correlativo)).all()
     response.headers["Cache-Control"] = "no-store"
-    return {"licitacion": LicitacionResumen.model_validate(fila), "items": [ItemResumen.model_validate(i) for i in items]}
+    return {"licitacion": LicitacionDetalle.model_validate(fila), "items": [ItemResumen.model_validate(i) for i in items]}
 
 
 @router.get("/dashboard")
@@ -154,3 +179,4 @@ def listar_ingestas(response: Response, limite: int = Query(default=5, ge=1, le=
         "procesados": f.procesados, "n_errores": len(f.errores or []),
         "detenido_por_error_api": f.detenido_por_error_api,
     } for f in filas]
+

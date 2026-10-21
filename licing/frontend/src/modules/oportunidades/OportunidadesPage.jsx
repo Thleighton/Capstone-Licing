@@ -1,6 +1,7 @@
 import { useLicitaciones } from "../../core/data/LicitacionesProvider";
 import { dinero, fechaCorta } from "../../core/ui/format";
 import EstadoBadge from "./components/EstadoBadge";
+import { officialOpportunityUrl } from "./utils";
 export default function OportunidadesPage() {
   const { rows, total, filtros, setFiltros, abrirFicha, error, cargando, pagina, setPagina, limite } = useLicitaciones();
   return <>
@@ -15,7 +16,8 @@ export default function OportunidadesPage() {
         <colgroup><col style={{ width: 140 }} /><col /><col style={{ width: "25%" }} /><col style={{ width: 130 }} /><col style={{ width: 110 }} /></colgroup>
         <thead><tr><th>ID</th><th>Nombre</th><th>Institución</th><th>Monto</th><th>Estado</th></tr></thead>
         <tbody>{!cargando && rows.map(r => <tr key={r.id} onClick={() => abrirFicha(r.id)}>
-          <td><button className="cod" onClick={e => { e.stopPropagation(); abrirFicha(r.id); }}>{r.codigo_externo}</button><div className="sub">Licitación</div></td>
+          <td><button className="cod" onClick={e => { e.stopPropagation(); abrirFicha(r.id); }}>{r.codigo_externo}</button>
+            <div className="sub">{officialOpportunityUrl(r) && <a href={officialOpportunityUrl(r)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Mercado Público ↗</a>}</div></td>
           <td className="nom cut" title={r.nombre}>{r.nombre || "Sin nombre"}</td>
           <td className="cut" title={r.nombre_organismo}>{r.nombre_unidad || r.nombre_organismo || "-"}<div className="sub cut">{r.region_comprador}</div></td>
           <td>{dinero(r.monto_estimado, r.moneda)}<div className="sub">cierra {fechaCorta(r.fecha_cierre)}</div></td>
@@ -30,3 +32,4 @@ export default function OportunidadesPage() {
     </section>
   </>;
 }
+

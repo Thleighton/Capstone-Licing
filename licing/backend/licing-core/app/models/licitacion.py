@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -48,3 +49,17 @@ class Licitacion(Base):
 
     region_comprador: Mapped[str | None] = mapped_column(Text)
     comuna_comprador: Mapped[str | None] = mapped_column(Text)
+
+    tipo: Mapped[str | None] = mapped_column(String(30))
+    codigo_tipo: Mapped[int | None] = mapped_column(Integer)
+    estimacion: Mapped[int | None] = mapped_column(Integer)
+    visibilidad_monto: Mapped[int | None] = mapped_column(Integer)
+    justificacion_monto: Mapped[str | None] = mapped_column(Text)
+    direccion_comprador: Mapped[str | None] = mapped_column(Text)
+    direccion_entrega: Mapped[str | None] = mapped_column(Text)
+    direccion_visita: Mapped[str | None] = mapped_column(Text)
+    # Contexto de la API, sin interpretarlo como fechas/lugar del evento.
+    fechas_fuente: Mapped[dict | None] = mapped_column(JSONB)
+    condiciones_fuente: Mapped[dict | None] = mapped_column(JSONB)
+    normalizacion_version: Mapped[str | None] = mapped_column(String(30))
+    normalizado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

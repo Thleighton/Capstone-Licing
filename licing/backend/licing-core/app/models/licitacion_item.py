@@ -9,6 +9,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import JSONB
 
 from ..database import Base
 
@@ -46,3 +47,7 @@ class LicitacionItem(Base):
 
     cantidad: Mapped[Decimal | None] = mapped_column(Numeric())
     unidad_medida: Mapped[str | None] = mapped_column(Text)
+    codigo_categoria: Mapped[str | None] = mapped_column(String(100), index=True)
+    categoria: Mapped[str | None] = mapped_column(Text)
+    estado_fuente: Mapped[int | None] = mapped_column(Integer)
+    adjudicacion_fuente: Mapped[dict | None] = mapped_column(JSONB)

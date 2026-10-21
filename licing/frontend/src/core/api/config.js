@@ -1,5 +1,5 @@
 // Configuración pública que entrega el backend (GET /api/config):
-// URL y anon key del proyecto Supabase "Licing/Usuarios" para iniciar sesión.
+// URL y anon key del proyecto Supabase Usuarios para iniciar sesión.
 let cache = null;
 
 export async function cargarConfig() {

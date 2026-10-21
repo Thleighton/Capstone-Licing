@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..config import settings
+from ..auth import solo_rol
 from ..database import get_db
 from ..models.raw import RawMercadoPublico
 from ..services.mercado_publico import MercadoPublicoClient
@@ -14,7 +15,7 @@ from ..services.ingesta_lote import (
 )
 from ..services.procesamiento import procesar_detalle_guardado
 
-router = APIRouter(prefix="/ingesta", tags=["Ingesta"])
+router = APIRouter(prefix="/ingesta", tags=["Ingesta"], dependencies=[Depends(solo_rol("administrador"))])
 
 
 @router.post("/licitaciones/fecha/{fecha}")

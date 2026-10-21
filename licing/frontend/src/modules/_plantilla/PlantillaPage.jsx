@@ -1,4 +1,4 @@
-// Ejemplo mínimo: lee datos con la sesión del usuario y llama al backend del módulo.
+// Ejemplo mínimo de consulta autenticada al backend Core.
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../core/api/client";
 
@@ -7,7 +7,7 @@ export default function PlantillaPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    apiFetch("/api/plantilla/hola").then(r => r.json()).then(setData).catch(e => setError(e.message));
+    apiFetch("/api/licitaciones?limite=5").then(r => r.json()).then(setData).catch(e => setError(e.message));
   }, []);
 
   return (

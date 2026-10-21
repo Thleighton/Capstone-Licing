@@ -1,0 +1,16 @@
+# La configuración real se carga desde Environment Variables de Vercel.
+.env
+.env.*
+**/.env
+**/.env.*
+
+.venv/
+**/.venv/
+venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.npm-cache/
+frontend/node_modules/
+frontend/dist/
+backups/

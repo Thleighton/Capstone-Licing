@@ -1,11 +1,14 @@
-// Llamadas del módulo al backend Python (api/licing/modulos/analisis.py).
-import { apiFetch } from "../../core/api/client";
-
+// Demostración local; el análisis documental sigue pendiente.
 export const EJEMPLOS = [
   { id: "alojamiento", nombre: "Servicio de alojamiento para delegación" },
   { id: "seminario", nombre: "Seminario y coffee break para 80 personas" },
 ];
-
-/** Hoy devuelve un resultado simulado. Cuando exista el motor IA/NLP, la firma se mantiene. */
-export const analizarEjemplo = ejemplo =>
-  apiFetch("/api/analisis/simular", { method: "POST", body: { ejemplo } }).then(r => r.json());
+const RESULTADOS = {
+  alojamiento: { titulo: "Alojamiento de delegación", servicio: "20 habitaciones por 3 noches", participantes: "40 personas" },
+  seminario: { titulo: "Seminario y coffee break", servicio: "Salón, proyección y coffee break", participantes: "80 personas" },
+};
+export const analizarEjemplo = ejemplo => Promise.resolve({
+  ...RESULTADOS[ejemplo], presupuesto: "Por confirmar en las bases",
+  documentos: "Oferta técnica, económica y antecedentes administrativos",
+  pendientes: "disponibilidad, fechas exactas y condiciones de pago.", simulado: true,
+});

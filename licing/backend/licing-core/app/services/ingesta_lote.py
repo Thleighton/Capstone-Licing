@@ -197,10 +197,13 @@ async def _ejecutar_lote_interno(
             else:
                 reutilizados += 1
 
-            procesado = procesar_detalle_guardado(
-                db=db,
-                registro=registro,
-            )
+            # Cada detalle se procesa de forma indivisible. Si un item falla,
+            # se conserva el crudo ya guardado y el lote puede continuar.
+            with db.begin_nested():
+                procesado = procesar_detalle_guardado(
+                    db=db,
+                    registro=registro,
+                )
 
             procesados += 1
 

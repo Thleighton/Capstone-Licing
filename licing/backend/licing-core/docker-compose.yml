@@ -1,3 +1,5 @@
+name: licing-core
+
 services:
   db:
     image: postgres:16-alpine
@@ -19,7 +21,11 @@ services:
   api:
     build: .
     container_name: licing_api
-    env_file: .env
+    env_file:
+      - path: ../../.env
+        required: false
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql+psycopg://licing:licing@db:5432/licing
     ports:
@@ -29,7 +35,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
 volumes:
   licing_pgdata:

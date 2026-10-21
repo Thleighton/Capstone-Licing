@@ -5,7 +5,7 @@ import { refrescar, tokenVigente } from "../auth/session";
 let onSinSesion = () => {};
 export const setOnSinSesion = fn => { onSinSesion = fn; };
 
-/** Llamada genérica al backend: apiFetch("/api/analisis/...", { method: "POST", body }) */
+/** Llamada autenticada al único backend Core. */
 export async function apiFetch(url, { headers = {}, body, method = "GET", reintento = true } = {}) {
   const token = await tokenVigente();
   if (!token) { onSinSesion("Tu sesión expiró. Vuelve a ingresar.", true); throw new Error("Sesión expirada"); }
@@ -28,20 +28,4 @@ export async function apiFetch(url, { headers = {}, body, method = "GET", reinte
   return res;
 }
 
-/**
- * Lectura de tablas de "Licing/Datos" vía /api/datos (solo lectura, lista blanca).
- * path con sintaxis PostgREST: "licitacion?select=id,nombre&limit=10"
- */
-export function datos(path, headers = {}) {
-  const i = path.indexOf("?");
-  const url = "/api/datos?t=" + encodeURIComponent(i < 0 ? path : path.slice(0, i)) +
-              "&q=" + encodeURIComponent(i < 0 ? "" : path.slice(i + 1));
-  return apiFetch(url, { headers });
-}
-
-export const datosJson = path => datos(path).then(r => r.json());
-
-export async function contar(tabla) {
-  const res = await datos(tabla + "?select=id", { Prefer: "count=exact", Range: "0-0" });
-  return Number((res.headers.get("content-range") || "*/0").split("/")[1]) || 0;
-}
+export const apiJson = (url, opciones) => apiFetch(url, opciones).then(r => r.json());

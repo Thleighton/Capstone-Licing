@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import engine
+from app.models.ejecucion_ingesta import EjecucionIngesta
 from app.models.raw import RawMercadoPublico
 from app.services.ingesta_lote import (
     obtener_o_descargar_detalle,
@@ -261,6 +262,50 @@ def test_lote_conserva_crudo_invalido_y_continua(entorno_descarga):
     }
 
     assert codigos_guardados == {codigo_bueno}
+
+@pytest.mark.parametrize("error_item", ["correlativo_repetido", "codigo_producto_largo"])
+def test_lote_revierte_detalle_invalido_y_guarda_el_siguiente(entorno_descarga, monkeypatch, error_item):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "mp_pausa_detalles_segundos", 0.001)
+    db = entorno_descarga["db"]
+    cliente = entorno_descarga["cliente"]
+    codigo_malo = entorno_descarga["codigo"]
+    codigo_bueno = f"{codigo_malo}-B"
+    cliente.licitaciones_activas.return_value = {
+        "Cantidad": 2,
+        "Listado": [{"CodigoExterno": codigo_malo}, {"CodigoExterno": codigo_bueno}],
+    }
+
+    def responder_detalle(codigo):
+        items = [{"Correlativo": 1, "NombreProducto": "Servicio valido", "Cantidad": 1}]
+        if codigo == codigo_malo:
+            items.append({
+                "Correlativo": 1 if error_item == "correlativo_repetido" else 2,
+                "CodigoProducto": "X" * 51 if error_item == "codigo_producto_largo" else "123",
+                "NombreProducto": "Item invalido",
+                "Cantidad": 1,
+            })
+        return {"Cantidad": 1, "Listado": [{
+            "CodigoExterno": codigo,
+            "Nombre": "Licitacion de prueba",
+            "Items": {"Cantidad": len(items), "Listado": items},
+        }]}
+
+    cliente.licitacion_por_codigo.side_effect = responder_detalle
+    resultado = asyncio.run(ejecutar_ingesta_lote(db, cliente, limite_detalles=2))
+
+    assert resultado["procesados"] == 1
+    assert len(resultado["errores"]) == 1
+    assert resultado["errores"][0]["codigo_externo"] == codigo_malo
+    assert db.query(Licitacion).filter_by(codigo_externo=codigo_malo).count() == 0
+    assert db.query(Licitacion).filter_by(codigo_externo=codigo_bueno).count() == 1
+    assert contar_detalles(db, codigo_malo) == 1
+    assert contar_detalles(db, codigo_bueno) == 1
+    ejecucion = db.get(EjecucionIngesta, resultado["ejecucion_id"])
+    assert ejecucion.estado == "parcial"
+    assert ejecucion.descargados == 2 and ejecucion.procesados == 1
+
 
 def test_lote_se_detiene_ante_error_429(entorno_descarga):
     db = entorno_descarga["db"]

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     mp_base_url: str = (
         "https://api.mercadopublico.cl/servicios/v1/publico"
     )
+    
+    mp_ca_base_url: str = (
+    "https://api2.mercadopublico.cl"
+)
 
     database_url: str
 

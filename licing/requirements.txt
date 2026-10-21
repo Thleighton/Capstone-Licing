@@ -1,2 +1,11 @@
-# Vercel y el desarrollo local usan las dependencias del único backend.
--r backend/licing-core/requirements.txt
+# Lista plana: el empaquetador Python de Vercel rechaza el include anidado.
+# Mantener sincronizada con backend/licing-core/requirements.txt.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.3
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+alembic==1.14.1
+tzdata==2025.1

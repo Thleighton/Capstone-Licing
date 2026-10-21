@@ -1,3 +1,16 @@
+from copy import deepcopy
+
+VERSION_NORMALIZACION = "2"
+CONDICIONES_FUENTE = (
+    "Contrato", "TipoConvocatoria", "Etapas", "EstadoEtapas", "Informada",
+    "Obras", "SubContratacion", "ProhibicionContratacion", "Modalidad", "TipoPago",
+    "FuenteFinanciamiento", "UnidadTiempo", "Tiempo", "TiempoDuracionContrato",
+    "UnidadTiempoDuracionContrato", "TipoDuracionContrato", "UnidadTiempoContratoLicitacion",
+    "ValorTiempoRenovacion", "PeriodoTiempoRenovacion", "EsRenovable", "ExtensionPlazo",
+    "EsBaseTipo", "Adjudicacion", "ObservacionContract",
+)
+
+
 def limpiar_texto(valor):
     if valor is None:
         return None
@@ -25,6 +38,10 @@ def normalizar_licitacion(detalle: dict) -> dict:
             "descripcion": limpiar_texto(item.get("Descripcion")),
             "cantidad": item.get("Cantidad"),
             "unidad_medida": limpiar_texto(item.get("UnidadMedida")),
+            "codigo_categoria": limpiar_texto(item.get("CodigoCategoria")),
+            "categoria": limpiar_texto(item.get("Categoria")),
+            "estado_fuente": item.get("CodigoEstadoLicitacion"),
+            "adjudicacion_fuente": deepcopy(item.get("Adjudicacion")),
         })
 
     return {
@@ -35,6 +52,17 @@ def normalizar_licitacion(detalle: dict) -> dict:
         "estado": limpiar_texto(detalle.get("Estado")),
         "monto_estimado": detalle.get("MontoEstimado"),
         "moneda": limpiar_texto(detalle.get("Moneda")),
+        "tipo": limpiar_texto(detalle.get("Tipo")),
+        "codigo_tipo": detalle.get("CodigoTipo"),
+        "estimacion": detalle.get("Estimacion"),
+        "visibilidad_monto": detalle.get("VisibilidadMonto"),
+        "justificacion_monto": limpiar_texto(detalle.get("JustificacionMontoEstimado")),
+        "direccion_comprador": limpiar_texto(comprador.get("DireccionUnidad")),
+        "direccion_entrega": limpiar_texto(detalle.get("DireccionEntrega")),
+        "direccion_visita": limpiar_texto(detalle.get("DireccionVisita")),
+        "fechas_fuente": deepcopy(fechas),
+        "condiciones_fuente": {k: deepcopy(detalle[k]) for k in CONDICIONES_FUENTE if k in detalle},
+        "normalizacion_version": VERSION_NORMALIZACION,
         "fecha_publicacion": limpiar_texto(
             fechas.get("FechaPublicacion")
         ),

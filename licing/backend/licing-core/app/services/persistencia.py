@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy.dialects.postgresql import insert
@@ -59,6 +59,12 @@ def guardar_licitacion(
         "nombre_unidad": comprador.get("nombre_unidad"),
         "region_comprador": comprador.get("region"),
         "comuna_comprador": comprador.get("comuna"),
+        **{k: datos.get(k) for k in (
+            "tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto",
+            "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente",
+            "condiciones_fuente", "normalizacion_version",
+        )},
+        "normalizado_en": datetime.now(timezone.utc),
     }
 
     sentencia = insert(Licitacion).values(**valores)
@@ -112,6 +118,10 @@ def guardar_items(
                 Decimal(str(cantidad)) if cantidad is not None else None
             ),
             "unidad_medida": item.get("unidad_medida"),
+            "codigo_categoria": item.get("codigo_categoria"),
+            "categoria": item.get("categoria"),
+            "estado_fuente": item.get("estado_fuente"),
+            "adjudicacion_fuente": item.get("adjudicacion_fuente"),
         }
 
         sentencia = insert(LicitacionItem).values(**valores)
@@ -140,3 +150,4 @@ def guardar_items(
     db.execute(borrar_ausentes)
 
     return len(items)
+

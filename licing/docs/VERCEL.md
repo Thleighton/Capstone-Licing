@@ -92,6 +92,8 @@ MP_TICKET=TU_TICKET_REAL
 MP_BASE_URL=https://api.mercadopublico.cl/servicios/v1/publico
 MP_PAUSA_DETALLES_SEGUNDOS=5
 MAX_RAW_ITEMS=20
+# Opcional: habilita /api/cron/ingesta (paso 8).
+CRON_SECRET=SECRETO_LARGO_Y_ALEATORIO
 ```
 
 Usa el mismo REF y el host copiado de Supabase Connect. Codifica los caracteres especiales de la contraseña dentro de la URL. El nombre visible Usuarios/Licitaciones no reemplaza al host ni al nombre PostgreSQL `postgres`.
@@ -132,7 +134,51 @@ El botón procesa como máximo un detalle por petición. `vercel.json` establece
 
 Abre **Oportunidades**, una ficha y el dashboard. En Supabase puedes verificar las filas de `licitacion`, `licitacion_item` y `ejecucion_ingesta`.
 
-No hay un cron de ingesta configurado en esta versión. **Actualizar** consulta la base; **Obtener licitaciones** descarga un detalle nuevo. Las pantallas de demostración conservan sus avisos.
+**Actualizar** consulta la base; **Obtener licitaciones** descarga un detalle nuevo. Para que la descarga ocurra sin pulsar el botón, configura el paso 8. Las pantallas de demostración conservan sus avisos.
+
+## 8. Ingesta automática cada 5 minutos
+
+En el plan Hobby, Vercel Cron solo permite una ejecución diaria, con una precisión de ±59 minutos. Para ejecutar la ingesta cada 5 minutos se usa un planificador externo: [cron-job.org](https://cron-job.org/) es gratuito, admite intervalos desde 1 minuto, el método POST y cabeceras propias. [Límites de Vercel Cron](https://vercel.com/docs/cron-jobs/usage-and-pricing) · [FAQ de cron-job.org](https://cron-job.org/en/faq/).
+
+El planificador llama a `/api/cron/ingesta`, que ejecuta el mismo lote que el botón, con el mismo bloqueo y el mismo historial. No usa una sesión de Supabase: se autentica con `Authorization: Bearer <CRON_SECRET>`, la misma convención que Vercel Cron.
+
+1. Genera un secreto largo:
+
+   ```powershell
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+2. Guárdalo como `CRON_SECRET` en **Settings > Environment Variables** de Vercel, en Production, y haz un **Redeploy**.
+
+3. Pruébalo a mano antes de programarlo:
+
+   ```powershell
+   $secreto = 'EL_MISMO_CRON_SECRET'
+   Invoke-RestMethod -Method Post -Uri 'https://TU-DOMINIO/api/cron/ingesta?limite=1' -Headers @{ Authorization = "Bearer $secreto" }
+   ```
+
+4. En cron-job.org, crea un cronjob:
+
+   | Campo | Valor |
+   |---|---|
+   | URL | `https://TU-DOMINIO/api/cron/ingesta?limite=1` |
+   | Execution schedule | Every 5 minutes |
+   | Advanced > Request method | `POST` |
+   | Advanced > Headers | `Authorization` = `Bearer <CRON_SECRET>` |
+   | Notifications | Avisar cuando falle y cuando se desactive |
+
+   Usa el dominio de producción. Las URL de Preview protegidas con Deployment Protection responden 401 desde Vercel antes de llegar a Core.
+
+| Respuesta | Significado |
+|---|---|
+| 200 | Lote ejecutado. Con `omitida: true`, otra ingesta seguía en curso y este turno no descargó nada |
+| 401 | Falta la cabecera o el secreto no coincide |
+| 503 | Falta `CRON_SECRET` en el despliegue, o la base no está disponible |
+| 502 | Mercado Público falló o devolvió una respuesta inválida |
+
+cron-job.org corta la conexión a los 30 segundos y desactiva el cronjob después de más de 25 fallos seguidos. Un lote de `limite=1` consulta el listado de activas, espera `MP_PAUSA_DETALLES_SEGUNDOS` y descarga un detalle. Normalmente cabe en ese tiempo, por eso no conviene subir `limite`. Si Mercado Público responde lento, cron-job.org registra un timeout. Según la documentación de Vercel, la cancelación por desconexión del cliente solo existe en el runtime de Node.js, así que la función Python debería terminar el lote dentro de sus 60 segundos. Compruébalo en **Actividad reciente** o en la tabla `ejecucion_ingesta`.
+
+Cada 5 minutos son 288 ejecuciones diarias. Cada una consulta el listado de activas y, como máximo, `limite` detalles. Revisa que la cuota diaria de tu ticket de Mercado Público y los límites de funciones de tu plan Vercel lo permitan.
 
 ## Papel de Docker
 

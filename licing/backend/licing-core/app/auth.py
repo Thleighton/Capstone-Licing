@@ -1,4 +1,5 @@
 """Sesiones y perfiles del proyecto Supabase Usuarios/Licitaciones."""
+import hmac
 import time
 
 import httpx
@@ -59,3 +60,13 @@ def solo_rol(*roles: str):
             raise HTTPException(403, "No tienes permiso para esta acción")
         return perfil
     return verificar
+
+
+def solo_cron(request: Request) -> None:
+    """Planificador externo: Authorization: Bearer <CRON_SECRET>, como Vercel Cron."""
+    if not settings.cron_secret:
+        raise HTTPException(503, "La ingesta programada no está configurada")
+    h = request.headers.get("authorization", "")
+    token = h[7:].strip() if h.startswith("Bearer ") else ""
+    if not hmac.compare_digest(token.encode(), settings.cron_secret.encode()):
+        raise HTTPException(401, "Credencial del planificador inválida")

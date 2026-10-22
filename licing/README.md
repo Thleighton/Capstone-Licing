@@ -31,7 +31,7 @@ licing/
 3. Completa `MP_TICKET` y `DATABASE_URL`. Puedes conservar estos valores en `backend/licing-core/.env`: ese archivo tiene prioridad sobre `licing/.env` y no se modifica al actualizar el código. Las variables del proceso tienen prioridad sobre ambos archivos.
 4. La tabla `public.usuario`, sus políticas RLS y Supabase Auth se conservan. Sus migraciones están en `supabase/migrations/`.
 
-El navegador recibe únicamente la configuración pública del proyecto para el login. Las credenciales de PostgreSQL y el ticket de Mercado Público permanecen en el servidor. Ya no se necesitan `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ni `CRON_SECRET` del backend retirado.
+El navegador recibe únicamente la configuración pública del proyecto para el login. Las credenciales de PostgreSQL y el ticket de Mercado Público permanecen en el servidor. Ya no se necesitan `SUPABASE_URL` ni `SUPABASE_SERVICE_ROLE_KEY` del backend retirado. `CRON_SECRET` es opcional y solo habilita la ingesta programada.
 
 ## Docker
 
@@ -87,10 +87,13 @@ También puedes ejecutar `uvicorn api.index:app --reload --port 8000` desde `lic
 | GET /api/dashboard | Indicadores de toda la base y próximos cierres | Usuario activo |
 | GET /api/ingestas | Últimas ejecuciones | Usuario activo |
 | /api/ingesta/licitaciones/... | Rutas originales de descarga y procesamiento de Core | Administrador |
+| GET o POST /api/cron/ingesta | Lote programado, con limite de 1 a 5 (predeterminado 1) | `Authorization: Bearer <CRON_SECRET>` |
 
 Las rutas originales `/ingesta/...` siguen disponibles con los mismos permisos para compatibilidad. Envía el token de Supabase Usuarios/Licitaciones como `Authorization: Bearer <token>`. El frontend lo adjunta y renueva automáticamente.
 
-Los administradores tienen un botón **Obtener licitaciones** que ejecuta un lote de un detalle. La ingesta conserva los límites, la pausa entre descargas y el bloqueo de Core. No hay un cron automático configurado en esta versión.
+Los administradores tienen un botón **Obtener licitaciones** que ejecuta un lote de un detalle. La ingesta conserva los límites, la pausa entre descargas y el bloqueo de Core.
+
+La misma ingesta puede ejecutarse automáticamente desde un planificador externo, como [cron-job.org](https://cron-job.org/), que llama a `/api/cron/ingesta` cada 5 minutos. Vercel Cron no sirve para esa frecuencia en el plan Hobby, que lo limita a una ejecución diaria. Sin `CRON_SECRET` la ruta responde 503. Si otra ingesta sigue en curso, responde 200 con `omitida: true` y no descarga nada. Configuración en [docs/VERCEL.md](docs/VERCEL.md#8-ingesta-automática-cada-5-minutos).
 
 Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem es inválido, se revierten la licitación y sus ítems, se conserva la respuesta original y se continúa con los siguientes códigos. El historial registra el resultado parcial y sus errores.
 
@@ -134,7 +137,7 @@ Desde `licing/frontend/`: `npm run build`.
 
 La guía principal está en **[docs/VERCEL.md](docs/VERCEL.md)**. En el proyecto Vercel usa Root Directory `licing` y Framework Preset `Other`.
 
-`api/index.py` importa Core y `vercel.json` empaqueta su código. Configura `DATABASE_URL` de un PostgreSQL accesible desde el despliegue, `MP_TICKET`, `USUARIOS_URL` y `USUARIOS_ANON_KEY`.
+`api/index.py` importa Core y `vercel.json` empaqueta su código. Configura `DATABASE_URL` de un PostgreSQL accesible desde el despliegue, `MP_TICKET`, `USUARIOS_URL` y `USUARIOS_ANON_KEY`. Para la ingesta programada, añade también `CRON_SECRET`.
 
 Aplica las migraciones de Core antes del despliegue, desde un entorno conectado a esa base. Mantén los lotes pequeños para respetar el límite de ejecución de la función. Vercel no inicia el PostgreSQL local de Docker.
 

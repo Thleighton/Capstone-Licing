@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     usuarios_url: str = ""
     usuarios_anon_key: str = ""
 
+    # Secreto del planificador externo. Vacío desactiva /api/cron/ingesta.
+    cron_secret: str = ""
+
     max_raw_items: int = 20
 
     mp_pausa_detalles_segundos: float = Field(

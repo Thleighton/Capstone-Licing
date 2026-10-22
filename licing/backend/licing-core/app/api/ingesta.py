@@ -302,6 +302,17 @@ async def ejecutar_lote(
     limite: int = Query(default=1, ge=1, le=5),
     db: Session = Depends(get_db),
 ):
+    try:
+        return await correr_lote(db=db, limite=limite)
+    except EjecucionEnCursoError as exc:
+        raise HTTPException(
+           status_code=409,
+           detail=str(exc),
+        ) from exc
+
+
+async def correr_lote(db: Session, limite: int) -> dict:
+    """Lote compartido por el botón y el cron. Deja pasar EjecucionEnCursoError."""
     client = MercadoPublicoClient()
 
     try:
@@ -310,12 +321,9 @@ async def ejecutar_lote(
             client=client,
             limite_detalles=limite,
         )
-    except EjecucionEnCursoError as exc:
+    except EjecucionEnCursoError:
         db.rollback()
-        raise HTTPException(
-           status_code=409,
-           detail=str(exc),
-        ) from exc
+        raise
 
     except httpx.HTTPStatusError as exc:
         db.rollback()

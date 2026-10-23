@@ -14,7 +14,10 @@ import seguimiento from "./seguimiento";
 import reportes from "./reportes";
 import configuracion from "./configuracion";
 
-export const MODULOS = [
+// Activación temporal de la interfaz; conserva todos los módulos para reactivarlos.
+export const SOLO_DASHBOARD = true;
+
+export const TODOS_LOS_MODULOS = [
   dashboard,
   oportunidades,
   perfilHotel,
@@ -26,9 +29,11 @@ export const MODULOS = [
   configuracion,
 ];
 
+export const MODULOS = SOLO_DASHBOARD ? [dashboard] : TODOS_LOS_MODULOS;
 export const MODULO_INICIAL = dashboard;
 
 // Componentes globales que exponen los módulos (diálogos que se abren desde cualquier página).
 export function Globales() {
   return MODULOS.filter(m => m.Global).map(({ id, Global }) => <Global key={id} />);
 }
+

@@ -7,6 +7,8 @@ import Indicadores from "./components/Indicadores";
 import ProximasACerrar from "./components/ProximasACerrar";
 import Estados from "./components/Estados";
 
+import Preseleccion from "./components/Preseleccion";
+
 export default function DashboardPage({ soloDashboard = false }) {
   const { dashboard, runs, status, error, abrirFicha, setQ, setFiltros } = useLicitaciones();
   const estado = status.kind; // "" cargando | ok | err
@@ -28,7 +30,7 @@ export default function DashboardPage({ soloDashboard = false }) {
         <a href="#clientes"><span>◎</span>Clientes</a><a href="#reportes"><span>▥</span>Reportes</a>
       </div>}
       <div className="section-title live-heading"><h2>Indicadores de licitaciones</h2><span className="badge">{soloDashboard ? "Datos guardados" : "Datos guardados · independientes de la demostración"}</span></div>
-      <div className="overview-note"><span className="badge blue">Panel de oportunidades</span><span>Indicadores sobre todas las licitaciones guardadas. La compatibilidad comercial está pendiente de evaluar.</span></div>
+      <div className="overview-note"><span className="badge blue">Panel de oportunidades</span><span>Indicadores sobre todas las licitaciones guardadas. La preselección del hotel se muestra al final del dashboard.</span></div>
       {error ? <div className="msg err">{error}</div> : estado === "ok" && dashboard && <Indicadores resumen={dashboard} />}
 
       <div className={"dashboard-workspace" + (soloDashboard ? " dashboard-only" : "")}>
@@ -48,6 +50,7 @@ export default function DashboardPage({ soloDashboard = false }) {
         </div>
         {!soloDashboard && <AsistenteIA />}
       </div>
+      <Preseleccion />
     </>
   );
 }

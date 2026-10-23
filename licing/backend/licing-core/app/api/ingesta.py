@@ -338,11 +338,21 @@ async def correr_lote(db: Session, limite: int) -> dict:
     client = MercadoPublicoClient()
 
     try:
-        return await ejecutar_ingesta_lote(
+        resultado = await ejecutar_ingesta_lote(
             db=db,
             client=client,
             limite_detalles=limite,
         )
+        ids = [r["licitacion_id"] for r in resultado.get("resultados", []) if r.get("procesado")]
+        if ids and settings.cron_secret and settings.filtradas_url:
+            import asyncio
+            from .preseleccion import evaluar_lote
+            try:
+                async with asyncio.timeout(8):
+                    resultado["preseleccion"] = await evaluar_lote(db, ids)
+            except Exception:
+                resultado["preseleccion"] = {"pendiente": True, "motivo": "Ingesta guardada; reintentar la preselección desde el dashboard."}
+        return resultado
     except EjecucionEnCursoError:
         db.rollback()
         raise

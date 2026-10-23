@@ -561,3 +561,7 @@ dialog::backdrop, .intake-help::backdrop { background: var(--backdrop); backdrop
   .app { grid-template-columns: minmax(0, 1fr); }
   aside, aside nav { min-width: 0; max-width: 100%; }
 }
+
+/* Vista temporal de solo dashboard; los módulos conservan su código y estilos. */
+.dashboard-workspace.dashboard-only { grid-template-columns: minmax(0, 1fr); }
+.dashboard-only .preview-row { grid-template-columns: minmax(0, 1fr); }

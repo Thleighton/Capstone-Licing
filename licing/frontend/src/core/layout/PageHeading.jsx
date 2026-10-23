@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 
 // Encabezado común de cada página. `extra` permite que un módulo agregue un botón junto al título.
-const PageHeading = forwardRef(function PageHeading({ titulo, descripcion, extra }, ref) {
+const PageHeading = forwardRef(function PageHeading({ titulo, descripcion, extra, mostrarAccion = true }, ref) {
   return (
     <header className="page-heading">
       <div>
@@ -9,8 +9,9 @@ const PageHeading = forwardRef(function PageHeading({ titulo, descripcion, extra
         <div className="page-title-row"><h1 ref={ref} tabIndex={-1}>{titulo}</h1>{extra}</div>
         <p>{descripcion}</p>
       </div>
-      <a className="button primary" href="#formulario">+ Definir criterios</a>
+      {mostrarAccion && <a className="button primary" href="#formulario">+ Definir criterios</a>}
     </header>
   );
 });
 export default PageHeading;
+

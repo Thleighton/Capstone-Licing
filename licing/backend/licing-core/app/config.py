@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 CORE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
 
     # Secreto del planificador externo. Vacío desactiva /api/cron/ingesta.
     cron_secret: str = ""
+
+    # Piloto optativo de embeddings. No habilita generación de texto ni modifica la ingesta.
+    preseleccion_gemini_api_key: SecretStr | None = None
+    preseleccion_embedding_dimensiones: int = Field(default=768, ge=128, le=3072)
 
     max_raw_items: int = 20
 

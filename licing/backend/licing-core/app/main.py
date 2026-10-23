@@ -8,6 +8,7 @@ from .api.consultas import router as consultas_router
 from .api.cron import router as cron_router
 from .api.ingesta import router as ingesta_router
 from .api.documentacion import router as documentacion_router
+from .api.preseleccion import router as preseleccion_router
 
 
 app = FastAPI(
@@ -20,6 +21,7 @@ app = FastAPI(
 app.include_router(config_router)
 app.include_router(consultas_router)
 app.include_router(documentacion_router)
+app.include_router(preseleccion_router)
 app.include_router(ingesta_router, prefix="/api")
 app.include_router(cron_router)
 # Compatibilidad con los comandos existentes de Core, con los mismos permisos.

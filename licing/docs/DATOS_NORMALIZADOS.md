@@ -94,8 +94,7 @@ permanentes entre versiones de las bases.
 se conserva una nueva versión RAW. Si es idéntica, solo se actualiza la verificación.
 Reprocesar el RAW por sí solo no actualiza esa fecha.
 
-El lote alterna altas y actualizaciones de las publicadas. Prioriza dentro de las
-actualizaciones los cierres aún no comprobados y después la verificación más antigua.
+El lote alterna altas y actualizaciones de las publicadas, priorizando la verificación más antigua.
 Los errores de un código tienen una espera antes del reintento; después se vuelve a
 consultar la API. No se considera vigente una fuente solo porque se haya renormalizado.
 
@@ -117,3 +116,30 @@ pendientes y elimina únicamente la suposición de unicidad del correlativo de o
 En instalaciones nuevas, `alembic upgrade head` aplica ambas.
 
 Estas correcciones no determinan la ubicación del servicio ni activan filtros hoteleros.
+
+## Conservación exclusiva de oportunidades disponibles
+
+La revisión `5c7bbdaa3adf` instala una función de eliminación física transaccional.
+Se eliminan licitaciones cuya fecha de cierre ya se cumplió (hora de Chile), y las
+cerradas, desiertas, adjudicadas, revocadas o suspendidas. Se borran sus ítems,
+documentos, extracciones, fragmentos, prestaciones, requisitos, períodos y versiones
+RAW. También se limpian los RAW pendientes de normalización cuando su versión más
+reciente demuestra que ya no están disponibles. Una versión RAW antigua no invalida
+una licitación vigente con plazo ampliado. Las fechas o estados desconocidos no
+constituyen prueba de vencimiento.
+
+La ingesta limpia antes de consultar la API y rechaza nuevos detalles no disponibles.
+Una consulta correcta por código que confirma `Cantidad=0` y `Listado=[]` permite
+eliminar ese código. Una caída de red, un HTTP de error o la ausencia en el listado
+general no autorizan su eliminación. Los fallos de formato se conservan para revisión.
+
+En Supabase, después de migrar, ejecutar `sql/limpieza_programada_supabase.sql` como
+`postgres`: programa la misma función cada minuto, independientemente de la ingesta
+y sin solicitudes HTTP. Conserva siete días de registros de ese trabajo. Verificar
+`cron.job_run_details` para confirmar ejecuciones `succeeded`. El desfase normal de
+limpieza es de hasta un minuto; una base detenida no ejecuta trabajos. La función
+es `SECURITY INVOKER`, con ejecución revocada a los roles de la Data API.
+
+La eliminación es permanente. No se crea un archivo histórico de oportunidades;
+`ejecucion_ingesta` conserva únicamente su seguimiento técnico. El downgrade
+desinstala la función, sin reconstruir las licitaciones eliminadas.

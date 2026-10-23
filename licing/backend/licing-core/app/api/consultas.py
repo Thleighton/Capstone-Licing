@@ -57,6 +57,7 @@ class ItemResumen(BaseModel):
 
     id: int
     correlativo: int
+    posicion_fuente: int
     codigo_producto: str | None
     nombre_producto: str | None
     descripcion: str | None
@@ -69,6 +70,7 @@ class ItemResumen(BaseModel):
 
 
 class LicitacionDetalle(LicitacionResumen):
+    fuente_consultada_en: datetime | None = None
     codigo_tipo: int | None
     justificacion_monto: str | None
     direccion_comprador: str | None
@@ -126,9 +128,11 @@ def detalle_licitacion(licitacion_id: int, response: Response, db: Session = Dep
         raise HTTPException(404, "No se encontró la licitación")
     items = db.scalars(select(LicitacionItem).where(
         LicitacionItem.licitacion_id == fila.id,
-    ).order_by(LicitacionItem.correlativo)).all()
+    ).order_by(LicitacionItem.posicion_fuente)).all()
     response.headers["Cache-Control"] = "no-store"
-    return {"licitacion": LicitacionDetalle.model_validate(fila), "items": [ItemResumen.model_validate(i) for i in items]}
+    raw = db.get(RawMercadoPublico, fila.raw_id)
+    detalle = LicitacionDetalle.model_validate(fila).model_copy(update={"fuente_consultada_en": raw.verificado_en if raw else None})
+    return {"licitacion": detalle, "items": [ItemResumen.model_validate(i) for i in items]}
 
 
 @router.get("/dashboard")

@@ -163,6 +163,27 @@ def test_actualiza_item_existente(entorno):
     assert item.cantidad == 10
 
 
+def test_recupera_el_caso_real_con_correlativos_6_y_7_repetidos(entorno):
+    detalle = entorno["detalle"]
+    correlativos = [3, 4, 5, 6, 6, 7, 7]
+    detalle["Items"] = {"Cantidad": 7, "Listado": [
+        {"Correlativo": c, "NombreProducto": f"Producto distinto {n}", "Cantidad": 1}
+        for n, c in enumerate(correlativos, 1)
+    ]}
+    raw_id = entorno["guardar_raw"](detalle)
+    primera = procesar(entorno)
+    assert primera.status_code == 200, primera.text
+    lic = obtener_licitacion(entorno)
+    db = entorno["db"]
+    items = db.query(LicitacionItem).filter_by(licitacion_id=lic.id).order_by(LicitacionItem.posicion_fuente).all()
+    assert [i.correlativo for i in items] == correlativos
+    assert [i.posicion_fuente for i in items] == list(range(1, 8))
+    ids = [i.id for i in items]
+    assert procesar(entorno).status_code == 200
+    assert [i.id for i in db.query(LicitacionItem).filter_by(licitacion_id=lic.id).order_by(LicitacionItem.posicion_fuente)] == ids
+    assert db.get(RawMercadoPublico, raw_id).respuesta["Items"] == detalle["Items"]
+
+
 def test_error_revierte_licitacion_e_items(entorno):
     primera = procesar(entorno)
     assert primera.status_code == 200, primera.text

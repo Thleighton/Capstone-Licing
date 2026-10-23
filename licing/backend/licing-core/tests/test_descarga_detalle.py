@@ -263,7 +263,7 @@ def test_lote_conserva_crudo_invalido_y_continua(entorno_descarga):
 
     assert codigos_guardados == {codigo_bueno}
 
-@pytest.mark.parametrize("error_item", ["correlativo_repetido", "codigo_producto_largo"])
+@pytest.mark.parametrize("error_item", ["correlativo_invalido", "codigo_producto_largo"])
 def test_lote_revierte_detalle_invalido_y_guarda_el_siguiente(entorno_descarga, monkeypatch, error_item):
     from app.config import settings
 
@@ -281,7 +281,7 @@ def test_lote_revierte_detalle_invalido_y_guarda_el_siguiente(entorno_descarga, 
         items = [{"Correlativo": 1, "NombreProducto": "Servicio valido", "Cantidad": 1}]
         if codigo == codigo_malo:
             items.append({
-                "Correlativo": 1 if error_item == "correlativo_repetido" else 2,
+                "Correlativo": None if error_item == "correlativo_invalido" else 2,
                 "CodigoProducto": "X" * 51 if error_item == "codigo_producto_largo" else "123",
                 "NombreProducto": "Item invalido",
                 "Cantidad": 1,

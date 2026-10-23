@@ -37,7 +37,7 @@ def test_adopta_tablas_manuales_y_conserva_datos_y_usuarios(integration_db):
 def test_no_registra_esquema_con_restriccion_faltante(integration_db):
     connection = integration_db.connection()
     connection.execute(text("DROP TABLE public.alembic_version"))
-    connection.execute(text("ALTER TABLE licitacion_item DROP CONSTRAINT uq_licitacion_item_correlativo"))
+    connection.execute(text("ALTER TABLE licitacion_item DROP CONSTRAINT uq_licitacion_item_posicion"))
     assert verificar_esquema(connection)
     with pytest.raises(ValueError, match="El esquema no coincide"):
         registrar_esquema(connection)

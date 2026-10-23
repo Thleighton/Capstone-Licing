@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
     ForeignKey,
     Integer,
     Numeric,
@@ -20,9 +21,10 @@ class LicitacionItem(Base):
     __table_args__ = (
         UniqueConstraint(
             "licitacion_id",
-            "correlativo",
-            name="uq_licitacion_item_correlativo",
+            "posicion_fuente",
+            name="uq_licitacion_item_posicion",
         ),
+        CheckConstraint("posicion_fuente > 0", name="ck_item_posicion_positiva"),
     )
 
     id: Mapped[int] = mapped_column(
@@ -41,6 +43,7 @@ class LicitacionItem(Base):
         nullable=False,
     )
 
+    posicion_fuente: Mapped[int] = mapped_column(Integer, nullable=False)
     codigo_producto: Mapped[str | None] = mapped_column(String(50))
     nombre_producto: Mapped[str | None] = mapped_column(Text)
     descripcion: Mapped[str | None] = mapped_column(Text)

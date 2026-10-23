@@ -14,6 +14,7 @@ from ..services.ingesta_lote import (
     EjecucionEnCursoError,
 )
 from ..services.procesamiento import procesar_detalle_guardado
+from ..services.limpieza import ausencia_confirmada, eliminar_no_disponibles, motivo_no_disponible
 
 router = APIRouter(prefix="/ingesta", tags=["Ingesta"], dependencies=[Depends(solo_rol("administrador"))])
 
@@ -48,6 +49,11 @@ async def ingestar_por_fecha(
     guardados = []
 
     for item in seleccion:
+        if motivo_no_disponible(item):
+            codigo = item.get("CodigoExterno")
+            if codigo:
+                eliminar_no_disponibles(db, codigo, confirmada=True)
+            continue
         registro = RawMercadoPublico(
             fuente="licitaciones",
             tipo_consulta="listado_fecha",
@@ -90,10 +96,21 @@ async def ingestar_por_codigo(
 
     listado = respuesta.get("Listado") or []
 
+    if ausencia_confirmada(respuesta):
+        eliminar_no_disponibles(db, codigo, confirmada=True)
+        db.commit()
+        return {"codigo": codigo, "guardado": False, "motivo": "no_encontrada_por_codigo"}
     if not listado:
         raise HTTPException(status_code=404, detail="No se encontró la licitación.")
 
     detalle = listado[0]
+    if not isinstance(detalle, dict) or detalle.get("CodigoExterno") != codigo:
+        raise HTTPException(status_code=502, detail="La API devolvió un detalle de otro código.")
+    motivo = motivo_no_disponible(detalle)
+    if motivo:
+        eliminar_no_disponibles(db, codigo, confirmada=True)
+        db.commit()
+        return {"codigo": codigo, "guardado": False, "motivo": motivo}
 
     registro = RawMercadoPublico(
         fuente="licitaciones",
@@ -164,6 +181,11 @@ async def ingestar_activas(
     codigos = []
 
     for item in seleccion:
+        if motivo_no_disponible(item):
+            codigo = item.get("CodigoExterno")
+            if codigo:
+                eliminar_no_disponibles(db, codigo, confirmada=True)
+            continue
         registro = RawMercadoPublico(
             fuente="licitaciones",
             tipo_consulta="listado_activas",

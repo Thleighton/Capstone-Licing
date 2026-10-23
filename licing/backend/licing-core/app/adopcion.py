@@ -17,7 +17,7 @@ from .models import ejecucion_ingesta, licitacion, licitacion_item, raw, documen
 
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
-REVISION_ACTUAL = "b9a70e6d4a93"
+REVISION_ACTUAL = "5c7bbdaa3adf"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 COLUMNAS_NUEVAS = {
@@ -97,7 +97,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))
@@ -115,7 +115,8 @@ def registrar_esquema(connection):
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
 
     if not versiones:
-        command.stamp(config, REVISION_BASE if legado else REVISION_ACTUAL)
+        # La comparación de tablas no detecta la función de limpieza.
+        command.stamp(config, REVISION_BASE if legado else "b9a70e6d4a93")
     command.upgrade(config, "head")
 
 

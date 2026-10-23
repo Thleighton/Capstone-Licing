@@ -14,6 +14,7 @@ from ..models.raw import RawMercadoPublico
 from .mercado_publico import MercadoPublicoClient
 from .normalizacion import VERSION_NORMALIZACION
 from .procesamiento import procesar_detalle_guardado
+from .limpieza import LicitacionNoDisponible, ausencia_confirmada, eliminar_no_disponibles, motivo_no_disponible
 
 ID_BLOQUEO_INGESTA = 728401
 CHILE = ZoneInfo("America/Santiago")
@@ -66,6 +67,7 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
     listado = respuesta["Listado"]
     if any(not isinstance(item, dict) for item in listado):
         raise ValueError("El listado contiene elementos inválidos.")
+    listado_vigente = [item for item in listado if not motivo_no_disponible(item)]
 
     ahora = datetime.now(timezone.utc)
     filas = db.execute(select(
@@ -109,7 +111,7 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
     excluidos = existentes | pospuestos
     nuevos = [
         codigo for codigo in dict.fromkeys(
-            r["CodigoExterno"].strip() for r in listado
+            r["CodigoExterno"].strip() for r in listado_vigente
             if isinstance(r.get("CodigoExterno"), str) and r["CodigoExterno"].strip()
         ) if codigo not in excluidos
     ]
@@ -135,12 +137,17 @@ async def obtener_o_descargar_detalle(db, client, codigo, forzar_descarga=False)
         RawMercadoPublico.tipo_consulta == "detalle_codigo",
     ).order_by(RawMercadoPublico.id.desc()).limit(1)).first()
     if existente is not None and not forzar_descarga:
+        motivo = motivo_no_disponible(existente.respuesta)
+        if motivo:
+            raise LicitacionNoDisponible(motivo)
         return existente, False
     await asyncio.sleep(settings.mp_pausa_detalles_segundos)
     respuesta = await client.licitacion_por_codigo(codigo)
     if not isinstance(respuesta, dict):
         raise ValueError("La consulta por código no devolvió un objeto JSON.")
     listado = respuesta.get("Listado")
+    if ausencia_confirmada(respuesta):
+        raise LicitacionNoDisponible("no_encontrada_por_codigo")
     if not isinstance(listado, list) or len(listado) != 1:
         raise ValueError("Se esperaba exactamente un detalle por código.")
     detalle = listado[0]
@@ -148,6 +155,9 @@ async def obtener_o_descargar_detalle(db, client, codigo, forzar_descarga=False)
         raise ValueError("El detalle tiene una estructura inválida.")
     if detalle.get("CodigoExterno") != codigo:
         raise ValueError("La API devolvió un código diferente del solicitado.")
+    motivo = motivo_no_disponible(detalle)
+    if motivo:
+        raise LicitacionNoDisponible(motivo)
     # Una actualización idéntica confirma frescura sin duplicar todo el JSON.
     if existente is not None and existente.respuesta == detalle:
         existente.verificado_en = datetime.now(timezone.utc)
@@ -188,6 +198,9 @@ def error_de_codigo(codigo, exc, raw_id=None):
 
 async def _ejecutar_lote_interno(db, client, limite_detalles=1, progreso=None):
     resultado = progreso if progreso is not None else {}
+    # Se confirma antes de la llamada externa: una caída de la API no revierte la limpieza.
+    resultado["limpieza"] = eliminar_no_disponibles(db)
+    db.commit()
     plan = await planificar_ingesta(db, client, limite_detalles)
     resultado.update(plan=plan)
     actualizar = set(plan["codigos_a_actualizar"])
@@ -203,9 +216,17 @@ async def _ejecutar_lote_interno(db, client, limite_detalles=1, progreso=None):
             with db.begin_nested():
                 procesado = procesar_detalle_guardado(db, registro)
             db.commit()
-            resultado["procesados"] += 1
-            resultado["actualizados"] += int(codigo in actualizar)
-            resultado["resultados"].append(procesado)
+            if procesado["procesado"]:
+                resultado["procesados"] += 1
+                resultado["actualizados"] += int(codigo in actualizar)
+                resultado["resultados"].append(procesado)
+            else:
+                resultado["descartadas"].append(procesado)
+        except LicitacionNoDisponible as exc:
+            db.rollback()
+            eliminados = eliminar_no_disponibles(db, codigo, confirmada=True)
+            db.commit()
+            resultado["descartadas"].append({"codigo_externo": codigo, "motivo": str(exc), **eliminados})
         except Exception as exc:
             db.rollback()
             resultado["errores"].append(error_de_codigo(codigo, exc, raw_id))
@@ -254,7 +275,7 @@ async def _ejecutar_ingesta_lote_con_bloqueo(db, client, limite_detalles=1):
     ejecucion_id = ejecucion.id
     progreso = {
         "plan": {}, "descargados": 0, "reutilizados": 0, "procesados": 0,
-        "actualizados": 0, "resultados": [], "errores": [],
+        "actualizados": 0, "resultados": [], "errores": [], "descartadas": [],
         "detenido_por_error_api": False, "codigo_en_curso": None,
     }
     try:

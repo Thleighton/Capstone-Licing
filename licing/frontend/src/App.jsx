@@ -10,10 +10,10 @@ import PageHeading from "./core/layout/PageHeading";
 import Footer from "./core/layout/Footer";
 import { useHashRoute } from "./core/router/useHashRoute";
 import { ThemeProvider } from "./core/ui/ThemeProvider";
-import { MODULOS, MODULO_INICIAL, Globales } from "./modules";
+import { MODULOS, MODULO_INICIAL, Globales, SOLO_DASHBOARD } from "./modules";
 
 function Shell() {
-  const ruta = useHashRoute();
+  const ruta = useHashRoute(MODULOS, MODULO_INICIAL.id);
   const modulo = MODULOS.find(m => m.id === ruta) || MODULO_INICIAL;
   const tituloRef = useRef(null);
   const primeraVez = useRef(true);
@@ -30,13 +30,13 @@ function Shell() {
     <div className="app">
       <Sidebar modulos={MODULOS} activo={modulo.id} />
       <main>
-        <Topbar />
+        <Topbar soloDashboard={SOLO_DASHBOARD} />
         <div className="content">
-          <PageHeading ref={tituloRef} titulo={modulo.titulo} descripcion={modulo.descripcion} extra={HeaderExtra ? <HeaderExtra /> : null} />
+          <PageHeading ref={tituloRef} titulo={modulo.titulo} descripcion={modulo.descripcion} extra={HeaderExtra ? <HeaderExtra /> : null} mostrarAccion={!SOLO_DASHBOARD} />
           {/* Todas las páginas quedan montadas (solo se ocultan) para no perder lo que el usuario
               escribió al cambiar de módulo, igual que en el prototipo original. */}
           {MODULOS.map(({ id, Page }) => (
-            <section key={id} data-page={id} hidden={id !== modulo.id}><Page activo={id === modulo.id} /></section>
+            <section key={id} data-page={id} hidden={id !== modulo.id}><Page activo={id === modulo.id} soloDashboard={SOLO_DASHBOARD} /></section>
           ))}
           <Footer />
         </div>
@@ -60,3 +60,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
+

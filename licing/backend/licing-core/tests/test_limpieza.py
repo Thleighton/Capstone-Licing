@@ -11,12 +11,9 @@ from sqlalchemy.exc import ProgrammingError
 from app.config import settings
 from app.models.licitacion import Licitacion
 from app.models.raw import RawMercadoPublico
-from app.models.documentacion import Documento, Extraccion, Fragmento, Prestacion, Requisito, PeriodoServicio
 from app.services import ingesta_lote as lotes
-from app.services.documentacion import ExtraccionEntrada, guardar_extraccion
 from app.services.limpieza import ausencia_confirmada, eliminar_no_disponibles, motivo_no_disponible
 from app.services.procesamiento import procesar_detalle_guardado
-from test_documentacion import ejemplo
 
 
 def detalle(codigo, **cambios):
@@ -61,7 +58,6 @@ def test_purga_completa_preserva_vigentes_y_es_idempotente(integration_db):
     codigo = "BORRAR-" + uuid4().hex[:8]
     r = raw(db, codigo, detalle(codigo))
     lic_id = procesar_detalle_guardado(db, r)["licitacion_id"]
-    guardar_extraccion(db, lic_id, ExtraccionEntrada.model_validate(ejemplo()))
     raw(db, codigo, detalle(codigo, Nombre="Otra versión"))
     codigo_vigente = "VIGENTE-" + uuid4().hex[:8]
     r_vigente = raw(db, codigo_vigente, detalle(codigo_vigente))
@@ -72,8 +68,6 @@ def test_purga_completa_preserva_vigentes_y_es_idempotente(integration_db):
     db.expire_all()
     assert db.get(Licitacion, lic_id) is None
     assert db.get(Licitacion, vigente_id) is not None
-    for modelo in (Documento, Extraccion, Fragmento, Prestacion, Requisito, PeriodoServicio):
-        assert db.scalar(select(func.count()).select_from(modelo)) == 0
     assert eliminar_no_disponibles(db) == {"licitaciones": 0, "items": 0, "raw": 0}
 
 

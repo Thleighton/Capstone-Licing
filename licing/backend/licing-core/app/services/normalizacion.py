@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-VERSION_NORMALIZACION = "2"
+VERSION_NORMALIZACION = "3"
 CONDICIONES_FUENTE = (
     "Contrato", "TipoConvocatoria", "Etapas", "EstadoEtapas", "Informada",
     "Obras", "SubContratacion", "ProhibicionContratacion", "Modalidad", "TipoPago",
@@ -20,14 +20,26 @@ def limpiar_texto(valor):
 
 
 def normalizar_licitacion(detalle: dict) -> dict:
-    comprador = detalle.get("Comprador") or {}
-    fechas = detalle.get("Fechas") or {}
-    bloque_items = detalle.get("Items") or {}
+    if not isinstance(detalle, dict):
+        raise ValueError("El detalle debe ser un objeto JSON.")
+    comprador = detalle.get("Comprador")
+    fechas = detalle.get("Fechas")
+    bloque_items = detalle.get("Items")
+    comprador = {} if comprador is None else comprador
+    fechas = {} if fechas is None else fechas
+    bloque_items = {} if bloque_items is None else bloque_items
+    if not all(isinstance(b, dict) for b in (comprador, fechas, bloque_items)):
+        raise ValueError("Comprador, Fechas e Items deben ser objetos JSON.")
+    listado = bloque_items.get("Listado")
+    listado = [] if listado is None else listado
+    if not isinstance(listado, list) or any(not isinstance(i, dict) for i in listado):
+        raise ValueError("Items.Listado debe ser una lista de objetos.")
 
     items = []
 
-    for item in bloque_items.get("Listado") or []:
+    for posicion, item in enumerate(listado, 1):
         items.append({
+            "posicion_fuente": posicion,
             "correlativo": item.get("Correlativo"),
             "codigo_producto": limpiar_texto(
                 item.get("CodigoProducto")

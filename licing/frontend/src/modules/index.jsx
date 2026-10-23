@@ -29,7 +29,9 @@ export const TODOS_LOS_MODULOS = [
   configuracion,
 ];
 
-export const MODULOS = SOLO_DASHBOARD ? [dashboard] : TODOS_LOS_MODULOS;
+// La pausa visual afecta solo al menú; el dashboard conserva todos sus accesos y componentes.
+export const MODULOS = TODOS_LOS_MODULOS;
+export const MODULOS_MENU = SOLO_DASHBOARD ? [dashboard] : MODULOS;
 export const MODULO_INICIAL = dashboard;
 
 // Componentes globales que exponen los módulos (diálogos que se abren desde cualquier página).

@@ -17,12 +17,13 @@ from .models import ejecucion_ingesta, licitacion, licitacion_item, raw, documen
 
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
-REVISION_ACTUAL = "c4f8a19d620e"
+REVISION_ACTUAL = "b9a70e6d4a93"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 COLUMNAS_NUEVAS = {
     "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en"},
-    "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente"},
+    "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente", "posicion_fuente"},
+    "raw_mercado_publico": {"verificado_en"},
 }
 
 
@@ -53,6 +54,8 @@ def verificar_esquema(connection, *, legado=False) -> list[str]:
                 return False
             if tipo == "index" and nombre == "ix_licitacion_item_codigo_categoria":
                 return False
+            if tipo == "unique_constraint" and nombre in {"uq_licitacion_item_correlativo", "uq_licitacion_item_posicion"}:
+                return False
         return True
 
     contexto = MigrationContext.configure(connection, opts={
@@ -79,8 +82,13 @@ def verificar_esquema(connection, *, legado=False) -> list[str]:
             errores.append(f"{nombre}.id: falta un generador de identificadores (IDENTITY o secuencia)")
         checks = {c["name"] for c in inspector.get_check_constraints(nombre, schema="public")}
         for restriccion in tabla.constraints:
+            if legado and restriccion.name == "ck_item_posicion_positiva":
+                continue
             if isinstance(restriccion, CheckConstraint) and restriccion.name not in checks:
                 errores.append(f"{nombre}: falta la restricción {restriccion.name}")
+        if legado and nombre == "licitacion_item":
+            if not any(set(c["column_names"]) == {"licitacion_id", "correlativo"} for c in inspector.get_unique_constraints(nombre, schema="public")):
+                errores.append("licitacion_item: falta la unicidad original de correlativos")
     return errores
 
 
@@ -89,16 +97,23 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    if versiones and versiones not in ([REVISION_BASE], [REVISION_RLS], [REVISION_ACTUAL]):
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", REVISION_ACTUAL}
+    if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
+    config = Config(str(CORE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(CORE_DIR / "alembic"))
+    config.attributes["connection"] = connection
+    if versiones and versiones != [REVISION_ACTUAL]:
+        command.upgrade(config, "head")
+        errores = verificar_esquema(connection)
+        if errores:
+            raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
+        return
     legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (not versiones and not TABLAS <= set(inspector.get_table_names(schema="public")))
     errores = verificar_esquema(connection, legado=legado)
     if errores:
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
 
-    config = Config(str(CORE_DIR / "alembic.ini"))
-    config.set_main_option("script_location", str(CORE_DIR / "alembic"))
-    config.attributes["connection"] = connection
     if not versiones:
         command.stamp(config, REVISION_BASE if legado else REVISION_ACTUAL)
     command.upgrade(config, "head")

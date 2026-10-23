@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     cron_secret: str = ""
 
     max_raw_items: int = 20
+    mp_actualizacion_horas: int = Field(default=24, ge=1, le=168)
+    mp_reintento_error_minutos: int = Field(default=60, ge=1, le=1440)
+    mp_lote_timeout_segundos: float = Field(default=45, gt=0, le=50)
 
     mp_pausa_detalles_segundos: float = Field(
         default=5.0,

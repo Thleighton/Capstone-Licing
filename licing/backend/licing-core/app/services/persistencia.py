@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -14,13 +15,9 @@ def convertir_fecha(valor):
 
     fecha = datetime.fromisoformat(valor)
 
-    # Nuestra tabla conserva por ahora fechas sin zona horaria.
-    # No eliminamos una zona silenciosamente si llega una.
+    # Convertir a hora chilena antes de guardar en las columnas locales.
     if fecha.tzinfo is not None:
-        raise ValueError(
-            "Se recibió una fecha con zona horaria; "
-            "su conversión todavía no está definida."
-        )
+        fecha = fecha.astimezone(ZoneInfo("America/Santiago")).replace(tzinfo=None)
 
     return fecha
 
@@ -85,9 +82,9 @@ def guardar_items(
     licitacion_id: int,
     items: list[dict],
 ) -> int:
-    correlativos_vistos = set()
+    posiciones_vistas = set()
 
-    for item in items:
+    for posicion, item in enumerate(items, 1):
         correlativo = item.get("correlativo")
 
         if (
@@ -99,18 +96,16 @@ def guardar_items(
                 "Cada ítem debe tener un correlativo entero positivo."
             )
 
-        if correlativo in correlativos_vistos:
-            raise ValueError(
-                f"El detalle contiene el correlativo repetido: {correlativo}."
-            )
-
-        correlativos_vistos.add(correlativo)
+        if item.get("posicion_fuente", posicion) != posicion:
+            raise ValueError("La posición del ítem no coincide con el orden del RAW.")
+        posiciones_vistas.add(posicion)
 
         cantidad = item.get("cantidad")
 
         valores = {
             "licitacion_id": licitacion_id,
             "correlativo": correlativo,
+            "posicion_fuente": posicion,
             "codigo_producto": item.get("codigo_producto"),
             "nombre_producto": item.get("nombre_producto"),
             "descripcion": item.get("descripcion"),
@@ -127,11 +122,11 @@ def guardar_items(
         sentencia = insert(LicitacionItem).values(**valores)
 
         sentencia = sentencia.on_conflict_do_update(
-            constraint="uq_licitacion_item_correlativo",
+            constraint="uq_licitacion_item_posicion",
             set_={
                 campo: sentencia.excluded[campo]
                 for campo in valores
-                if campo not in {"licitacion_id", "correlativo"}
+                if campo not in {"licitacion_id", "posicion_fuente"}
             },
         )
 
@@ -140,10 +135,10 @@ def guardar_items(
         LicitacionItem.licitacion_id == licitacion_id
     )
 
-    if correlativos_vistos:
+    if posiciones_vistas:
         borrar_ausentes = borrar_ausentes.where(
-            LicitacionItem.correlativo.not_in(
-                sorted(correlativos_vistos)
+            LicitacionItem.posicion_fuente.not_in(
+                sorted(posiciones_vistas)
             )
         )
 

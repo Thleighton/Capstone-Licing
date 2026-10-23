@@ -29,8 +29,8 @@ def datos(integration_db):
         db.flush()
         filas.append(fila)
     db.add_all([
-        LicitacionItem(licitacion_id=filas[0].id, correlativo=2, nombre_producto="Segundo", cantidad=2),
-        LicitacionItem(licitacion_id=filas[0].id, correlativo=1, nombre_producto="Primero", cantidad=1),
+        LicitacionItem(licitacion_id=filas[0].id, correlativo=2, posicion_fuente=2, nombre_producto="Segundo", cantidad=2),
+        LicitacionItem(licitacion_id=filas[0].id, correlativo=1, posicion_fuente=1, nombre_producto="Primero", cantidad=1),
         EjecucionIngesta(limite_detalles=1, estado="parcial", descargados=1, procesados=0, errores=[{"mensaje": "dato interno"}]),
     ])
     db.commit()

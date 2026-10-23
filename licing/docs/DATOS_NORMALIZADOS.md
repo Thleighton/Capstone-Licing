@@ -78,3 +78,42 @@ Verificar conteos de raw, licitaciones e ítems antes y después, categorías co
 JSON, ausencia de registros huérfanos, revisión Alembic y RLS. El almacenamiento de
 texto y futuras representaciones semánticas debe medirse con una muestra real;
 la estimación de espacio del JSON no incluye estas tablas ni vectores.
+
+## Corrección de ingesta y normalización 3
+
+Los correlativos de Mercado Público pueden repetirse en productos diferentes.
+`licitacion_item.correlativo` conserva el valor original. `posicion_fuente` identifica
+la posición, desde 1, dentro de `Items.Listado`; la unicidad pasa a
+`(licitacion_id, posicion_fuente)`. No se eliminan ni renumeran los ítems de origen.
+Las filas existentes conservan sus identificadores. Las posiciones corresponden a
+la versión RAW referenciada por la licitación, no son identificadores comerciales
+permanentes entre versiones de las bases.
+
+`raw_mercado_publico.consultado_en` conserva la primera descarga de esa respuesta;
+`verificado_en` registra la última comprobación en la API. Si la respuesta cambia,
+se conserva una nueva versión RAW. Si es idéntica, solo se actualiza la verificación.
+Reprocesar el RAW por sí solo no actualiza esa fecha.
+
+El lote alterna altas y actualizaciones de las publicadas. Prioriza dentro de las
+actualizaciones los cierres aún no comprobados y después la verificación más antigua.
+Los errores de un código tienen una espera antes del reintento; después se vuelve a
+consultar la API. No se considera vigente una fuente solo porque se haya renormalizado.
+
+Parámetros operativos, sin relación con los criterios comerciales del hotel:
+
+- `MP_ACTUALIZACION_HORAS=24`: antigüedad que habilita una actualización; la capacidad
+  de cada lote determina cuándo se ejecuta, no garantiza una revisión diaria de toda la base.
+- `MP_REINTENTO_ERROR_MINUTOS=60`: espera de un código fallido.
+- `MP_LOTE_TIMEOUT_SEGUNDOS=45`: límite de aplicación inferior a los 60 segundos del hosting.
+
+Cada detalle correcto se confirma por separado. Un error o un tiempo agotado conserva
+los avances y cierra el historial como parcial, error o interrumpida. Los mensajes HTTP
+omiten URLs y credenciales. Las fechas con offset se convierten a `America/Santiago`.
+
+Despliegue de una instalación existente: aplicar `968329dc86b0`, desplegar el nuevo
+escritor y después aplicar `b9a70e6d4a93`. La primera etapa conserva la restricción
+anterior y admite inserciones del escritor antiguo; la segunda completa posiciones
+pendientes y elimina únicamente la suposición de unicidad del correlativo de origen.
+En instalaciones nuevas, `alembic upgrade head` aplica ambas.
+
+Estas correcciones no determinan la ubicación del servicio ni activan filtros hoteleros.

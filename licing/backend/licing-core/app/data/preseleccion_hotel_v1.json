@@ -1,0 +1,237 @@
+{
+  "version": "hotel-rm-1",
+  "estado": "piloto",
+  "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
+  "notas": [
+    "Las coincidencias son señales de pertinencia, no cumplimiento ni decisión de postular.",
+    "La alimentación y los complementos se evalúan como posibles servicios asociados; su oferta independiente no está confirmada.",
+    "OTEC, OTIC y capacitación no son palabras de exclusión.",
+    "La ausencia de palabras clave conserva el caso para evaluación semántica o revisión."
+  ],
+  "grupos": [
+    {
+      "id": "alojamiento",
+      "nivel": "directa",
+      "descripcion": "Contratación de alojamiento, hospedaje o estadías en habitaciones de hotel para personas o delegaciones.",
+      "patrones": [
+        "\\balojamientos?\\b",
+        "\\bhospedajes?\\b",
+        "\\bhoteleria\\b",
+        "\\bhotel(?:es)?\\b",
+        "\\bservicios? hoteleros?\\b",
+        "\\bhabitacion(?:es)?\\b",
+        "\\bpernocta(?:cion(?:es)?|r|s)?\\b",
+        "\\bestadias?\\b",
+        "\\bpension completa\\b"
+      ]
+    },
+    {
+      "id": "salones",
+      "nivel": "directa",
+      "descripcion": "Arriendo o uso de salones, salas de reuniones, auditorios o recintos para jornadas, encuentros, congresos y eventos institucionales.",
+      "patrones": [
+        "\\bsalon(?:es)?\\b",
+        "\\bsalas? (?:de|para) (?:reunion(?:es)?|conferencias?|capacitacion|eventos?|sesion(?:es)?)\\b",
+        "\\bcentros? de (?:eventos?|convenciones?)\\b",
+        "\\b(?:arriendo|arrendamiento|alquiler|reserva|contratacion) de (?:un |una |los |las )?(?:espacios?(?: fisicos?)?|recintos?|dependencias|auditorios?)\\b",
+        "\\b(?:espacios? fisicos?|recintos?|auditorios?) (?:para|destinad[oa]s? a)\\b",
+        "\\blocal(?:es)? (?:para|de) (?:reunion(?:es)?|eventos?|jornadas?)\\b"
+      ]
+    },
+    {
+      "id": "actividades",
+      "nivel": "contexto",
+      "descripcion": "Actividades que podrían necesitar salones, alojamiento o servicios asociados; la actividad por sí sola no identifica el servicio contratado.",
+      "patrones": [
+        "\\bjornadas?(?: institucional(?:es)?)?\\b",
+        "\\bencuentros?\\b",
+        "\\bseminarios?\\b",
+        "\\bcongresos?\\b",
+        "\\bconvencion(?:es)?\\b",
+        "\\btaller(?:es)?\\b",
+        "\\bcapacitacion(?:es)?\\b",
+        "\\bceremonias?\\b",
+        "\\bconferencias?\\b",
+        "\\breunion(?:es)?\\b",
+        "\\bactividades? presenciales?\\b",
+        "\\b(?:otec|otic)\\b"
+      ]
+    },
+    {
+      "id": "alimentacion_asociada",
+      "nivel": "contexto",
+      "descripcion": "Alimentación asociada a estadías, reuniones o eventos en un hotel: desayuno, almuerzo, cena, coffee break y cóctel.",
+      "patrones": [
+        "\\bcof+e+e?\\s*[- ]?breaks?\\b",
+        "\\bpausas? (?:de|para) cafe\\b",
+        "\\bservicios? de cafe(?:teria)?\\b",
+        "\\bdesayunos?\\b",
+        "\\balmuerzos?\\b",
+        "\\bcenas?\\b",
+        "\\balimentacion\\b",
+        "\\bcoctel(?:es)?\\b",
+        "\\bcocktail(?:s)?\\b",
+        "\\bbanqueteria\\b",
+        "\\bcatering\\b",
+        "\\bagapes?\\b",
+        "\\bcolacion(?:es)?\\b",
+        "\\brefrigerios?\\b"
+      ]
+    },
+    {
+      "id": "complementos",
+      "nivel": "complemento",
+      "descripcion": "Equipamiento y apoyo audiovisual asociado a salones y eventos; una compra de equipos por sí sola no constituye un servicio hotelero.",
+      "patrones": [
+        "\\baudiovisual(?:es)?\\b",
+        "\\bamplificacion\\b",
+        "\\bproyector(?:es)?\\b",
+        "\\bmicrofonos?\\b",
+        "\\bpantallas?\\b",
+        "\\b(?:wifi|wi fi)\\b",
+        "\\bestacionamientos?\\b",
+        "\\bmobiliario\\b"
+      ]
+    }
+  ],
+  "ambiguedades": [
+    {
+      "id": "compra_bienes_obras",
+      "patron": "\\b(?:adquisicion|compra|suministro|reparacion|construccion|remodelacion|mantenimiento|mantencion|instalacion)\\b",
+      "motivo": "Puede tratarse de bienes u obras, aunque mencione habitaciones, salones o hoteles."
+    },
+    {
+      "id": "docencia_produccion",
+      "patron": "\\b(?:relatores?|docentes?|certificacion|produccion integral|organizacion integral|servicios? de capacitacion|productoras? de eventos?)\\b",
+      "motivo": "Comprobar si se contrata docencia o producción integral, o solamente un espacio y servicios asociados."
+    }
+  ],
+  "perfiles_no_hoteleros": [
+    {
+      "id": "formacion_produccion",
+      "descripcion": "Se contrata impartir cursos con relatores, docentes y certificación, o producir íntegramente una actividad; mencionar asistentes o una jornada no confirma un arriendo de salón."
+    },
+    {
+      "id": "bienes_obras",
+      "descripcion": "Adquisición o reparación de bienes, equipos, insumos, ropa de cama, mobiliario u obras de construcción y mantenimiento, sin contratar alojamiento ni el uso de un salón."
+    }
+  ],
+  "comunas_rm": [
+    "Santiago",
+    "Cerrillos",
+    "Cerro Navia",
+    "Conchalí",
+    "El Bosque",
+    "Estación Central",
+    "Huechuraba",
+    "Independencia",
+    "La Cisterna",
+    "La Florida",
+    "La Granja",
+    "La Pintana",
+    "La Reina",
+    "Las Condes",
+    "Lo Barnechea",
+    "Lo Espejo",
+    "Lo Prado",
+    "Macul",
+    "Maipú",
+    "Ñuñoa",
+    "Pedro Aguirre Cerda",
+    "Peñalolén",
+    "Providencia",
+    "Pudahuel",
+    "Quilicura",
+    "Quinta Normal",
+    "Recoleta",
+    "Renca",
+    "San Joaquín",
+    "San Miguel",
+    "San Ramón",
+    "Vitacura",
+    "Puente Alto",
+    "Pirque",
+    "San José de Maipo",
+    "Colina",
+    "Lampa",
+    "Tiltil",
+    "San Bernardo",
+    "Buin",
+    "Calera de Tango",
+    "Paine",
+    "Melipilla",
+    "Alhué",
+    "Curacaví",
+    "María Pinto",
+    "San Pedro",
+    "Talagante",
+    "El Monte",
+    "Isla de Maipo",
+    "Padre Hurtado",
+    "Peñaflor"
+  ],
+  "aliases_rm": {
+    "santiago centro": "Santiago",
+    "til til": "Tiltil",
+    "region metropolitana": "Región Metropolitana",
+    "region metropolitana de santiago": "Región Metropolitana",
+    "rm": "Región Metropolitana",
+    "r m": "Región Metropolitana"
+  },
+  "comunas_ambiguas": [
+    "San Pedro"
+  ],
+  "ciudades_fuera_rm": {
+    "Valparaíso": "Valparaíso",
+    "Viña del Mar": "Valparaíso",
+    "Quilpué": "Valparaíso",
+    "Villa Alemana": "Valparaíso",
+    "San Antonio": "Valparaíso",
+    "La Serena": "Coquimbo",
+    "Coquimbo": "Coquimbo",
+    "Rancagua": "O’Higgins",
+    "San Fernando": "O’Higgins",
+    "Talca": "Maule",
+    "Curicó": "Maule",
+    "Linares": "Maule",
+    "Chillán": "Ñuble",
+    "Concepción": "Biobío",
+    "Talcahuano": "Biobío",
+    "Los Ángeles": "Biobío",
+    "Temuco": "La Araucanía",
+    "Villarrica": "La Araucanía",
+    "Pucón": "La Araucanía",
+    "Valdivia": "Los Ríos",
+    "Osorno": "Los Lagos",
+    "Puerto Montt": "Los Lagos",
+    "Puerto Varas": "Los Lagos",
+    "Castro": "Los Lagos",
+    "Coyhaique": "Aysén",
+    "Punta Arenas": "Magallanes",
+    "Arica": "Arica y Parinacota",
+    "Iquique": "Tarapacá",
+    "Antofagasta": "Antofagasta",
+    "Calama": "Antofagasta",
+    "San Pedro de Atacama": "Antofagasta",
+    "Copiapó": "Atacama",
+    "Vallenar": "Atacama"
+  },
+  "regiones_fuera_rm": [
+    "Tarapacá",
+    "Antofagasta",
+    "Atacama",
+    "Coquimbo",
+    "Valparaíso",
+    "O’Higgins",
+    "Maule",
+    "Ñuble",
+    "Biobío",
+    "La Araucanía",
+    "Los Ríos",
+    "Los Lagos",
+    "Aysén",
+    "Magallanes",
+    "Arica y Parinacota"
+  ],
+  "fuente_territorial": "https://www.gobiernosantiago.cl/nuestra-region/"
+}

@@ -4,14 +4,22 @@ import { useEffect, useState } from "react";
 
 const leer = () => location.hash.slice(1).split("?")[0];
 
-export function useHashRoute() {
-  const [ruta, setRuta] = useState(leer);
+export function useHashRoute(modulos, inicial) {
+  const resolver = () => modulos.some(m => m.id === leer()) ? leer() : inicial;
+  const [ruta, setRuta] = useState(resolver);
   useEffect(() => {
-    const onChange = () => setRuta(leer());
+    const onChange = () => {
+      const actual = leer();
+      const siguiente = modulos.some(m => m.id === actual) ? actual : inicial;
+      if (actual !== siguiente) history.replaceState(null, "", location.pathname + location.search + "#" + siguiente);
+      setRuta(siguiente);
+    };
+    onChange();
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
-  }, []);
+  }, [modulos, inicial]);
   return ruta;
 }
 
 export const irA = id => { if (location.hash !== "#" + id) location.hash = id; };
+

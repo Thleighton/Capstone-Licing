@@ -1,2 +1,2 @@
 
-from . import documentacion  # noqa: F401
+"""Modelos del núcleo operativo de LICING."""

@@ -134,20 +134,25 @@ def test_reintento_vencido_descarga_una_version_nueva(integration_db, cliente):
     assert lic.raw_id != original.id and db.get(RawMercadoPublico, original.id).respuesta == malo
 
 
-def test_actualiza_cerrada_aunque_no_figure_en_activas(integration_db, cliente):
+def test_elimina_vencida_aunque_no_figure_en_activas(integration_db, cliente):
     db = integration_db
     codigo = "TEST-CIERRE-" + uuid4().hex[:8]
     cierre = (datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)-timedelta(hours=1)).isoformat()
-    raw = guardar(db, codigo, detalle(codigo, cierre), antiguo=True, procesar=True)
+    raw = guardar(db, codigo, detalle(codigo), antiguo=True, procesar=True)
     lic = db.scalars(select(Licitacion).where(Licitacion.codigo_externo == codigo)).one()
     id_original = lic.id
+    raw_id = raw.id
+    lic.fecha_cierre = convertir_fecha(cierre)
+    db.commit()
     cliente.licitaciones_activas.return_value = {"Listado": []}
     cliente.licitacion_por_codigo.return_value = {"Listado": [detalle(codigo, cierre, "Cerrada", 6)], "Cantidad": 1}
     r = asyncio.run(lotes._ejecutar_ingesta_lote_con_bloqueo(db, cliente, 1))
-    assert r["actualizados"] == 1
+    assert r["limpieza"]["licitaciones"] == 1
+    assert r["procesados"] == 0
     db.expire_all()
     lic = db.get(Licitacion, id_original)
-    assert lic.estado == "Cerrada" and lic.raw_id != raw.id
+    assert lic is None and db.get(RawMercadoPublico, raw_id) is None
+    cliente.licitacion_por_codigo.assert_not_awaited()
 
 
 def test_refresco_identico_no_duplica_raw_ni_lo_hace_nuevo(integration_db, cliente):

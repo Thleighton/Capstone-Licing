@@ -1,0 +1,515 @@
+{
+  "version": "hotel-2026-10-v2",
+  "estado": "piloto",
+  "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
+  "notas": [
+    "Las coincidencias son señales de pertinencia, no cumplimiento ni decisión de postular.",
+    "La alimentación y los complementos se evalúan como posibles servicios asociados; su oferta independiente no está confirmada.",
+    "OTEC, OTIC y capacitación no son palabras de exclusión.",
+    "La ausencia de palabras clave conserva el caso para evaluación semántica o revisión."
+  ],
+  "grupos": [
+    {
+      "id": "alojamiento",
+      "nivel": "directa",
+      "descripcion": "Contratación de alojamiento, hospedaje o estadías en habitaciones de hotel para personas o delegaciones.",
+      "patrones": [
+        "\\balojamientos?\\b",
+        "\\bhospedajes?\\b",
+        "\\bhoteleria\\b",
+        "\\bhotel(?:es)?\\b",
+        "\\bservicios? hoteleros?\\b",
+        "\\bhabitacion(?:es)?\\b",
+        "\\bpernocta(?:cion(?:es)?|r|s)?\\b",
+        "\\bestadias?\\b",
+        "\\bpension completa\\b",
+        "\\bhospederia\\b",
+        "\\b(?:servicios? de )?residencia(?: temporal)?\\b",
+        "\\bhospedamiento\\b",
+        "\\b(?:rooming|overnight|huespedes)\\b"
+      ]
+    },
+    {
+      "id": "salones",
+      "nivel": "directa",
+      "descripcion": "Arriendo o uso de salones, salas de reuniones, auditorios o recintos para jornadas, encuentros, congresos y eventos institucionales.",
+      "patrones": [
+        "\\bsalon(?:es)?\\b",
+        "\\bsalas? (?:de|para) (?:reunion(?:es)?|conferencias?|capacitacion|eventos?|sesion(?:es)?)\\b",
+        "\\bcentros? de (?:eventos?|convenciones?)\\b",
+        "\\b(?:arriendo|arrendamiento|alquiler|reserva|contratacion) de (?:un |una |los |las )?(?:espacios?(?: fisicos?)?|recintos?|dependencias|auditorios?)\\b",
+        "\\b(?:espacios? fisicos?|recintos?|auditorios?) (?:para|destinad[oa]s? a)\\b",
+        "\\blocal(?:es)? (?:para|de) (?:reunion(?:es)?|eventos?|jornadas?)\\b",
+        "\\barriendo de (?:un |una )?local\\b",
+        "\\bcentros? de reuniones\\b",
+        "\\b(?:salas?|espacios?) para (?:talleres|seminarios|congresos|jornadas)\\b"
+      ]
+    },
+    {
+      "id": "actividades",
+      "nivel": "contexto",
+      "descripcion": "Actividades que podrían necesitar salones, alojamiento o servicios asociados; la actividad por sí sola no identifica el servicio contratado.",
+      "patrones": [
+        "\\bjornadas?(?: institucional(?:es)?)?\\b",
+        "\\bencuentros?\\b",
+        "\\bseminarios?\\b",
+        "\\bcongresos?\\b",
+        "\\bconvencion(?:es)?\\b",
+        "\\btaller(?:es)?\\b",
+        "\\bcapacitacion(?:es)?\\b",
+        "\\bceremonias?\\b",
+        "\\bconferencias?\\b",
+        "\\breunion(?:es)?\\b",
+        "\\bactividades? presenciales?\\b",
+        "\\b(?:otec|otic)\\b"
+      ]
+    },
+    {
+      "id": "alimentacion_asociada",
+      "nivel": "contexto",
+      "descripcion": "Alimentación asociada a estadías, reuniones o eventos en un hotel: desayuno, almuerzo, cena, coffee break y cóctel.",
+      "patrones": [
+        "\\bcof+e+e?\\s*[- ]?breaks?\\b",
+        "\\bpausas? (?:de|para) cafe\\b",
+        "\\bservicios? de cafe(?:teria)?\\b",
+        "\\bdesayunos?\\b",
+        "\\balmuerzos?\\b",
+        "\\bcenas?\\b",
+        "\\balimentacion\\b",
+        "\\bcoctel(?:es)?\\b",
+        "\\bcocktail(?:s)?\\b",
+        "\\bbanqueteria\\b",
+        "\\bcatering\\b",
+        "\\bagapes?\\b",
+        "\\bcolacion(?:es)?\\b",
+        "\\brefrigerios?\\b"
+      ]
+    },
+    {
+      "id": "complementos",
+      "nivel": "complemento",
+      "descripcion": "Equipamiento y apoyo audiovisual asociado a salones y eventos; una compra de equipos por sí sola no constituye un servicio hotelero.",
+      "patrones": [
+        "\\baudiovisual(?:es)?\\b",
+        "\\bamplificacion\\b",
+        "\\bproyector(?:es)?\\b",
+        "\\bmicrofonos?\\b",
+        "\\bpantallas?\\b",
+        "\\b(?:wifi|wi fi)\\b",
+        "\\bestacionamientos?\\b",
+        "\\bmobiliario\\b"
+      ]
+    }
+  ],
+  "ambiguedades": [
+    {
+      "id": "compra_bienes_obras",
+      "patron": "\\b(?:adquisicion|compra|suministro|reparacion|construccion|remodelacion|mantenimiento|mantencion|instalacion)\\b",
+      "motivo": "Puede tratarse de bienes u obras, aunque mencione habitaciones, salones o hoteles."
+    },
+    {
+      "id": "docencia_produccion",
+      "patron": "\\b(?:relatores?|docentes?|certificacion|produccion integral|organizacion integral|servicios? de capacitacion|productoras? de eventos?)\\b",
+      "motivo": "Comprobar si se contrata docencia o producción integral, o solamente un espacio y servicios asociados."
+    },
+    {
+      "id": "alojamiento_informatico",
+      "patron": "\\b(?:hosting|datacenter|data center|infraestructura virtualizada|servidores?|maquinas virtuales|cloud|nube informatica)\\b",
+      "motivo": "Comprobar alojamiento informático; no equivale a hospedaje de personas."
+    }
+  ],
+  "perfiles_no_hoteleros": [
+    {
+      "id": "formacion_produccion",
+      "descripcion": "Se contrata impartir cursos con relatores, docentes y certificación, o producir íntegramente una actividad; mencionar asistentes o una jornada no confirma un arriendo de salón."
+    },
+    {
+      "id": "bienes_obras",
+      "descripcion": "Adquisición o reparación de bienes, equipos, insumos, ropa de cama, mobiliario u obras de construcción y mantenimiento, sin contratar alojamiento ni el uso de un salón."
+    }
+  ],
+  "comunas_rm": [
+    "Santiago",
+    "Cerrillos",
+    "Cerro Navia",
+    "Conchalí",
+    "El Bosque",
+    "Estación Central",
+    "Huechuraba",
+    "Independencia",
+    "La Cisterna",
+    "La Florida",
+    "La Granja",
+    "La Pintana",
+    "La Reina",
+    "Las Condes",
+    "Lo Barnechea",
+    "Lo Espejo",
+    "Lo Prado",
+    "Macul",
+    "Maipú",
+    "Ñuñoa",
+    "Pedro Aguirre Cerda",
+    "Peñalolén",
+    "Providencia",
+    "Pudahuel",
+    "Quilicura",
+    "Quinta Normal",
+    "Recoleta",
+    "Renca",
+    "San Joaquín",
+    "San Miguel",
+    "San Ramón",
+    "Vitacura",
+    "Puente Alto",
+    "Pirque",
+    "San José de Maipo",
+    "Colina",
+    "Lampa",
+    "Tiltil",
+    "San Bernardo",
+    "Buin",
+    "Calera de Tango",
+    "Paine",
+    "Melipilla",
+    "Alhué",
+    "Curacaví",
+    "María Pinto",
+    "San Pedro",
+    "Talagante",
+    "El Monte",
+    "Isla de Maipo",
+    "Padre Hurtado",
+    "Peñaflor"
+  ],
+  "aliases_rm": {
+    "santiago centro": "Santiago",
+    "til til": "Tiltil",
+    "region metropolitana": "Región Metropolitana",
+    "region metropolitana de santiago": "Región Metropolitana",
+    "rm": "Región Metropolitana",
+    "r m": "Región Metropolitana",
+    "r.m.": "Región Metropolitana"
+  },
+  "comunas_ambiguas": [
+    "San Pedro"
+  ],
+  "ciudades_fuera_rm": {
+    "Valparaíso": "Valparaíso",
+    "Viña del Mar": "Valparaíso",
+    "Quilpué": "Valparaíso",
+    "Villa Alemana": "Valparaíso",
+    "San Antonio": "Valparaíso",
+    "La Serena": "Coquimbo",
+    "Coquimbo": "Coquimbo",
+    "Rancagua": "O’Higgins",
+    "San Fernando": "O’Higgins",
+    "Talca": "Maule",
+    "Curicó": "Maule",
+    "Linares": "Maule",
+    "Chillán": "Ñuble",
+    "Concepción": "Biobío",
+    "Talcahuano": "Biobío",
+    "Los Ángeles": "Biobío",
+    "Temuco": "La Araucanía",
+    "Villarrica": "La Araucanía",
+    "Pucón": "La Araucanía",
+    "Valdivia": "Los Ríos",
+    "Osorno": "Los Lagos",
+    "Puerto Montt": "Los Lagos",
+    "Puerto Varas": "Los Lagos",
+    "Castro": "Los Lagos",
+    "Coyhaique": "Aysén",
+    "Punta Arenas": "Magallanes",
+    "Arica": "Arica y Parinacota",
+    "Iquique": "Tarapacá",
+    "Antofagasta": "Antofagasta",
+    "Calama": "Antofagasta",
+    "San Pedro de Atacama": "Antofagasta",
+    "Copiapó": "Atacama",
+    "Vallenar": "Atacama",
+    "San Pedro de la Paz": "Biobío"
+  },
+  "regiones_fuera_rm": [
+    "Tarapacá",
+    "Antofagasta",
+    "Atacama",
+    "Coquimbo",
+    "Valparaíso",
+    "O’Higgins",
+    "Maule",
+    "Ñuble",
+    "Biobío",
+    "La Araucanía",
+    "Los Ríos",
+    "Los Lagos",
+    "Aysén",
+    "Magallanes",
+    "Arica y Parinacota"
+  ],
+  "fuente_territorial": "https://www.gobiernosantiago.cl/nuestra-region/",
+  "clientes_estrategicos": [
+    {
+      "id": "mineduc",
+      "nombre": "Ministerio de Educación",
+      "patron": "\\b(?:ministerio de educacion|mineduc|subsecretaria de educacion(?: superior| parvularia)?)\\b"
+    },
+    {
+      "id": "minsal",
+      "nombre": "Ministerio de Salud",
+      "patron": "\\b(?:ministerio de salud|minsal|subsecretaria de salud publica|subsecretaria de redes asistenciales)\\b"
+    },
+    {
+      "id": "uchile",
+      "nombre": "Universidad de Chile",
+      "patron": "\\buniversidad de chile\\b"
+    },
+    {
+      "id": "junji",
+      "nombre": "JUNJI",
+      "patron": "\\b(?:junji|junta nacional de jardines infantiles)\\b"
+    },
+    {
+      "id": "junaeb",
+      "nombre": "JUNAEB",
+      "patron": "\\b(?:junaeb|junta nacional de auxilio escolar y becas)\\b"
+    },
+    {
+      "id": "justicia",
+      "nombre": "Ministerio de Justicia",
+      "patron": "\\bministerio de justicia(?: y derechos humanos)?\\b"
+    }
+  ],
+  "hotel": {
+    "nombre": "Hotel Plaza San Francisco",
+    "comuna": "Santiago",
+    "region": "13",
+    "habitaciones_disponibles": null,
+    "disponibilidad_por_fecha": null,
+    "servicios_fuera_del_hotel_confirmados": false,
+    "presupuesto_minimo": null,
+    "fuentes": [
+      "Correo del hotel remitido el 19-10-2026",
+      "SALONES HPSF.pdf"
+    ]
+  },
+  "salones": [
+    {
+      "nombre": "Ejecutivo",
+      "montajes": {
+        "u": null,
+        "auditorio": null,
+        "imperial": 8,
+        "escuela": null,
+        "mesas_10": null,
+        "mesas_5": null,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Alerce",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 20,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Roble",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 20,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Mistral",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 25,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Neruda",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 20,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Parra",
+      "montajes": {
+        "u": 20,
+        "auditorio": 35,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 40,
+        "mesas_5": 25,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Ebro",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 25,
+        "coctel": null
+      }
+    },
+    {
+      "nombre": "Tiber",
+      "montajes": {
+        "u": 15,
+        "auditorio": 20,
+        "imperial": 15,
+        "escuela": 20,
+        "mesas_10": 30,
+        "mesas_5": 25,
+        "coctel": 15
+      }
+    },
+    {
+      "nombre": "Volga",
+      "montajes": {
+        "u": 20,
+        "auditorio": 30,
+        "imperial": 20,
+        "escuela": 25,
+        "mesas_10": 30,
+        "mesas_5": 25,
+        "coctel": 30
+      }
+    },
+    {
+      "nombre": "Duero",
+      "montajes": {
+        "u": 25,
+        "auditorio": 50,
+        "imperial": 25,
+        "escuela": 30,
+        "mesas_10": 40,
+        "mesas_5": 30,
+        "coctel": 30
+      }
+    },
+    {
+      "nombre": "Arrau",
+      "montajes": {
+        "u": 25,
+        "auditorio": 50,
+        "imperial": 25,
+        "escuela": 30,
+        "mesas_10": 40,
+        "mesas_5": 30,
+        "coctel": 30
+      }
+    },
+    {
+      "nombre": "Araucaria",
+      "montajes": {
+        "u": 40,
+        "auditorio": 100,
+        "imperial": 40,
+        "escuela": 60,
+        "mesas_10": 80,
+        "mesas_5": 40,
+        "coctel": 60
+      }
+    },
+    {
+      "nombre": "Sena",
+      "montajes": {
+        "u": 30,
+        "auditorio": 60,
+        "imperial": 30,
+        "escuela": 35,
+        "mesas_10": 50,
+        "mesas_5": 30,
+        "coctel": 40
+      }
+    },
+    {
+      "nombre": "Danubio",
+      "montajes": {
+        "u": 35,
+        "auditorio": 100,
+        "imperial": 35,
+        "escuela": 50,
+        "mesas_10": 70,
+        "mesas_5": 40,
+        "coctel": 80
+      }
+    },
+    {
+      "nombre": "Rhin",
+      "montajes": {
+        "u": 20,
+        "auditorio": 60,
+        "imperial": 20,
+        "escuela": 30,
+        "mesas_10": 50,
+        "mesas_5": 30,
+        "coctel": 60
+      }
+    },
+    {
+      "nombre": "Danubio Abierto",
+      "montajes": {
+        "u": null,
+        "auditorio": 120,
+        "imperial": null,
+        "escuela": 100,
+        "mesas_10": 100,
+        "mesas_5": 60,
+        "coctel": 100
+      }
+    },
+    {
+      "nombre": "Dan+ Tam + Rhin",
+      "montajes": {
+        "u": null,
+        "auditorio": 200,
+        "imperial": null,
+        "escuela": 130,
+        "mesas_10": 150,
+        "mesas_5": 100,
+        "coctel": 160
+      }
+    },
+    {
+      "nombre": "Pérgola",
+      "montajes": {
+        "u": 60,
+        "auditorio": 450,
+        "imperial": 60,
+        "escuela": 200,
+        "mesas_10": 280,
+        "mesas_5": 150,
+        "coctel": 300
+      }
+    }
+  ],
+  "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada."
+}

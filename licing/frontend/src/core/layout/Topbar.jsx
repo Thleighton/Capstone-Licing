@@ -6,7 +6,7 @@ import { useLicitaciones } from "../data/LicitacionesProvider";
 import { useTheme } from "../ui/ThemeProvider";
 import BotonIngesta from "./BotonIngesta";
 
-export default function Topbar() {
+export default function Topbar({ soloDashboard = false }) {
   const { perfil, logout } = useAuth();
   const { q, setQ, status, cargar } = useLicitaciones();
   const { dark, toggle } = useTheme();
@@ -14,10 +14,10 @@ export default function Topbar() {
 
   return (
     <div className="topbar">
-      <label className="search"><Icon name="search" />
+      {!soloDashboard && <label className="search"><Icon name="search" />
         <input type="search" placeholder="Buscar licitación, ID o institución..." value={q}
           onChange={e => { setQ(e.target.value); irA("oportunidades"); }} />
-      </label>
+      </label>}
       <div className="spacer" />
       <div className={"status " + status.kind}><span className="dot" /><span>{status.text}</span></div>
       <button type="button" id="themeToggle" onClick={toggle} aria-pressed={dark} aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}>
@@ -35,3 +35,4 @@ export default function Topbar() {
     </div>
   );
 }
+

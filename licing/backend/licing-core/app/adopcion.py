@@ -13,11 +13,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .config import CORE_DIR
 from .database import Base, engine
-from .models import ejecucion_ingesta, licitacion, licitacion_item, raw, documentacion  # noqa: F401
+from .models import ejecucion_ingesta, licitacion, licitacion_item, raw  # noqa: F401
 
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
-REVISION_ACTUAL = "c08ccd7a1466"
+REVISION_ACTUAL = "b8654f3a89fc"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 COLUMNAS_NUEVAS = {
@@ -97,7 +97,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))
@@ -109,7 +109,10 @@ def registrar_esquema(connection):
         if errores:
             raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
         return
-    legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (not versiones and not TABLAS <= set(inspector.get_table_names(schema="public")))
+    columnas_licitacion = {c["name"] for c in inspector.get_columns("licitacion", schema="public")} if inspector.has_table("licitacion", schema="public") else set()
+    legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (
+        not versiones and not COLUMNAS_NUEVAS["licitacion"] <= columnas_licitacion
+    )
     errores = verificar_esquema(connection, legado=legado)
     if errores:
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))

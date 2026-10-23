@@ -143,3 +143,43 @@ es `SECURITY INVOKER`, con ejecución revocada a los roles de la Data API.
 La eliminación es permanente. No se crea un archivo histórico de oportunidades;
 `ejecucion_ingesta` conserva únicamente su seguimiento técnico. El downgrade
 desinstala la función, sin reconstruir las licitaciones eliminadas.
+
+## Evidencia de ubicación del servicio
+
+La revisión `c08ccd7a1466` añade solo `licitacion.ubicacion_servicio` (JSONB), sin
+crear tablas. La región y comuna del comprador siguen siendo datos independientes.
+La nueva columna guarda la versión del extractor, el RAW utilizado, regiones y
+comunas candidatas, y evidencias con campo, texto, contexto y posiciones originales.
+Los ítems se identifican por su posición en el RAW, incluso con correlativos repetidos.
+
+El catálogo usa las 52 comunas de la RM y nombres de las 16 regiones de Chile.
+Fuente territorial: https://www.bcn.cl/siit/mapoteca/comunas. No es un geocodificador
+de todas las comunas del país. Se inspeccionan título, descripción, direcciones de
+entrega/visita y texto de ítems; se excluye el bloque del comprador. Se distinguen
+las menciones, las entregas y las visitas; ninguna demuestra automáticamente el
+lugar contractual del servicio. Una región que incluye «de Santiago» no demuestra
+que la comuna requerida sea Santiago.
+
+Estados: `NULL` significa pendiente de procesar; `no_informada`, sin menciones del
+catálogo; `por_revisar`, con menciones que necesitan interpretación. No se asignan
+porcentajes de confianza ni se aprueban o descartan licitaciones por estas señales.
+Negaciones, ubicaciones múltiples, sedes institucionales y homónimos requieren
+revisión. Se limita a 64 evidencias y se marca `truncada` si quedan más; las listas
+de candidatos siguen considerando todo el texto. La evidencia no sustituye las bases.
+
+La normalización y la ingesta guardan esta información automáticamente. Para datos
+existentes, desde Core y con la conexión habitual ejecutar:
+
+```bash
+python -m alembic upgrade head
+python -m app.reprocesar_ubicaciones
+```
+
+El reprocesamiento es idempotente, trabaja en lotes de 100 y comprueba que el RAW
+siga siendo el mismo antes de actualizar. No descarga archivos, no cambia el RAW,
+ni sus fechas de consulta/verificación, ni la fecha anterior de normalización.
+El detalle autenticado de la API devuelve la columna; si corresponde a otro RAW,
+la devuelve como pendiente. El filtro `region` existente sigue refiriéndose al
+comprador. Los filtros de lugar del servicio deben usar evidencia validada y
+conservar los casos desconocidos para revisión. No se conecta aún la segunda base
+al dashboard ni se activa un modelo semántico o LLM.

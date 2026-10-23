@@ -1,4 +1,5 @@
 from copy import deepcopy
+from .ubicacion import extraer_ubicacion
 
 VERSION_NORMALIZACION = "3"
 CONDICIONES_FUENTE = (
@@ -75,6 +76,7 @@ def normalizar_licitacion(detalle: dict) -> dict:
         "fechas_fuente": deepcopy(fechas),
         "condiciones_fuente": {k: deepcopy(detalle[k]) for k in CONDICIONES_FUENTE if k in detalle},
         "normalizacion_version": VERSION_NORMALIZACION,
+        "ubicacion_servicio": extraer_ubicacion(detalle),
         "fecha_publicacion": limpiar_texto(
             fechas.get("FechaPublicacion")
         ),

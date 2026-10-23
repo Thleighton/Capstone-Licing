@@ -70,6 +70,7 @@ class ItemResumen(BaseModel):
 
 
 class LicitacionDetalle(LicitacionResumen):
+    ubicacion_servicio: dict | None = None
     fuente_consultada_en: datetime | None = None
     codigo_tipo: int | None
     justificacion_monto: str | None
@@ -132,6 +133,9 @@ def detalle_licitacion(licitacion_id: int, response: Response, db: Session = Dep
     response.headers["Cache-Control"] = "no-store"
     raw = db.get(RawMercadoPublico, fila.raw_id)
     detalle = LicitacionDetalle.model_validate(fila).model_copy(update={"fuente_consultada_en": raw.verificado_en if raw else None})
+    # Un escritor anterior puede cambiar raw_id sin regenerar la evidencia.
+    if detalle.ubicacion_servicio and detalle.ubicacion_servicio.get("raw_id") != fila.raw_id:
+        detalle = detalle.model_copy(update={"ubicacion_servicio": None})
     return {"licitacion": detalle, "items": [ItemResumen.model_validate(i) for i in items]}
 
 

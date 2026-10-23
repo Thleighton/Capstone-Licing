@@ -34,10 +34,12 @@ def guardar_licitacion(
 
     comprador = datos.get("comprador") or {}
     monto = datos.get("monto_estimado")
+    ubicacion = datos.get("ubicacion_servicio")
 
     valores = {
         "codigo_externo": codigo,
         "raw_id": raw_id,
+        "ubicacion_servicio": {**ubicacion, "raw_id": raw_id} if ubicacion else None,
         "nombre": datos.get("nombre"),
         "descripcion": datos.get("descripcion"),
         "codigo_estado": datos.get("codigo_estado"),

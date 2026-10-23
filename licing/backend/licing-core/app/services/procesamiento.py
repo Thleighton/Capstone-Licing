@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..models.raw import RawMercadoPublico
 from .normalizacion import normalizar_licitacion
 from .persistencia import guardar_licitacion, guardar_items
+from .limpieza import eliminar_no_disponibles, motivo_no_disponible
 
 
 def procesar_detalle_guardado(
@@ -11,6 +12,18 @@ def procesar_detalle_guardado(
 ) -> dict:
     if registro.tipo_consulta != "detalle_codigo":
         raise ValueError("El registro no corresponde a un detalle.")
+
+    if not isinstance(registro.respuesta, dict) or not registro.codigo_externo or (
+        registro.respuesta.get("CodigoExterno") != registro.codigo_externo
+    ):
+        raise ValueError("El código del detalle no coincide con el registro crudo.")
+
+    motivo = motivo_no_disponible(registro.respuesta)
+    if motivo:
+        codigo = registro.codigo_externo
+        eliminados = eliminar_no_disponibles(db, codigo, confirmada=True)
+        return {"codigo_externo": codigo, "procesado": False, "eliminado": True,
+                "motivo": motivo, **eliminados}
 
     datos = normalizar_licitacion(registro.respuesta)
 

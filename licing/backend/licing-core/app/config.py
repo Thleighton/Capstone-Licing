@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     # Secreto del planificador externo. Vacío desactiva /api/cron/ingesta.
     cron_secret: str = ""
 
+    filtradas_url: str = "https://gzhofrcnefoxqvywzgei.supabase.co/functions/v1/licing-filtradas"
+
     max_raw_items: int = 20
     mp_actualizacion_horas: int = Field(default=24, ge=1, le=168)
     mp_reintento_error_minutos: int = Field(default=60, ge=1, le=1440)

@@ -9,7 +9,7 @@ from sqlalchemy.exc import DBAPIError
 from app.adopcion import REVISION_ACTUAL, registrar_esquema, verificar_esquema
 from app.config import CORE_DIR
 
-DOCUMENTALES = {"licitacion_documento", "licitacion_extraccion", "documento_fragmento",
+DOCUMENTALES = {"licitacion_extraccion", "documento_fragmento",
                 "licitacion_prestacion", "licitacion_periodo_servicio", "licitacion_requisito"}
 
 
@@ -20,11 +20,12 @@ def configuracion(connection):
     return config
 
 
-def test_esquema_operativo_sin_tablas_documentales(integration_db):
+def test_esquema_operativo_con_una_sola_tabla_documental(integration_db):
     c = integration_db.connection()
     tablas = set(inspect(c).get_table_names(schema="public"))
     assert DOCUMENTALES.isdisjoint(tablas)
     assert {"licitacion", "licitacion_item", "raw_mercado_publico", "ejecucion_ingesta", "alembic_version"} <= tablas
+    assert "licitacion_documento" in tablas
     assert verificar_esquema(c) == []
     funcion = c.execute(text("SELECT prosrc FROM pg_proc WHERE oid="
         "'public.purgar_licitaciones_no_disponibles(text,boolean)'::regprocedure")).scalar_one()
@@ -41,7 +42,7 @@ def test_migracion_se_niega_a_borrar_datos_y_conserva_licitacion(integration_db)
     c = integration_db.connection()
     config = configuracion(c)
     command.downgrade(config, "c08ccd7a1466")
-    assert DOCUMENTALES <= set(inspect(c).get_table_names(schema="public"))
+    assert DOCUMENTALES | {"licitacion_documento"} <= set(inspect(c).get_table_names(schema="public"))
     codigo = "RETIRO-"+uuid4().hex[:8]
     raw_id = c.execute(text("""INSERT INTO raw_mercado_publico
         (fuente,tipo_consulta,codigo_externo,respuesta,http_status,consultado_en)

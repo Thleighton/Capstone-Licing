@@ -26,6 +26,34 @@ def test_candidata_no_equivale_a_decision_de_postular():
     assert r["criterios"]["ubicacion"]["evidencias"][0]["fuente"] == "nombre"
 
 
+@pytest.mark.parametrize('estado,codigo', [('error','pdf_corrupto'),('error','pdf_protegido'),
+    ('sin_texto','sin_texto_legible'),('parcial','lectura_parcial')])
+def test_fallos_documentales_van_a_revision_con_motivo_aunque_la_api_indique_fuera_rm(estado, codigo):
+    r = evaluar(nombre='Alojamiento en Valparaíso', documentos=[{'id': 1, 'nombre': 'Bases.pdf',
+        'estado_extraccion': estado, 'cobertura': {'motivo_codigo': codigo}, 'paginas_texto': []}])
+    assert r['clasificacion'] == 'revision_manual'
+    assert 'Bases.pdf' in r['motivo']
+    assert r['criterios']['documentos']['incidencias'][0]['codigo'] == codigo
+
+
+def test_un_pdf_legible_no_oculta_otro_ilegible_y_los_retirados_no_bloquean():
+    docs = [{'id': 1, 'estado_extraccion': 'extraido'}, {'id': 2, 'estado_extraccion': 'sin_texto'}]
+    assert evaluar(documentos=docs)['clasificacion'] == 'revision_manual'
+    docs[1]['vigente'] = False
+    assert evaluar(documentos=docs)['clasificacion'] == 'preseleccionada'
+
+
+def test_fallo_de_descarga_sin_pdf_guardado_tambien_se_conserva_para_revisar():
+    r = evaluar(incidencia_documental={'codigo':'archivo_vacio','motivo':'La descarga devolvió un archivo vacío (0 bytes).'})
+    assert r['clasificacion'] == 'revision_manual'
+    assert 'vacío' in r['motivo']
+
+
+def test_fallo_documental_no_conserva_licitaciones_que_ya_caducaron():
+    r = evaluar(fecha_cierre='2020-01-01', documentos=[{'id':1,'estado_extraccion':'error'}])
+    assert r['clasificacion'] == 'descartada'
+
+
 @pytest.mark.parametrize("comuna", cargar_catalogo()["comunas_rm"])
 def test_cobertura_de_comunas_rm(comuna):
     r = evaluar(nombre=f"Se requiere alojamiento en la comuna de {comuna}, Región Metropolitana.")

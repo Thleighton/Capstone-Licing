@@ -2,7 +2,7 @@ import io
 import subprocess
 
 import pytest
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
 
 from app.services.pdf_bases import extraer_pdf, MAX_BYTES
@@ -36,6 +36,8 @@ def test_escaneado_no_se_declara_leido():
     result = extraer_pdf(pdf())
     assert result['estado_extraccion'] == 'sin_texto'
     assert result['cobertura']['paginas_pendientes'] == [1]
+    assert result['cobertura']['motivo_codigo'] == 'sin_texto_legible'
+    assert 'podría' in result['cobertura']['motivo']
 
 
 @pytest.mark.parametrize('data', [b'not a PDF', b'%PDF-' + b'x' * MAX_BYTES])
@@ -45,12 +47,30 @@ def test_archivo_invalido(data):
 
 
 def test_protegido_o_corrupto_queda_pendiente():
-    assert extraer_pdf(pdf(protegido=True))['estado_extraccion'] == 'error'
-    assert extraer_pdf(b'%PDF-corrupto')['estado_extraccion'] == 'error'
+    protegido = extraer_pdf(pdf(protegido=True))
+    corrupto = extraer_pdf(b'%PDF-corrupto')
+    assert protegido['estado_extraccion'] == corrupto['estado_extraccion'] == 'error'
+    assert protegido['cobertura']['motivo_codigo'] == 'pdf_protegido'
+    assert corrupto['cobertura']['motivo_codigo'] == 'pdf_corrupto'
 
 
 def test_limite_de_tiempo(monkeypatch):
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired('pdf', 10)
     monkeypatch.setattr(subprocess, 'run', timeout)
-    assert extraer_pdf(pdf())['estado_extraccion'] == 'error'
+    r = extraer_pdf(pdf())
+    assert r['estado_extraccion'] == 'error'
+    assert r['cobertura']['motivo_codigo'] == 'limite_tiempo'
+
+
+def test_pdf_sin_paginas_y_lectura_parcial_tienen_motivos_distintos():
+    writer = PdfWriter()
+    vacio = io.BytesIO(); writer.write(vacio)
+    assert extraer_pdf(vacio.getvalue())['cobertura']['motivo_codigo'] == 'sin_paginas'
+    writer.add_page(PdfReader(io.BytesIO(pdf('Servicio de alojamiento en Santiago para 50 personas.'))).pages[0])
+    writer.add_blank_page(width=600, height=800)
+    parcial = io.BytesIO(); writer.write(parcial)
+    r = extraer_pdf(parcial.getvalue())
+    assert r['estado_extraccion'] == 'parcial'
+    assert r['cobertura']['motivo_codigo'] == 'lectura_parcial'
+    assert r['cobertura']['paginas_pendientes'] == [2]

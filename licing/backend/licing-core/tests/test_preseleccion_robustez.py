@@ -122,7 +122,18 @@ def test_cobertura_nacional_se_conserva_aunque_nombre_una_ciudad(ciudad):
 
 @pytest.mark.parametrize("cambios", [
     {"nombre": {}}, {"descripcion": 123}, {"items": {}}, {"items": "alojamiento"},
-    {"items": [None]}, {"items": [{"descripcion": []}]}, {"documentos": {}},
+    {"items": [None]}, {"items": [{"descripcion": []}]},
+    {"codigo_estado": "5"}, {"codigo_estado": True}, {"nombre_organismo": []},
+])
+def test_datos_mal_formados_no_detienen_el_lote_ni_se_certifican(cambios):
+    r = evaluar(**cambios)
+    assert r["clasificacion"] == "revision_manual"
+    assert r["entrada_parcial"]
+    assert r["calidad_datos"]["incidencias"]
+
+
+@pytest.mark.parametrize("cambios", [
+    {"documentos": {}},
     {"documentos": [True]}, {"documentos": [{"id": 1, "paginas_texto": "Santiago"}]},
     {"documentos": [{"id": 1, "paginas_texto": [None]}]},
     {"documentos": [{"id": 1, "paginas_texto": [{"texto": 123}]}]},
@@ -131,13 +142,12 @@ def test_cobertura_nacional_se_conserva_aunque_nombre_una_ciudad(ciudad):
     {"documentos": [{"id": 1, "cobertura": {"motivo_codigo": []}}]},
     {"documentos": [{"id": 1, "vigente": "false"}]},
     {"incidencia_documental": []}, {"incidencia_documental": {}},
-    {"codigo_estado": "5"}, {"codigo_estado": True}, {"nombre_organismo": []},
 ])
-def test_datos_mal_formados_no_detienen_el_lote_ni_se_certifican(cambios):
+def test_datos_documentales_invalidos_no_bloquean_una_ficha_suficiente(cambios):
     r = evaluar(**cambios)
-    assert r["clasificacion"] == "revision_manual"
-    assert r["entrada_parcial"]
+    assert r["clasificacion"] == "preseleccionada"
     assert r["calidad_datos"]["incidencias"]
+    assert r["decision_postular"] is False
 
 
 @pytest.mark.parametrize("datos", [None, [], "alojamiento en Santiago", 1, False])
@@ -214,11 +224,12 @@ def test_lectura_acotada_conserva_el_limite_total_y_no_descarta():
     assert parcial and sum(len(t) for _, t in campos) <= MAX_TEXTO_TOTAL
 
 
-def test_lista_de_paginas_truncada_no_se_presenta_como_cumplimiento():
+def test_lista_de_paginas_invalida_no_impide_usar_la_ficha_suficiente():
     r = evaluar(documentos=[{"id": 1, "estado_extraccion": "extraido", "paginas_texto": [
         {"pagina": n, "texto": "Alojamiento en Santiago"} for n in range(1, 122)]}])
-    assert r["entrada_parcial"]
-    assert r["clasificacion"] == "revision_manual"
+    assert r["calidad_datos"]["incidencias"]
+    assert r["clasificacion"] == "preseleccionada"
+    assert r["decision_postular"] is False
 
 
 @pytest.mark.parametrize("nombre", [
@@ -245,7 +256,66 @@ def test_una_linea_ajena_no_oculta_servicios_hoteleros_en_otras_lineas(servicio)
     assert not r["criterios"]["pertinencia"]["exclusiones_evidentes"]
 
 
-def test_no_descarta_objeto_ajeno_si_la_entrada_es_parcial_o_el_documento_fallo():
+def test_entrada_parcial_se_conserva_pero_fallo_documental_no_oculta_objeto_ajeno():
     assert evaluar(nombre="Compra de medicamentos", items=[None])["clasificacion"] == "revision_manual"
     assert evaluar(nombre="Compra de medicamentos", incidencia_documental={
-        "codigo": "pdf_corrupto", "motivo": "PDF ilegible"})["clasificacion"] == "revision_manual"
+        "codigo": "pdf_corrupto", "motivo": "PDF ilegible"})["clasificacion"] == "descartada"
+
+
+@pytest.mark.parametrize("codigo,nombre_producto", [
+    ("42142502", "Agujas para anestesia"), ("51111716", "Medicamento oncológico"),
+    ("56101532", "Mobiliario"), ("43211503", "Computadores"),
+    ("72101506", "Mantenimiento de ascensores"), ("80111713", "Administradores de bases de datos"),
+    ("101101001", "Licitación Pública de Obra"), ("102101001", "Licitación Pública de Consultoria"),
+])
+def test_codigos_ajenos_descartan_sin_exigir_pdf_ni_lugar(codigo, nombre_producto):
+    r = evaluar(nombre="Contratación de suministros o servicios", items=[{
+        "codigo_producto": codigo, "nombre_producto": nombre_producto,
+        "categoria": "Servicios de Viajes, alimentación, alojamiento y entretenimiento"}],
+        incidencia_documental={"codigo": "sin_descarga_publica", "motivo": "No fue posible obtener bases."})
+    assert r["clasificacion"] == "descartada"
+    e = r["criterios"]["pertinencia"]["exclusiones_evidentes"][0]
+    assert e["fuente"] == "items[0].codigo_producto"
+    assert codigo in e["evidencia"]
+
+
+@pytest.mark.parametrize("codigo", [None, "99999999", "42", 42142502])
+def test_codigo_desconocido_en_una_linea_impide_descartar_el_conjunto(codigo):
+    r = evaluar(nombre="Contrato de servicios", items=[
+        {"codigo_producto": "42142502", "nombre_producto": "Agujas"},
+        {"codigo_producto": codigo, "descripcion": "Servicio por especificar"},
+    ])
+    assert r["clasificacion"] == "revision_manual"
+
+
+@pytest.mark.parametrize("servicio", ["Alojamiento en Santiago", "Arriendo de salón en Santiago",
+    "Coffee break para una jornada en Santiago", "Capacitación presencial con almuerzo"])
+def test_codigo_ajeno_no_sobrepasa_una_necesidad_hoteleria_en_otra_linea(servicio):
+    r = evaluar(nombre="Contrato de servicios", items=[
+        {"codigo_producto": "42142502", "descripcion": "Suministro de agujas"},
+        {"codigo_producto": "43211503", "descripcion": servicio},
+    ])
+    assert r["clasificacion"] != "descartada"
+
+
+@pytest.mark.parametrize("texto,codigo", [
+    ("Adaptadores de equipos de alimentación enteral", "42231500"),
+    ("Reparación de vehículos en taller particular, jornada normal", "78180101"),
+])
+def test_alimentacion_clinica_y_jornada_laboral_no_son_servicios_del_hotel(texto, codigo):
+    r = evaluar(nombre="Contrato de suministros", items=[{"codigo_producto": codigo, "descripcion": texto}])
+    assert r["clasificacion"] == "descartada"
+
+
+def test_bases_legibles_que_contradicen_la_ficha_si_se_consideran():
+    r = evaluar(documentos=[{"id": 7, "estado_extraccion": "extraido", "paginas_texto": [
+        {"pagina": 1, "texto": "El alojamiento se prestará en Valparaíso."}]}])
+    assert r["clasificacion"] == "revision_manual"
+    assert r["criterios"]["ubicacion"]["estado"] == "mixta"
+
+
+def test_pdf_ilegible_no_inventa_servicio_o_ubicacion_que_no_estan_en_la_ficha():
+    r = evaluar(nombre="Contrato 2026", documentos=[{"id": 1, "estado_extraccion": "parcial",
+        "paginas_texto": [{"pagina": 1, "texto": "Alojamiento en Santiago"}]}])
+    assert r["clasificacion"] == "revision_manual"
+    assert not r["criterios"]["pertinencia"]["directa"]

@@ -1,6 +1,7 @@
 """Preselección explicable y documentos del hotel; LLM fuera de esta etapa."""
 import base64
 import binascii
+import asyncio
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -22,7 +23,7 @@ from ..models.licitacion_documento import LicitacionDocumento
 from ..services import filtradas, documentos_origen
 from ..services.enlaces import ficha_oficial
 from ..services.pdf_bases import extraer_pdf, MAX_BYTES
-from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE
+from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE, VERSION_MOTOR
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -36,14 +37,17 @@ def serializable(valor):
 
 
 def cargar_entradas(db, ids):
+    if not ids:
+        return {}
     filas = db.scalars(select(Licitacion).where(Licitacion.id.in_(ids))).all()
     entradas = {}
     versiones = documentos_origen.versiones(db, ids)
+    verificaciones = dict(db.execute(select(RawMercadoPublico.id, RawMercadoPublico.verificado_en)
+        .where(RawMercadoPublico.id.in_({f.raw_id for f in filas}))).all())
     for fila in filas:
         datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns if c.name != "ingesta_documental"}
-        raw = db.get(RawMercadoPublico, fila.raw_id)
         datos.update(items=[], documentos_version=versiones[fila.id], url_oficial=ficha_oficial(fila.codigo_externo),
-                     fuente_verificada_en=raw.verificado_en if raw else None)
+                     fuente_verificada_en=verificaciones.get(fila.raw_id))
         if fila.ingesta_documental.get("incidencia_documental"):
             datos["incidencia_documental"] = fila.ingesta_documental["incidencia_documental"]
         entradas[fila.id] = datos
@@ -56,13 +60,12 @@ def cargar_entradas(db, ids):
 
 def firma_fuente(datos):
     estables = {k: v for k, v in datos.items() if k not in {"fuente_verificada_en", "normalizado_en"}}
+    estables.update(version_motor=VERSION_MOTOR, catalogo_version=cargar_catalogo()["version"])
     return hashlib.sha256(json.dumps(estables, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
 async def evaluar_lote(db, ids, actor=None):
-    observado_en = datetime.now(timezone.utc).isoformat()
-    codigos_vigentes = list(db.scalars(select(Licitacion.codigo_externo)))
-    await filtradas.operar("sincronizar_fuente", {"codigos": codigos_vigentes, "observado_en": observado_en})
+    ids = list(dict.fromkeys(ids))
     entradas = cargar_entradas(db, ids)
     if len(entradas) != len(set(ids)):
         raise HTTPException(404, "Alguna licitación ya no está disponible. Actualiza la lista.")
@@ -83,12 +86,26 @@ async def evaluar_lote(db, ids, actor=None):
     versiones = documentos_origen.versiones(db, ids)
     if any(versiones[d["id"]] != d["documentos_version"] for d in entradas.values()):
         raise HTTPException(409, "Los documentos cambiaron durante la evaluación. Vuelve a intentarlo.")
-    return await filtradas.operar("guardar", {"lote": lote, "perfil": cargar_catalogo(), "actor": actor})
+    observado_en = datetime.now(timezone.utc).isoformat()
+    codigos_vigentes = list(db.scalars(select(Licitacion.codigo_externo)))
+    await filtradas.operar("sincronizar_fuente", {"codigos": codigos_vigentes, "observado_en": observado_en})
+    # La persistencia admite 20 entradas. Se carga y comprueba la fuente una sola
+    # vez y se mantienen como máximo dos peticiones de guardado en curso.
+    semaforo = asyncio.Semaphore(2)
+    async def guardar(parte):
+        async with semaforo:
+            return await filtradas.operar("guardar", {"lote": parte, "perfil": cargar_catalogo(), "actor": actor})
+    respuestas = await asyncio.gather(*(guardar(lote[i:i+20]) for i in range(0, len(lote), 20)),
+                                     return_exceptions=True)
+    for respuesta in respuestas:
+        if isinstance(respuesta, BaseException):
+            raise respuesta
+    return {"evaluadas": [e for r in respuestas for e in r.get("evaluadas", [])]}
 
 
 class Lote(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    ids: list[Annotated[int, Field(strict=True, gt=0)]] = Field(min_length=1, max_length=20)
+    ids: list[Annotated[int, Field(strict=True, gt=0)]] = Field(min_length=1, max_length=100)
 
 
 class Revision(BaseModel):
@@ -127,6 +144,24 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
 @router.post("/evaluar")
 async def evaluar(entrada: Lote, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
     return await evaluar_lote(db, entrada.ids, str(UUID(usuario["id"])))
+
+
+@router.get("/plan", dependencies=[Depends(usuario_actual)])
+async def plan(response: Response, db: Session = Depends(get_db)):
+    """Evalúa al cambiar la fuente o las reglas; conserva resultados y revisiones vigentes."""
+    ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
+    entradas = cargar_entradas(db, ids)
+    fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
+    guardadas = {}
+    for offset in range(0, len(ids), 100):
+        pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
+            "limite": 100, "offset": offset})
+        guardadas.update({str(f["id"]): f for f in pagina.get("filas", [])})
+    pendientes = [int(i) for i, d in entradas.items()
+        if guardadas.get(i, {}).get("hash_fuente") != firma_fuente(d)
+        or guardadas.get(i, {}).get("estado_seleccion") == "pendiente_evaluacion"]
+    response.headers["Cache-Control"] = "no-store"
+    return {"ids": pendientes, "total": len(ids), "version_motor": VERSION_MOTOR}
 
 
 @router.post("/documentos/obtener")

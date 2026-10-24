@@ -11,7 +11,7 @@ from .revision_documental import evaluar_documentacion
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-4"
+VERSION_MOTOR = "reglas-hotel-5"
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
 MAX_DOCUMENTOS = 10
@@ -165,9 +165,8 @@ def _campos(datos: dict):
         for nombre in ("nombre_producto", "descripcion", "categoria"):
             agregar(f"items[{n}].{nombre}", item.get(nombre))
     for doc in datos["documentos"]:
-        if not doc.get("vigente", True):
+        if not doc.get("vigente", True) or doc.get("estado_extraccion") != "extraido":
             continue
-        parcial |= doc.get("estado_extraccion") != "extraido"
         for pagina in doc.get("paginas_texto") or []:
             agregar(f"documentos[{doc['id']}].paginas[{pagina['pagina']}]", pagina.get("texto"))
     return campos, parcial
@@ -199,6 +198,10 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
                 m = patron.search(normal)
                 if m:
                     nivel = grupo["nivel"]
+                    if ((grupo["id"] == "alimentacion_asociada" and re.search(r"\balimentacion (?:enteral|parenteral)\b", normal))
+                            or (grupo["id"] == "actividades" and re.fullmatch(r"jornadas?|taller(?:es)?", m.group())
+                                and re.match(r"\s+(?:normal|extraordinaria|laboral|particular|mecanico)\b", normal[m.end():]))):
+                        nivel = "complemento"
                     if re.fullmatch(r"hotel(?:es)?|hoteleria", m.group()):
                         antes = re.split(r"[.;\n]", normal[:m.start()])[-1][-120:]
                         despues = re.split(r"[.;\n]", normal[m.end():], maxsplit=1)[0][:120]
@@ -222,8 +225,8 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     directas = [x for x in coincidencias if x["nivel"] == "directa"
         and not x["fuente"].endswith(("categoria", "nombre_producto"))]
     exclusiones = []
-    senales = any(x["grupo"] in {"alojamiento", "salones", "actividades", "alimentacion_asociada"}
-                  for x in coincidencias)
+    senales = any(x["nivel"] != "complemento" and x["grupo"] in {"alojamiento", "salones", "actividades", "alimentacion_asociada"}
+                  and not x["fuente"].endswith("categoria") for x in coincidencias)
     # Excluir requiere un objeto ajeno explícito, nunca solo ausencia de palabras clave.
     # Cualquier señal de un paquete hotelero mantiene el caso para desambiguación.
     if not senales:
@@ -236,6 +239,28 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
                 if m:
                     exclusiones.append({"codigo": regla["id"], "motivo": regla["motivo"],
                         "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
+        items = datos.get("items") or []
+        segmentos = cargar_catalogo().get("segmentos_producto_ajenos", {})
+        familias = cargar_catalogo().get("familias_producto_ajenas", {})
+        especiales = cargar_catalogo().get("codigos_producto_ajenos", {})
+        def objeto_ajeno(item):
+            codigo = item.get("codigo_producto")
+            if not isinstance(codigo, str):
+                return None
+            if codigo in especiales:
+                return especiales[codigo]
+            if re.fullmatch(r"\d{8}", codigo):
+                return familias.get(codigo[:4]) or segmentos.get(codigo[:2])
+            return None
+        # Todas las líneas deben tener un código conocido ajeno; una línea desconocida
+        # o una señal de servicios hoteleros conserva la oportunidad completa.
+        if items and all(objeto_ajeno(i) for i in items):
+            for n, item in enumerate(items[:10]):
+                codigo = item["codigo_producto"]
+                exclusiones.append({"codigo": "producto_ajeno", "fuente": f"items[{n}].codigo_producto",
+                    "motivo": "Las líneas publicadas corresponden a " + objeto_ajeno(item)
+                        + "; no se identifica contratación de servicios del hotel.",
+                    "evidencia": f"{codigo}: {item.get('nombre_producto') or item.get('descripcion') or objeto_ajeno(item)}"})
     # El título de una línea genérica puede ser la única información disponible: conserva para revisar.
     return {"grupos": sorted({x["grupo"] for x in coincidencias}), "directa": bool(directas),
         "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30],
@@ -408,8 +433,12 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     if ahora.tzinfo is None:
         raise ValueError("La hora de evaluación debe indicar su zona horaria.")
     ahora = ahora.astimezone(CHILE)
-    campos, parcial = _campos(datos)
-    parcial |= bool(problemas)
+    # Las bases son una fuente complementaria. Los errores al conseguirlas o leerlas
+    # no anulan evidencia suficiente de la ficha y sus ítems.
+    utilizables = {**datos, "documentos": [d for n, d in enumerate(datos.get("documentos", []))
+        if not any(p.startswith(f"documentos[{n}].") for p in problemas)]}
+    campos, parcial = _campos(utilizables)
+    parcial |= any(not p.startswith(("documentos", "incidencia_documental")) for p in problemas)
     vigencia = evaluar_vigencia(datos, ahora)
     pertinencia = detectar_pertinencia(datos, campos=campos)
     ubicacion = detectar_ubicacion(datos, campos=campos, pertinencia=pertinencia)
@@ -421,8 +450,6 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion")
     if vigencia["resultado"] == "no_cumple":
         clasificacion, motivo = "descartada", vigencia["motivo"]
-    elif documentacion["requiere_revision"]:
-        clasificacion, motivo = "revision_manual", "Pendiente de revisión documental. " + documentacion["motivo"]
     elif territorial == "no_cumple":
         clasificacion, motivo = "descartada", "El servicio identificado se solicita fuera de la Región Metropolitana."
     elif rubro == "no_cumple":
@@ -431,10 +458,13 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         clasificacion, motivo = "preseleccionada", "Oportunidad vigente, con servicio potencialmente hotelero y ubicación identificada en la RM."
     else:
         clasificacion = "revision_manual"
-        motivo = "Conservar: hay información insuficiente o ambigua para completar la preselección."
+        motivo = ("La ficha no permite confirmar la vigencia." if vigencia["resultado"] != "cumple" else
+            "La ficha no identifica con claridad el servicio contratado." if rubro != "cumple" else
+            "El servicio puede servir al hotel, pero su lugar de ejecución no está confirmado en la RM.")
     if pertinencia["ambiguedades"] or parcial:
         if clasificacion == "preseleccionada":
-            clasificacion, motivo = "revision_manual", "Hay requisitos ambiguos o documentos parcialmente leídos."
+            clasificacion, motivo = "revision_manual", "La información utilizada es ambigua o supera el límite de lectura."
+    documentacion["bloquea_preseleccion"] = False
     entrada = {"campos": campos, "estado": datos.get("estado"), "codigo_estado": datos.get("codigo_estado"),
         "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id"),
         "documentacion": documentacion, "calidad_datos": problemas,

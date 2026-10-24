@@ -4,6 +4,7 @@ import "./preseleccion.css";
 
 const URL = "/api/preseleccion";
 const etiquetas = { preseleccionada: "Posible oportunidad", revision_manual: "Revisión necesaria", descartada: "Descartada por regla", pendiente_evaluacion: "Sin evaluar" };
+const PENDIENTES = "pendientes_documentales";
 const fecha = valor => valor ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(valor)) : "Sin fecha";
 const evidencia = c => c.evidencias?.map(e => e.evidencia || e.texto).filter(Boolean).slice(0, 5) || [];
 const base64 = file => new Promise((resolve, reject) => {
@@ -23,7 +24,8 @@ export default function Preseleccion() {
   const archivoInput = useRef(null); const secuencia = useRef(0);
   useEffect(() => {
     let vigente = true; setCargando(true);
-    apiJson(`${URL}?clasificacion=${filtro}&offset=${offset}`).then(r => {
+    const consulta = filtro === PENDIENTES ? `${URL}/pendientes-documentales?offset=${offset}` : `${URL}?clasificacion=${filtro}&offset=${offset}`;
+    apiJson(consulta).then(r => {
       if (vigente) { setDatos(r); setErrorCarga(""); }
     }).catch(e => { if (vigente) setErrorCarga(e.message); }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
@@ -77,12 +79,14 @@ export default function Preseleccion() {
       <button className="primary" disabled={!!ocupado || cargando} onClick={evaluar}>Actualizar preselección</button></div>
     <p className="pre-nota">Una coincidencia indica una posible oportunidad. Revisa sus bases, capacidad y disponibilidad antes de decidir postular. Los datos desconocidos quedan pendientes.</p>
     <div className="pre-controles"><label>Mostrar <select value={filtro} disabled={!!ocupado} onChange={e => { setFiltro(e.target.value); setOffset(0); }}>
-      <option value="">Todas</option>{Object.entries(etiquetas).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <option value="">Todas</option>{Object.entries(etiquetas).map(([k, v]) => <option key={k} value={k}>{v}</option>)}<option value={PENDIENTES}>Pendientes por revisar · documentos</option></select></label>
+      <button disabled={!!ocupado} aria-pressed={filtro === PENDIENTES} onClick={() => { setFiltro(PENDIENTES); setOffset(0); }}>Pendientes por revisar</button>
       <span className="sub">{datos.total} resultados</span></div>
+    {filtro === PENDIENTES && <p className="pre-nota">Licitaciones conservadas por problemas al descargar o leer sus documentos. Los motivos son orientativos y requieren revisión.</p>}
     {ocupado && <p role="status">{ocupado}</p>}
     {(error || errorCarga) && <p className="msg err" role="alert">{error || errorCarga}</p>}
     {cargando ? <p role="status">Cargando preselección…</p> : <>
-      {!datos.filas.length && !error && !errorCarga && <p className="pre-vacio">{datos.ids_fuente.length ? "No hay resultados en esta vista. Usa Actualizar preselección para evaluar los datos guardados." : "Todavía no hay licitaciones vigentes para evaluar."}</p>}
+      {!datos.filas.length && !error && !errorCarga && <p className="pre-vacio">{filtro === PENDIENTES ? "No hay incidencias documentales pendientes registradas." : datos.ids_fuente.length ? "No hay resultados en esta vista. Usa Actualizar preselección para evaluar los datos guardados." : "Todavía no hay licitaciones vigentes para evaluar."}</p>}
       <div className="pre-lista">{datos.filas.map(fila => <article key={fila.id} className="pre-fila">
         <div><span className="sub">{fila.codigo_externo} · Cierra {fecha(fila.fecha_cierre)}</span><h3>{fila.nombre}</h3><p>{fila.motivo_seleccion}</p>
           <span className="badge">{etiquetas[fila.estado_seleccion]}</span> {fila.cobertura === "sin_bases" && <span className="sub">Sin bases adjuntas</span>}</div>
@@ -95,14 +99,23 @@ export default function Preseleccion() {
       <div className="section-title"><h3>{seleccion.codigo_externo} · {seleccion.nombre}</h3><button disabled={!!ocupado} onClick={() => { secuencia.current++; setSeleccion(null); }}>Cerrar revisión</button></div>
       {!detalle ? <p role="status">Cargando evidencia…</p> : <>
         {(!detalle.fuente_actualizada || !detalle.evaluacion) && <p className="msg">La evaluación necesita actualizarse. Usa Actualizar preselección antes de registrar una revisión.</p>}
-        {detalle.criterios.map(c => <div className="pre-criterio" key={c.id}><strong>{({ vigencia: "Vigencia", ubicacion: "Lugar del servicio", pertinencia: "Servicios del hotel" })[c.codigo] || c.nombre}</strong>
+        {!!detalle.incidencias_documentales?.length && <div className="msg" role="status"><strong>Pendiente de revisión documental</strong>
+          {detalle.incidencias_documentales.map((i, n) => <p key={n}>{i.nombre && <strong>{i.nombre}: </strong>}{i.motivo}</p>)}</div>}
+        {detalle.criterios.map(c => <div className="pre-criterio" key={c.id}><strong>{({ vigencia: "Vigencia", ubicacion: "Lugar del servicio", pertinencia: "Servicios del hotel", documentos: "Documentos" })[c.codigo] || c.nombre}</strong>
           <span className="badge">{({ cumple: "Coincidencia", no_cumple: "Fuera del criterio", sin_informacion: "Por verificar" })[c.resultado] || c.resultado}</span>
+          {c.motivo && <p>{c.motivo}</p>}
           {evidencia(c).map((texto, i) => <blockquote key={i}>{texto}</blockquote>)}</div>)}
         {!!detalle.evaluacion?.metadatos?.requisitos_detectados?.hallazgos?.length && <details><summary>Cantidades, fechas y requisitos detectados · pendientes de interpretación</summary>
           {detalle.evaluacion.metadatos.requisitos_detectados.hallazgos.map((h, i) => <p key={i}><strong>{h.texto}</strong><br /><span className="sub">{h.fuente}</span><br />{h.contexto}</p>)}</details>}
         <h4>Bases y anexos</h4><p className="sub">PDF de hasta 3 MB y 120 páginas. Las páginas escaneadas o ilegibles requieren revisión; no se consideran información confirmada.</p>
+        <p className="sub">{detalle.ingesta_documental?.estado === "descargada"
+          ? "Bases obtenidas desde Mercado Público. Puede haber anexos adicionales pendientes."
+          : detalle.ingesta_documental?.estado === "procesando" ? "Descarga automática en curso."
+          : detalle.ingesta_documental?.estado ? "No se completó la descarga automática. Se reintentará; puedes adjuntar las bases manualmente."
+          : "Bases pendientes de descarga automática."}</p>
         {detalle.documentos.map(d => <div className="pre-documento" key={d.id}><div>{d.url_descarga ? <a href={d.url_descarga} target="_blank" rel="noreferrer">{d.nombre} ↗</a> : d.nombre}<br />
           <span className="sub">{({ extraido: "Texto leído", parcial: "Lectura parcial", sin_texto: "Requiere OCR o lectura manual", error: "No se pudo leer", pendiente: "Pendiente" })[d.estado_extraccion]} · {d.paginas || "?"} páginas</span></div>
+          {d.incidencia && <p>Motivo orientativo: {d.incidencia.motivo}</p>}
           <button disabled={!!ocupado} onClick={() => retirar(d.id)}>Retirar de la evaluación</button></div>)}
         <form onSubmit={subir} className="pre-carga"><label>Documento de {seleccion.codigo_externo}<input ref={archivoInput} type="file" accept="application/pdf,.pdf" disabled={!!ocupado} onChange={e => setArchivo(e.target.files?.[0] || null)} /></label>
           <label>Tipo <select value={tipo} disabled={!!ocupado} onChange={e => setTipo(e.target.value)}><option value="bases_tecnicas">Bases técnicas</option><option value="bases_administrativas">Bases administrativas</option><option value="anexo">Anexo</option><option value="otro">Otro</option></select></label>

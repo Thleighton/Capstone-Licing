@@ -8,7 +8,7 @@ import sys
 import zipfile
 from xml.etree import ElementTree as ET
 
-from .pdf_bases import MAX_BYTES, MOTIVOS_PDF
+from .pdf_bases import MAX_BYTES, MOTIVOS_PDF, entorno_lector
 
 VERSION_EXTRACTOR = "office-texto-1"
 ZIP = b"PK\x03\x04"
@@ -60,7 +60,7 @@ def extraer_office(contenido: bytes, extension: str) -> dict:
         # Aislamiento como en los PDF: un archivo costoso no consume sin límite el proceso de la API.
         try:
             proceso = subprocess.run([sys.executable, "-m", "app.services.lectura_office", extension],
-                                     input=contenido, capture_output=True, timeout=5, check=False)
+                                     input=contenido, capture_output=True, timeout=5, check=False, env=entorno_lector())
             salida = json.loads(proceso.stdout) if proceso.returncode == 0 else _resultado(
                 "error", "limite_recursos" if proceso.returncode < 0 else "documento_corrupto")
         except subprocess.TimeoutExpired:

@@ -89,3 +89,10 @@ def test_documento_no_legible_queda_para_revision_con_motivo(contenido, extensio
 def test_entrada_invalida(contenido, extension):
     with pytest.raises(ValueError):
         extraer_office(contenido, extension)
+
+
+def test_lector_aislado_no_depende_del_directorio_actual(tmp_path, monkeypatch):
+    # En Vercel el proceso arranca fuera de licing-core: Core se agrega a sys.path desde api/index.py.
+    monkeypatch.chdir(tmp_path)
+    r = extraer_office(docx('<w:p><w:r><w:t>Servicio de alojamiento para 30 personas en Santiago.</w:t></w:r></w:p>'), 'docx')
+    assert r['estado_extraccion'] == 'extraido'

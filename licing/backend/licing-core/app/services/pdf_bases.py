@@ -1,6 +1,7 @@
 """Lectura acotada de PDF. El original se conserva fuera de Postgres."""
 import hashlib
 import json
+import os
 import subprocess
 import sys
 
@@ -18,6 +19,11 @@ MOTIVOS_PDF = {
     "limite_recursos": "La lectura se interrumpió por los límites de procesamiento; requiere revisión manual.",
     "error_lectura": "No se pudo completar la lectura del PDF; la causa no pudo determinarse.",
 }
+
+
+def entorno_lector():
+    # El hijo no hereda sys.path: en Vercel, Core se agrega desde api/index.py y no está en el directorio actual.
+    return {**os.environ, "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
 
 
 class _LecturaNoViable(Exception):
@@ -50,7 +56,7 @@ def extraer_pdf(contenido: bytes) -> dict:
     # Aislamiento: un PDF costoso no consume sin límite el proceso de la API.
     try:
         proceso = subprocess.run([sys.executable, "-m", "app.services.pdf_bases"],
-                                 input=contenido, capture_output=True, timeout=10, check=False)
+                                 input=contenido, capture_output=True, timeout=10, check=False, env=entorno_lector())
         salida = json.loads(proceso.stdout) if proceso.returncode == 0 else _error("limite_recursos" if proceso.returncode < 0 else "error_lectura")
     except subprocess.TimeoutExpired:
         salida = _error("limite_tiempo")

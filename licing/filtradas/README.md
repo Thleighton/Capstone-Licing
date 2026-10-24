@@ -1,27 +1,47 @@
 # Preselección del Hotel Plaza San Francisco
 
-Core conserva la ingesta y el RAW completos en Usuarios/Licitaciones. El segundo proyecto guarda las oportunidades evaluadas, ítems, resultados explicables, revisiones y documentos. No se crean tablas adicionales: se reutilizan las ocho existentes.
+Para continuar el PR y configurar cron-job.org, ver [Relevo del cron documental](../docs/RELEVO_CRON_DOCUMENTOS.md).
 
-La preselección usa fecha y estado, ubicación del servicio (no domicilio del comprador), un catálogo amplio de servicios y reglas para ambigüedades. Los datos desconocidos van a revisión. No ejecuta embeddings, ML, LLM ni decide postular. Los clientes estratégicos son una preferencia, no una exclusión. Las capacidades del PDF del hotel se conservan en el perfil; no se suman salas combinadas ni se presupone disponibilidad.
+Usuarios/Licitaciones es la capa de entrada: conserva RAW, normalización y documentos originales en `licitacion_documento`, vinculados por `licitacion_id`. Los PDF están en el bucket privado `licitacion-bases` de **ese mismo proyecto**. El texto se conserva una sola vez, con índices que permiten reconstruir cada página; los filtros leen esa fuente.
 
-## Documentos
+LicitacionesFiltradas guarda oportunidades evaluadas, ítems, criterios, revisiones y referencias `documento_id/version/hash` en `evaluacion_filtro.entrada_evaluada`. No almacena PDF ni su texto completo. La migración `documentos_solo_en_origen` retira la tabla documental vacía y el control de descargas equivocados de filtradas; se detiene si encuentra documentos para evitar pérdida de datos. El bucket anterior queda deshabilitado para PDF.
 
-El dashboard acepta PDF de hasta 3 MB, 120 páginas y 10 documentos activos por oportunidad. Core lee un máximo de 300.000 caracteres por documento en un proceso con límites de memoria y tiempo. El PDF original se conserva en Storage privado; el texto conserva página y evidencia. Un lector alternativo intenta recuperar PDF mal estructurados. No hay OCR: páginas escaneadas o ilegibles fuerzan revisión. La lectura de un archivo no confirma que se hayan recibido todas las bases. No se descargan anexos automáticamente: la API de Mercado Público no entrega un conjunto completo de enlaces.
-
-Retirar un PDF invalida la evaluación y conserva el archivo para trazabilidad hasta la eliminación de la oportunidad. Repetir un archivo idéntico lo reutiliza. Repetir una evaluación idéntica conserva la revisión humana; cambios de fuente, perfil o documentos invalidan los resultados anteriores. Los descartes por falta de capacidad no se etiquetan automáticamente como ejemplos negativos del rubro.
+La preselección considera vigencia, servicios hoteleros y lugar de ejecución en RM; no confunde domicilio del comprador con ejecución. Los casos desconocidos quedan para revisión. Todavía no ejecuta embeddings, ML o LLM ni decide postular. Los clientes estratégicos son una preferencia; las capacidades del hotel no se interpretan como disponibilidad.
 
 ## Instalación
 
-1. En un proyecto nuevo, ejecutar `001_base.sql` una sola vez. **La base del usuario ya tiene ese esquema: no repetirlo.**
-2. Aplicar las migraciones de `supabase/migrations` únicamente en LicitacionesFiltradas, en orden. La primera es portable y se prueba automáticamente; la segunda configura Storage privado y una purga cada minuto.
-3. Desplegar `supabase/functions/licing-filtradas/index.ts` con `verify_jwt=false`. La función valida **cada solicitud** contra el endpoint fijo de Core antes de leer el cuerpo; no es una función anónima. Usa las variables privilegiadas internas de Supabase y nunca las devuelve al cliente.
-4. Desplegar Core y frontend. `FILTRADAS_URL` apunta a la función. `CRON_SECRET` debe existir en Core; se reutiliza la credencial privada del planificador, no se solicita ni guarda una clave del segundo proyecto en el navegador. El callback apunta exclusivamente al dominio de producción.
-5. Un usuario activo pulsa **Actualizar preselección** para registrar el perfil versionado y evaluar los datos existentes. El cron de ingesta evalúa después cada nuevo lote; si filtradas no responde, conserva la ingesta y señala que hay evaluación pendiente.
+1. Aplicar la migración Alembic de Core `b5df9fcc5f0d` en Usuarios/Licitaciones, después de `b8654f3a89fc`. Crea una sola tabla documental con eliminación en cascada al retirar la licitación y un campo de control de descargas en `licitacion`.
+2. Aplicar `../docs/sql/documentos_storage_origen.sql` en **Usuarios/Licitaciones**: bucket privado, límite 3 MB y función de detección de huérfanos, exclusiva del servidor.
+3. Desplegar `../backend/licing-core/supabase/functions/documentos-origen/index.ts` en **Usuarios/Licitaciones**. Tiene autenticación propia: valida el secreto existente mediante el callback fijo de Core, antes de leer el cuerpo. Usa las credenciales privilegiadas internas de ese proyecto. `DOCUMENTOS_STORAGE_URL` apunta a esta función; no hay claves en el navegador.
+4. Aplicar en **LicitacionesFiltradas** las migraciones de `supabase/migrations` en orden. `001_base.sql` es un snapshot histórico para instalaciones nuevas; no repetirlo en la base existente. Desplegar allí la versión actual de `licing-filtradas`, que ya no permite operaciones documentales.
+5. Publicar Core y frontend. El callback autenticador debe estar disponible en producción. Inicializar el perfil desde **Actualizar preselección**; la descarga documental es independiente y no necesita que exista ese perfil.
 
-La limpieza de filtradas elimina vencidas/cerradas y sus dependencias cada minuto. Al actualizar la preselección o procesar una ingesta, sincroniza las bajas de la fuente original usando una lectura completa, con protección para altas posteriores al snapshot. Los binarios huérfanos se retiran mediante la API de Storage en evaluaciones posteriores, tras una hora de margen; no se borran directamente filas de `storage.objects`. No hay almacenamiento ilimitado: controlar el uso de Database y Storage; adjuntar bases solo a oportunidades potenciales o dudosas.
+Ambas funciones verifican su autorización de integración antes de operar. Se despliegan con `verify_jwt=false` únicamente porque realizan esa verificación propia; no son accesos anónimos. Auth y roles siguen en el proyecto original.
+
+## Descarga y documentos
+
+**Estado del canal de descarga:** `MP_DESCARGA_PORTAL_HABILITADA=false` por defecto. La descarga del botón público está comprobada técnicamente, pero no se ha confirmado que automatizar ese formulario sea un mecanismo autorizado para este uso. Antes de habilitarla hay que confirmar con ChileCompra la vía documentada aplicable o contar con su autorización. Los términos vigentes de la API exigen los mecanismos descritos en su sitio y prohíben eludir sus límites. Esta configuración no es una certificación legal.
+
+Mientras el canal esté pendiente, tanto el cron como el botón de obtención devuelven `canal_descarga_no_confirmado` sin consultar el portal ni reservar trabajos. La carga manual, el almacenamiento privado, la extracción y los filtros siguen disponibles. Las descargas que se incorporen por un canal oficial deberán respetar sus límites y controles; no se evaden CAPTCHA, restricciones o autenticación.
+
+Fuentes consultadas: https://www.chilecompra.cl/api/ y https://www.chilecompra.cl/terminos-y-condiciones-de-uso/. La API OCDS se anuncia en https://datos-abiertos.chilecompra.cl/descargas/procesos-ocds, pero las comprobaciones realizadas no recuperaron documentos de las licitaciones consultadas. No se ha ejecutado la carga masiva de las 150.
+
+El cron existente `/api/cron/ingesta` ejecuta en paralelo un turno documental con sesión propia y reserva de dos minutos. Incluye las licitaciones existentes y las nuevas. `DOCUMENTOS_AUTOMATICOS=false` desactiva este acompañamiento; `/api/cron/documentos` permite programarlo por separado usando el mismo secreto. `POST /api/preseleccion/documentos/obtener`, autenticado como usuario, adelanta un turno. No procesa 150 oportunidades en una sola petición.
+
+Descarga el PDF principal del botón público **Descarga bases**, verificando el código mostrado en la ficha, las cookies y el formulario ASP.NET. Restringe cada salto al host y ruta oficiales HTTPS; rechaza HTML, desafíos, archivos mayores de 3 MB y redirecciones externas. No evade el listado protegido de anexos ni realiza OCR. Que el PDF principal se haya leído no confirma que estén todas las bases.
+
+El lector admite hasta 120 páginas y 300.000 caracteres, en proceso aislado. La cobertura conserva páginas ilegibles para revisión. Repetir la huella no duplica archivos; una nueva versión automática retira de la evaluación la anterior automática y mantiene su original. La reserva se libera o vence sola. Los fallos temporales esperan una hora; desde el tercer intento o si no hay acceso público, 24 horas. Un éxito se revisa a los siete días y los cambios del RAW adelantan la consulta.
+
+La descarga y persistencia se confirman en origen antes de intentar la evaluación. Si filtradas falla, el documento se conserva. El retiro manual también se confirma en origen. Cambiar documentos invalida la firma usada para la preselección, aunque el RAW siga siendo el mismo. Las revisiones de entradas sin cambios se conservan.
+
+Los PDF corruptos, protegidos, sin texto legible o con lectura parcial conservan el original y un motivo orientativo. Las descargas vacías o que no entregan PDF registran la incidencia en `licitacion.ingesta_documental`, incluso si no se pudo guardar un archivo. Una oportunidad disponible con cualquiera de esas incidencias pasa a revisión manual y no se descarta automáticamente por los filtros. La vigencia conserva prioridad: esta protección no retiene licitaciones cerradas o vencidas.
+
+El apartado **Pendientes por revisar** consulta `GET /api/preseleccion/pendientes-documentales` directamente en origen y muestra la razón aunque filtradas no esté disponible o no haya perfil/evaluación inicial. El detalle muestra los problemas por archivo. Retirar un documento excluye su incidencia de la revisión, sin borrar su original. Incorporar un reemplazo válido permite reevaluar; un documento legible no oculta otro que siga ilegible.
+
+Si el cron de ingesta se mantiene detenido, se pueden completar los documentos de las licitaciones existentes ejecutando `/api/cron/documentos` por lotes independientes. No hace falta volver a consultar ni reinsertar sus RAW para empezar esa tarea. Después de la publicación hay que ejecutarla o programarla expresamente; el código por sí solo no enriquece las 150 licitaciones históricas.
+
+La baja de una licitación elimina sus registros documentales por clave foránea. El cron documental solicita por la API de Storage la eliminación de binarios huérfanos tras una hora de margen; no borra directamente `storage.objects`. La purga de oportunidades filtradas conserva su ejecución cada minuto.
 
 ## Verificación
 
-`npm ci && npm test` en esta carpeta valida migraciones, ítems repetidos, idempotencia, revisión, cambios concurrentes, permisos y eliminación física. `npx deno test supabase/functions/licing-filtradas/handler_test.ts` verifica autenticación y límites del adaptador. Core tiene pruebas de reglas, evidencias, PDF y API; la CI ejecuta su suite en PostgreSQL 17 y compila el frontend.
-
-La subida y revisión no requieren modificar el dashboard existente ni reactivar módulos retirados. Para revertir la interfaz y Core, revertir el commit de aplicación; las migraciones son aditivas salvo el cambio de unicidad de los ítems y no requieren borrado para desactivar el panel.
+`npm ci && npm test` prueba migraciones y persistencia de filtradas, incluido el retiro del almacenamiento erróneo y la conservación de referencias. Las pruebas de Core verifican texto por página sin duplicarlo, reservas, deduplicación, firmas y eliminación en cascada. Las pruebas Deno cubren autenticación, rutas, huellas, bucket de origen y limpieza por API. La CI usa PostgreSQL 17 y compila el frontend.

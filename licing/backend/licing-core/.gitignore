@@ -1,4 +1,5 @@
 .env
+supabase/.temp/
 .env.*
 !.env.example
 

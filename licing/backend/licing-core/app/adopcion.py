@@ -13,15 +13,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .config import CORE_DIR
 from .database import Base, engine
-from .models import ejecucion_ingesta, licitacion, licitacion_item, raw  # noqa: F401
+from .models import ejecucion_ingesta, licitacion, licitacion_item, licitacion_documento, raw  # noqa: F401
 
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
-REVISION_ACTUAL = "b8654f3a89fc"
+REVISION_ACTUAL = "b5df9fcc5f0d"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 COLUMNAS_NUEVAS = {
-    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio"},
+    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental"},
     "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente", "posicion_fuente"},
     "raw_mercado_publico": {"verificado_en"},
 }
@@ -97,7 +97,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))
@@ -118,6 +118,11 @@ def registrar_esquema(connection):
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
 
     if not versiones:
+        if not legado and inspector.has_table("licitacion_documento", schema="public"):
+            if connection.execute(text("SELECT to_regprocedure('public.purgar_licitaciones_no_disponibles(text,boolean)')")).scalar() is None:
+                raise ValueError("El esquema no coincide: falta la función de limpieza de Core.")
+            command.stamp(config, REVISION_ACTUAL)
+            return
         # La comparación de tablas no detecta la función de limpieza.
         command.stamp(config, REVISION_BASE if legado else "b9a70e6d4a93")
     command.upgrade(config, "head")

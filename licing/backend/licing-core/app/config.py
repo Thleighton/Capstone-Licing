@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     cron_secret: str = ""
 
     filtradas_url: str = "https://gzhofrcnefoxqvywzgei.supabase.co/functions/v1/licing-filtradas"
+    documentos_automaticos: bool = True
+    # Habilitar solo tras confirmar con ChileCompra el mecanismo autorizado de descarga del portal.
+    mp_descarga_portal_habilitada: bool = False
+    documentos_storage_url: str = "https://nylzzocvemddikexqzav.supabase.co/functions/v1/documentos-origen"
+    # cron-job.org espera hasta 30 s; dejar margen para red y arranque.
+    documentos_timeout_segundos: float = Field(default=24, gt=0, le=25)
 
     max_raw_items: int = 20
     mp_actualizacion_horas: int = Field(default=24, ge=1, le=168)

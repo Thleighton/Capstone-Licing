@@ -219,3 +219,33 @@ def test_lista_de_paginas_truncada_no_se_presenta_como_cumplimiento():
         {"pagina": n, "texto": "Alojamiento en Santiago"} for n in range(1, 122)]}])
     assert r["entrada_parcial"]
     assert r["clasificacion"] == "revision_manual"
+
+
+@pytest.mark.parametrize("nombre", [
+    "Adquisición de catéteres", "Compra de medicamentos", "SUMINSTRO DE ANTISÉPTICOS",
+    "KITS PARA PROCEDIMIENTOS ENDOVASCULARES", "SUMINISTRO ALCOHOL GEL 70%",
+    "Servicio de prestaciones médicas ambulatorias", "Procedimientos quirúrgicos",
+    "SERVICIOS PROFESIONALES PERSONAL TI", "Compra de computadores",
+    "Adquisición de notebooks", "Construcción de puentes", "Conservación de caminos",
+])
+def test_objeto_ajeno_explicito_sin_senales_hoteleras_se_descarta_con_evidencia(nombre):
+    r = evaluar(nombre=nombre)
+    assert r["clasificacion"] == "descartada"
+    assert r["criterios"]["pertinencia"]["resultado"] == "no_cumple"
+    assert r["criterios"]["pertinencia"]["exclusiones_evidentes"][0]["fuente"] == "nombre"
+
+
+@pytest.mark.parametrize("servicio", [
+    "Arriendo de salón en Santiago", "Alojamiento en Santiago",
+    "Coffee break para una jornada en Santiago", "Seminario para funcionarios",
+])
+def test_una_linea_ajena_no_oculta_servicios_hoteleros_en_otras_lineas(servicio):
+    r = evaluar(nombre="Compra de computadores", items=[{"descripcion": servicio}])
+    assert r["clasificacion"] != "descartada"
+    assert not r["criterios"]["pertinencia"]["exclusiones_evidentes"]
+
+
+def test_no_descarta_objeto_ajeno_si_la_entrada_es_parcial_o_el_documento_fallo():
+    assert evaluar(nombre="Compra de medicamentos", items=[None])["clasificacion"] == "revision_manual"
+    assert evaluar(nombre="Compra de medicamentos", incidencia_documental={
+        "codigo": "pdf_corrupto", "motivo": "PDF ilegible"})["clasificacion"] == "revision_manual"

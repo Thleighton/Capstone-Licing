@@ -10,6 +10,7 @@ from app.models import (  # noqa: F401
     raw,
     licitacion,
     licitacion_item,
+    licitacion_documento,
     ejecucion_ingesta,
 )
 

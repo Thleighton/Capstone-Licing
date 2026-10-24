@@ -7,6 +7,8 @@ from .api.config_publica import router as config_router
 from .api.consultas import router as consultas_router
 from .api.cron import router as cron_router
 from .api.ingesta import router as ingesta_router
+from .api.preseleccion import router as preseleccion_router
+from .services.filtradas import FiltradasNoDisponible
 
 
 app = FastAPI(
@@ -20,6 +22,12 @@ app.include_router(config_router)
 app.include_router(consultas_router)
 app.include_router(ingesta_router, prefix="/api")
 app.include_router(cron_router)
+app.include_router(preseleccion_router)
+
+@app.exception_handler(FiltradasNoDisponible)
+async def filtradas_error(_: Request, exc: FiltradasNoDisponible):
+    return JSONResponse({"error": str(exc)}, status_code=503)
+
 # Compatibilidad con los comandos existentes de Core, con los mismos permisos.
 app.include_router(ingesta_router, include_in_schema=False)
 

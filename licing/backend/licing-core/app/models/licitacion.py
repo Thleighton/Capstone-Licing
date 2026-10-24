@@ -74,3 +74,4 @@ class Licitacion(Base):
     normalizacion_version: Mapped[str | None] = mapped_column(String(30))
     normalizado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ubicacion_servicio: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    ingesta_documental: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")

@@ -6,7 +6,7 @@ Las menciones, negaciones y direcciones de visita requieren revisión contextual
 import re
 import unicodedata
 
-VERSION_UBICACION = "ubicacion-texto-1"
+VERSION_UBICACION = "ubicacion-texto-2"
 MAX_EVIDENCIAS = 64
 
 REGIONES = {
@@ -60,6 +60,9 @@ CATALOGO = [("region", codigo, None, re.compile("|".join(
     _patron(alias) for alias in sorted(aliases, key=len, reverse=True))))
     for codigo, aliases in REGIONES.items()]
 CATALOGO += [("comuna", "13", nombre, re.compile(_patron(nombre))) for nombre in COMUNAS_RM]
+# Reconocer topónimos completos antes de sus palabras parciales.
+TOPONIMOS = (("San Pedro de Atacama", "02"), ("San Pedro de la Paz", "08"),
+             ("Santiago de Compostela", None), ("Santiago del Estero", None), ("Santiago de Cuba", None))
 
 
 def _campos(detalle):
@@ -82,8 +85,15 @@ def extraer_ubicacion(detalle, raw_id=None):
     for campo, texto in _campos(detalle):
         normalizado, posiciones = _texto_busqueda(texto)
         hallazgos = []
+        completos = [(m.start(), m.end(), nombre, region) for nombre, region in TOPONIMOS
+                     for m in re.finditer(_patron(nombre), normalizado)]
+        for a, b, nombre, region in completos:
+            if region:
+                hallazgos.append((posiciones[a][0], posiciones[b-1][1], "comuna", region, nombre))
         for tipo, region, comuna, patron in CATALOGO:
             for match in patron.finditer(normalizado):
+                if any(a <= match.start() and b >= match.end() for a, b, _, _ in completos):
+                    continue
                 inicio, fin = posiciones[match.start()][0], posiciones[match.end() - 1][1]
                 hallazgos.append((inicio, fin, tipo, region, comuna))
         for inicio, fin, tipo, region, comuna in sorted(hallazgos):

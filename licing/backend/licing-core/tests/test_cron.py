@@ -19,6 +19,7 @@ class DbFalsa:
 def lotes(client, monkeypatch):
     """Sustituye el lote real y devuelve los límites con que se llamó."""
     monkeypatch.setattr(settings, "cron_secret", SECRETO)
+    monkeypatch.setattr(settings, "documentos_automaticos", False)
     app.dependency_overrides[get_db] = lambda: DbFalsa()
     llamadas = []
 

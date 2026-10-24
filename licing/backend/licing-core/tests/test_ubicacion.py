@@ -37,8 +37,8 @@ def test_mencion_de_region_no_inventa_comuna():
 
 
 def test_comunas_homonimas_fuera_de_rm_no_confunden_san_pedro():
-    assert extraer_ubicacion({"Descripcion": "Salón en San Pedro de Atacama"})["comunas_candidatas"] == []
-    assert extraer_ubicacion({"Descripcion": "Salón en San Pedro de la Paz"})["comunas_candidatas"] == []
+    assert extraer_ubicacion({"Descripcion": "Salón en San Pedro de Atacama"})["regiones_candidatas"] == ["02"]
+    assert extraer_ubicacion({"Descripcion": "Salón en San Pedro de la Paz"})["regiones_candidatas"] == ["08"]
 
 
 def test_evidencia_tiene_posicion_y_texto_original_con_unicode():

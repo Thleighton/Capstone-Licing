@@ -2,6 +2,8 @@ import { useLicitaciones } from "../../core/data/LicitacionesProvider";
 import { dinero, fechaCorta } from "../../core/ui/format";
 import EstadoBadge from "./components/EstadoBadge";
 import { officialOpportunityUrl } from "./utils";
+import ClienteImportanteBadge from "../../core/ui/ClienteImportanteBadge";
+import TituloLicitacion from "../../core/ui/TituloLicitacion";
 export default function OportunidadesPage() {
   const { rows, total, filtros, setFiltros, abrirFicha, error, cargando, pagina, setPagina, limite } = useLicitaciones();
   return <>
@@ -15,11 +17,11 @@ export default function OportunidadesPage() {
       <div className="scroll" aria-busy={cargando}><table>
         <colgroup><col style={{ width: 140 }} /><col /><col style={{ width: "25%" }} /><col style={{ width: 130 }} /><col style={{ width: 110 }} /></colgroup>
         <thead><tr><th>ID</th><th>Nombre</th><th>Institución</th><th>Monto</th><th>Estado</th></tr></thead>
-        <tbody>{!cargando && rows.map(r => <tr key={r.id} onClick={() => abrirFicha(r.id)}>
+        <tbody>{rows.map(r => <tr key={r.id} className={r.clientes_importantes?.length ? "opportunity-important" : undefined} onClick={() => abrirFicha(r.id)}>
           <td><button className="cod" onClick={e => { e.stopPropagation(); abrirFicha(r.id); }}>{r.codigo_externo}</button>
             <div className="sub">{officialOpportunityUrl(r) && <a href={officialOpportunityUrl(r)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Mercado Público ↗</a>}</div></td>
-          <td className="nom cut" title={r.nombre}>{r.nombre || "Sin nombre"}</td>
-          <td className="cut" title={r.nombre_organismo}>{r.nombre_unidad || r.nombre_organismo || "-"}<div className="sub cut">{r.region_comprador}</div></td>
+          <td className="nom"><TituloLicitacion as="div" licitacion={r} /></td>
+          <td title={r.nombre_organismo}><span className="cut opportunity-client-name">{r.nombre_unidad || r.nombre_organismo || "-"}</span><div className="sub cut">{r.region_comprador}</div><ClienteImportanteBadge clientes={r.clientes_importantes} /></td>
           <td>{dinero(r.monto_estimado, r.moneda)}<div className="sub">cierra {fechaCorta(r.fecha_cierre)}</div></td>
           <td><EstadoBadge r={r} /></td>
         </tr>)}</tbody>

@@ -4,6 +4,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -15,6 +16,9 @@ from ..models.licitacion import Licitacion
 from ..models.licitacion_item import LicitacionItem
 from ..models.raw import RawMercadoPublico
 from ..services.enlaces import ficha_oficial
+from ..services import filtradas
+from ..services.clientes_importantes import identificar_clientes_importantes, listar_clientes_importantes
+from .preseleccion import cargar_entradas, firma_fuente
 
 CHILE = ZoneInfo("America/Santiago")
 router = APIRouter(prefix="/api", tags=["Consultas"], dependencies=[Depends(usuario_actual)])
@@ -39,6 +43,12 @@ class LicitacionResumen(BaseModel):
     tipo: str | None
     estimacion: int | None
     visibilidad_monto: int | None
+
+    @computed_field
+    @property
+    def clientes_importantes(self) -> list[dict]:
+        return identificar_clientes_importantes({"nombre_organismo": self.nombre_organismo,
+                                                 "nombre_unidad": self.nombre_unidad})
 
     @computed_field
     @property
@@ -94,6 +104,12 @@ def _abiertas(ahora):
     )
 
 
+@router.get("/clientes")
+def clientes_importantes(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return {"clientes": listar_clientes_importantes()}
+
+
 @router.get("/licitaciones")
 def listar_licitaciones(
     response: Response,
@@ -139,9 +155,55 @@ def detalle_licitacion(licitacion_id: int, response: Response, db: Session = Dep
     return {"licitacion": detalle, "items": [ItemResumen.model_validate(i) for i in items]}
 
 
+async def _proximas_filtradas(db, candidatas):
+    """Interseca cierres abiertos y ordenados con selecciones guardadas vigentes."""
+    if not candidatas:
+        return [], True
+    fuentes = {f.codigo_externo: f.raw_id for f in candidatas}
+    seleccionadas = []
+    try:
+        for offset in range(0, len(candidatas), 100):
+            pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
+                "limite": 100, "offset": offset})
+            for guardada in pagina.get("filas", []):
+                if guardada.get("estado_seleccion") not in {"preseleccionada", "revision_manual"}:
+                    continue
+                seleccionadas.append(guardada)
+    except filtradas.FiltradasNoDisponible:
+        # Nunca sustituir una clasificación no disponible por licitaciones sin filtrar.
+        return [], False
+    # Leer ítems y versiones documentales solo de resultados que podrían mostrarse.
+    # La sesión se usa secuencialmente; el SQL síncrono no bloquea otras peticiones.
+    ids_candidatas = {f.id for f in candidatas}
+    ids = list({f["id"] for f in seleccionadas if f["id"] in ids_candidatas})
+    if not ids:
+        return [], True
+    entradas = await run_in_threadpool(cargar_entradas, db, ids)
+    estados = {}
+    for guardada in seleccionadas:
+        entrada = entradas.get(str(guardada["id"]))
+        if (entrada is not None and guardada.get("codigo_externo") == entrada["codigo_externo"]
+                and guardada.get("fuente_raw_id") == entrada["raw_id"]
+                and guardada.get("hash_fuente") == firma_fuente(entrada)):
+            estados[guardada["id"]] = guardada["estado_seleccion"]
+    return [(f, estados[f.id]) for f in candidatas if f.id in estados], True
+
+
 @router.get("/dashboard")
-def dashboard(response: Response, db: Session = Depends(get_db)):
+async def dashboard(response: Response, db: Session = Depends(get_db)):
     ahora = _ahora_chile()
+    resumen, candidatas = await run_in_threadpool(_resumen_dashboard, db, ahora)
+    proximas, proximas_disponibles = await _proximas_filtradas(db, candidatas)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        **resumen,
+        "proximas": [{**LicitacionResumen.model_validate(f).model_dump(), "estado_seleccion": estado}
+                     for f, estado in proximas],
+        "proximas_disponibles": proximas_disponibles,
+    }
+
+
+def _resumen_dashboard(db, ahora):
     total = db.scalar(select(func.count()).select_from(Licitacion))
     abiertas = db.scalar(select(func.count()).select_from(Licitacion).where(*_abiertas(ahora)))
     cierran_pronto = db.scalar(select(func.count()).select_from(Licitacion).where(
@@ -165,16 +227,14 @@ def dashboard(response: Response, db: Session = Depends(get_db)):
         for i in range(7)
     ]
     estados = db.execute(select(func.coalesce(Licitacion.estado, "Sin estado"), func.count()).group_by(Licitacion.estado)).all()
-    proximas = db.scalars(select(Licitacion).where(
+    candidatas = db.scalars(select(Licitacion).where(
         *_abiertas(ahora), Licitacion.fecha_cierre.is_not(None),
-    ).order_by(Licitacion.fecha_cierre, Licitacion.id).limit(4)).all()
-    response.headers["Cache-Control"] = "no-store"
+    ).order_by(Licitacion.fecha_cierre, Licitacion.id)).all()
     return {
         "total": total, "abiertas": abiertas, "cierran_pronto": cierran_pronto, "nuevas": nuevas,
         "publicaciones": publicaciones,
         "estados": [{"estado": estado, "cantidad": n} for estado, n in estados],
-        "proximas": [LicitacionResumen.model_validate(f) for f in proximas],
-    }
+    }, candidatas
 
 
 @router.get("/ingestas")

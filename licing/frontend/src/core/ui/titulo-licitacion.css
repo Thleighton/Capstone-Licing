@@ -1,0 +1,5 @@
+.licitacion-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; min-width: 0; }
+.licitacion-name { overflow-wrap: anywhere; }
+.licitacion-heading .licitacion-requester { font-size: 13px; line-height: 1.5; font-weight: 500; color: var(--muted); overflow-wrap: anywhere; }
+.nom .licitacion-heading { margin: 0; font-size: 14px; line-height: 1.5; font-weight: 650; }
+.nom .licitacion-requester { font-size: 12px; }

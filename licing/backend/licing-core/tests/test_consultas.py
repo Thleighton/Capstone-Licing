@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from zoneinfo import ZoneInfo
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,7 +12,7 @@ from app.models.raw import RawMercadoPublico
 
 
 @pytest.fixture
-def datos(integration_db):
+def datos(integration_db, monkeypatch):
     db = integration_db
     ahora = datetime.now(ZoneInfo("America/Santiago")).replace(tzinfo=None)
     filas = []
@@ -34,6 +35,13 @@ def datos(integration_db):
         EjecucionIngesta(limite_detalles=1, estado="parcial", descargados=1, procesados=0, errores=[{"mensaje": "dato interno"}]),
     ])
     db.commit()
+    from app.api.preseleccion import cargar_entradas, firma_fuente
+    from app.services import filtradas
+    entradas = cargar_entradas(db, [f.id for f in filas])
+    selecciones = [{"id": f.id, "codigo_externo": f.codigo_externo, "fuente_raw_id": f.raw_id,
+        "estado_seleccion": "preseleccionada" if n == 0 else "revision_manual",
+        "hash_fuente": firma_fuente(entradas[str(f.id)])} for n, f in enumerate(filas)]
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(return_value={"filas": selecciones}))
     return filas
 
 
@@ -75,6 +83,8 @@ def test_dashboard_considera_toda_la_base_y_fechas(client_usuario, datos):
     assert sum(d["cantidad"] for d in resumen["publicaciones"]) == 4
     assert sum(d["cantidad"] for d in resumen["estados"]) == 4
     assert [d["id"] for d in resumen["proximas"]] == [datos[0].id, datos[1].id]
+    assert [d["estado_seleccion"] for d in resumen["proximas"]] == ["preseleccionada", "revision_manual"]
+    assert resumen["proximas_disponibles"] is True
 
 
 def test_historial_sin_datos_internos(client_usuario, datos):

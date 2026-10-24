@@ -1,77 +1,91 @@
-/* Shared palette: restrained surfaces, legible text, consistent accents. */
+/* Colores compartidos: superficies con matiz y estados con contraste. */
 :root {
   color-scheme: light;
-  --bg: #f3f5f7;
-  --card: #fbfcfd;
+  --bg: #edf2f8;
+  --card: #ffffff;
   --raised: #ffffff;
-  --surface-soft: #edf1f5;
-  --sidebar: #eef1f5;
-  --hero: #e8eef5;
-  --text: #283444;
-  --heading: #25364d;
-  --muted: #5d6b7c;
-  --placeholder: #647286;
-  --line: #dbe2e9;
-  --control-line: #8292a5;
-  --control-hover: #71859e;
-  --hover: #e7ecf2;
-  --accent: #3c6194;
-  --accent-bg: #e6edf6;
-  --primary: #3e6599;
-  --primary-hover: #335783;
+  --surface-soft: #f0f4fa;
+  --sidebar: #19324b;
+  --sidebar-text: #c2d3e6;
+  --sidebar-heading: #f4f8ff;
+  --sidebar-line: #36516c;
+  --sidebar-active: #087d89;
+  --hero: #e9edff;
+  --hero-end: #def3f1;
+  --text: #304059;
+  --heading: #1c2f4d;
+  --muted: #53647d;
+  --placeholder: #61728b;
+  --line: #d8e2ee;
+  --control-line: #8195af;
+  --control-hover: #728ba6;
+  --hover: #e6edf6;
+  --accent: #066e7a;
+  --accent-bg: #def2f3;
+  --primary: #087d89;
+  --primary-hover: #056571;
   --on-primary: #ffffff;
-  --focus: #527db4;
-  --ok: #2f725a;
-  --ok-bg: #e8f2ec;
-  --warn: #856323;
-  --warn-bg: #f6f0e1;
-  --warn-ring: #a68345;
-  --err: #a14550;
-  --err-bg: #f8eaec;
-  --violet: #75608f;
-  --violet-bg: #f0ecf6;
+  --focus: #176fc5;
+  --ok: #08735d;
+  --ok-bg: #ddf5ec;
+  --warn: #91500a;
+  --warn-bg: #fff0d7;
+  --warn-ring: #c37417;
+  --err: #aa354e;
+  --err-bg: #fde7ed;
+  --violet: #6748b8;
+  --violet-bg: #eee7fc;
+  --blue: #275fb8;
+  --blue-bg: #e5efff;
   --gray-bg: var(--surface-soft);
-  --chart-muted: #d6dee8;
-  --chart-bar: #7d99be;
-  --shadow: 0 2px 10px #1b263a06;
-  --shadow-float: 0 16px 48px #18253612;
+  --chart-muted: #b7c6db;
+  --chart-bar: #6b87d9;
+  --shadow: 0 5px 20px #26436a08;
+  --shadow-float: 0 16px 48px #1825361c;
   --backdrop: #17233466;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #1d232c;
-  --card: #252d38;
-  --raised: #2a3340;
-  --surface-soft: #222a35;
-  --sidebar: #222a35;
-  --hero: #293544;
-  --text: #dce3ec;
-  --heading: #e4eaf2;
-  --muted: #b0bdcd;
-  --placeholder: #a0aec0;
-  --line: #3b4655;
-  --control-line: #74879f;
-  --control-hover: #8b9db3;
-  --hover: #303c4b;
-  --accent: #a1bddf;
-  --accent-bg: #303f53;
-  --primary: #456d9f;
-  --primary-hover: #4e77a7;
-  --focus: #91b3df;
-  --ok: #abd0bb;
-  --ok-bg: #2d3e36;
-  --warn: #ddc38d;
-  --warn-bg: #403a2e;
-  --warn-ring: #c3a261;
-  --err: #e3acb4;
-  --err-bg: #433139;
-  --violet: #c5b5dc;
-  --violet-bg: #383246;
-  --chart-muted: #414f60;
-  --chart-bar: #718fb7;
-  --shadow: 0 2px 10px #0000000c;
-  --shadow-float: 0 16px 48px #00000029;
+  --bg: #142237;
+  --card: #1e3048;
+  --raised: #243a54;
+  --surface-soft: #263b55;
+  --sidebar: #182c43;
+  --sidebar-text: #bfd0e5;
+  --sidebar-heading: #f0f6ff;
+  --sidebar-line: #38516d;
+  --sidebar-active: #087d89;
+  --hero: #303f65;
+  --hero-end: #214d59;
+  --text: #dbe8f9;
+  --heading: #f0f6ff;
+  --muted: #b4c7df;
+  --placeholder: #a6bcd6;
+  --line: #3d5673;
+  --control-line: #6985a4;
+  --control-hover: #9ab7d7;
+  --hover: #2d4562;
+  --accent: #80e0e7;
+  --accent-bg: #224b5b;
+  --primary: #087d89;
+  --primary-hover: #096c77;
+  --focus: #9ac6ff;
+  --ok: #86e0bd;
+  --ok-bg: #224c46;
+  --warn: #ffd18a;
+  --warn-bg: #514331;
+  --warn-ring: #e7ae57;
+  --err: #ffb0c0;
+  --err-bg: #533448;
+  --violet: #c8b4ff;
+  --violet-bg: #3c3c66;
+  --blue: #a8caff;
+  --blue-bg: #2b4369;
+  --chart-muted: #607b9e;
+  --chart-bar: #9bafff;
+  --shadow: 0 5px 20px #09142718;
+  --shadow-float: 0 16px 48px #09142755;
   --backdrop: #10172099;
 }
 
@@ -433,12 +447,18 @@ body.locked .app { display: none; }
 
 /* Theme-aware components. Both modes use the same visual hierarchy. */
 body { background: var(--bg); color: var(--text); }
-aside { background: var(--sidebar); color: var(--muted); border-color: var(--line); }
+aside { background: var(--sidebar); color: var(--sidebar-text); border-color: var(--sidebar-line); }
 .logo, .login-brand { color: var(--heading); }
-.hotel { background: var(--surface-soft); color: var(--muted); border: 1px solid var(--line); }
-nav a { color: var(--muted); }
-nav a:hover { background: var(--hover); color: var(--heading); transform: none; }
-nav a.active, nav a.active:hover { background: var(--accent-bg); color: var(--accent); box-shadow: inset 3px 0 var(--accent); }
+aside .logo { color: var(--sidebar-heading); }
+aside .logo svg { color: #81e1e5; }
+.hotel { background: #ffffff0a; color: var(--sidebar-text); border: 1px solid var(--sidebar-line); }
+aside nav a { color: var(--sidebar-text); }
+aside nav a:hover { background: #ffffff0c; color: var(--sidebar-heading); transform: none; }
+aside nav a.active, aside nav a.active:hover { background: var(--sidebar-active); color: #ffffff; box-shadow: 0 5px 14px #071e3426; }
+.sidebar { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--sidebar-line) transparent; }
+@media (max-width: 860px) {
+  .sidebar { overflow-y: visible; }
+}
 a, a.cod, button.cod { color: var(--accent); }
 .topbar { background: var(--card); border-color: var(--line); }
 .search { background: var(--surface-soft); color: var(--muted); }
@@ -451,7 +471,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .primary, .page-heading .primary, .help-tabs button[aria-selected=true] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); box-shadow: none; }
 .primary:hover, .page-heading .primary:hover, .help-tabs button[aria-selected=true]:hover { background: var(--primary-hover); color: var(--on-primary); border-color: var(--primary-hover); }
-.page-heading { background: var(--hero); border: 1px solid var(--line); box-shadow: none; }
+.page-heading { background: linear-gradient(115deg, var(--hero), var(--hero-end)); border: 1px solid var(--line); box-shadow: var(--shadow); }
 h1, .page-heading h1 { color: var(--heading); }
 .eyebrow, .page-heading .eyebrow, .page-heading p:not(.eyebrow) { color: var(--muted); }
 .overview-note, .sub, .empty, footer { color: var(--muted); }

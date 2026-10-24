@@ -13,6 +13,11 @@ const ICONS = {
   star: <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9z" />,
   alert: <><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18h.01" /></>,
   chart: <path d="M5 20V10M12 20V4M19 20v-7" />,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2" /></>,
+  users: <><circle cx="9" cy="8" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5.65" /></>,
+  sliders: <><path d="M3 6h4M11 6h10M3 12h10M17 12h4M3 18h4M11 18h10" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  activity: <path d="M2 12h5l3-8 4 16 3-8h5" />,
 };
 
 export default function Icon({ name }) {

@@ -1,6 +1,6 @@
 // Ensambla la aplicación: autenticación -> datos compartidos -> layout -> módulo activo.
 // Para agregar un módulo nuevo NO se toca este archivo: se registra en src/modules/index.js.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "./core/auth/AuthProvider";
 import LoginScreen from "./core/auth/LoginScreen";
 import { LicitacionesProvider } from "./core/data/LicitacionesProvider";
@@ -17,6 +17,11 @@ function Shell() {
   const modulo = MODULOS.find(m => m.id === ruta) || MODULO_INICIAL;
   const tituloRef = useRef(null);
   const primeraVez = useRef(true);
+  const [visitados, setVisitados] = useState(() => new Set([modulo.id]));
+
+  useEffect(() => {
+    setVisitados(previos => previos.has(modulo.id) ? previos : new Set([...previos, modulo.id]));
+  }, [modulo.id]);
 
   useEffect(() => {
     document.title = "LICING · " + modulo.titulo;
@@ -27,15 +32,14 @@ function Shell() {
 
   const { HeaderExtra } = modulo;
   return (
-    <div className="app">
+    <div className="app" data-module={modulo.id}>
       <Sidebar modulos={MODULOS_MENU} activo={modulo.id} />
       <main>
         <Topbar />
         <div className="content">
           <PageHeading ref={tituloRef} titulo={modulo.titulo} descripcion={modulo.descripcion} extra={HeaderExtra ? <HeaderExtra /> : null} />
-          {/* Todas las páginas quedan montadas (solo se ocultan) para no perder lo que el usuario
-              escribió al cambiar de módulo, igual que en el prototipo original. */}
-          {MODULOS.map(({ id, Page }) => (
+          {/* Cargar cada módulo al abrirlo y conservar después sus formularios y filtros. */}
+          {MODULOS.filter(({ id }) => id === modulo.id || visitados.has(id)).map(({ id, Page }) => (
             <section key={id} data-page={id} hidden={id !== modulo.id}><Page activo={id === modulo.id} /></section>
           ))}
           <Footer />

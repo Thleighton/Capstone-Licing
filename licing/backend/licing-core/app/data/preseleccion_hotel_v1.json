@@ -1,10 +1,11 @@
 {
-  "version": "hotel-2026-10-v4",
+  "version": "hotel-2026-10-v6",
   "estado": "piloto",
   "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
   "notas": [
     "Las coincidencias son señales de pertinencia, no cumplimiento ni decisión de postular.",
-    "La alimentación y los complementos se evalúan como posibles servicios asociados; su oferta independiente no está confirmada.",
+    "Los únicos pilares son vigencia, ubicación del servicio en la RM y solicitud de alojamiento, salones o alimentación, en ese orden.",
+    "La alimentación puede identificar una posible oportunidad por sí sola; no se exige combinarla con alojamiento o salones.",
     "OTEC, OTIC y capacitación no son palabras de exclusión.",
     "La ausencia de palabras clave no descarta por sí sola: se contrasta con los productos publicados.",
     "Las bases son complementarias; su descarga o carga manual no condiciona la preselección."
@@ -73,8 +74,8 @@
     },
     {
       "id": "alimentacion_asociada",
-      "nivel": "contexto",
-      "descripcion": "Alimentación asociada a estadías, reuniones o eventos en un hotel: desayuno, almuerzo, cena, coffee break y cóctel.",
+      "nivel": "directa",
+      "descripcion": "Servicios de alimentación independientes o combinados con alojamiento y salones: desayuno, almuerzo, cena, coffee break, cóctel y banquetería.",
       "patrones": [
         "\\bcof+e+e?\\s*[- ]?breaks?\\b",
         "\\bpausas? (?:de|para) cafe\\b",
@@ -590,6 +591,36 @@
     "94": "servicios de organizaciones y asociaciones"
   },
   "exclusiones_evidentes": [
+    {
+      "id": "compra_mobiliario",
+      "patron": "\\b(?:adquisicion|compra) (?:de )?mobiliario\\b",
+      "motivo": "El objeto explícito es adquirir mobiliario, sin contratar el uso de salones o alojamiento."
+    },
+    {
+      "id": "reparacion_vehiculos",
+      "patron": "\\b(?:mantencion|mantenimiento|reparacion)\\b[^.;\\n]{0,100}\\b(?:vehiculos|maquinarias?|carrocerias|transmisiones)\\b",
+      "motivo": "El objeto explícito es la mantención o reparación de vehículos y maquinaria."
+    },
+    {
+      "id": "investigacion_mercado",
+      "patron": "\\b(?:estudio (?:de )?percepcion|investigacion (?:de mercados?|basada en el consumidor)|focus groups?)\\b",
+      "motivo": "El objeto explícito es un estudio de percepción o investigación de mercado."
+    },
+    {
+      "id": "campana_publicitaria",
+      "patron": "\\b(?:campana comunicacional|plan de medios)\\b",
+      "motivo": "El objeto explícito es una campaña comunicacional o un plan de medios."
+    },
+    {
+      "id": "cursos_especializados",
+      "patron": "\\b(?:servicio|contratacion) (?:de )?cursos de capacitacion\\b",
+      "motivo": "Se contrata impartir cursos de capacitación, sin identificar alojamiento, salones o alimentación asociados."
+    },
+    {
+      "id": "infraestructura_informatica",
+      "patron": "\\balojamiento (?:de |para )?(?:infraestructura virtualizada|servidores?|maquinas virtuales|sitios? web|datos|aplicaciones?)\\b",
+      "motivo": "El alojamiento solicitado corresponde a infraestructura informática, no a personas."
+    },
     {
       "id": "insumos_clinicos",
       "patron": "\\b(?:adquisicion|adq\\.?|compra|suministro|suminstro|sum\\.?|kits? (?:para|de))\\b[^\\n]{0,180}\\b(?:medicamentos|farmacos|insumos (?:medicos|clinicos)|materiales clinicos|cateteres|suturas|reactivos|protesis|endovasculares|antisepticos|povidona|alcohol gel)\\b",

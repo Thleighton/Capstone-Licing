@@ -4,7 +4,11 @@ Usuarios/Licitaciones es la capa de entrada: conserva RAW, normalización y docu
 
 LicitacionesFiltradas guarda oportunidades evaluadas, ítems, criterios, revisiones y referencias `documento_id/version/hash` en `evaluacion_filtro.entrada_evaluada`. No almacena PDF ni su texto completo. La migración `documentos_solo_en_origen` retira la tabla documental vacía y el control de descargas equivocados de filtradas; se detiene si encuentra documentos para evitar pérdida de datos. El bucket anterior queda deshabilitado para PDF.
 
-La preselección considera vigencia, servicios hoteleros y lugar de ejecución en RM; no confunde domicilio del comprador con ejecución. Los casos desconocidos quedan para revisión. Todavía no ejecuta embeddings, ML o LLM ni decide postular. Los clientes estratégicos son una preferencia; las capacidades del hotel no se interpretan como disponibilidad.
+La preselección decide únicamente con tres pilares, en este orden: **vigencia**, **lugar de prestación en la RM** y **servicio solicitado: alojamiento, salones, alimentación o una combinación**. La alimentación puede cumplir el tercer pilar por sí sola. No confunde el domicilio del comprador con el lugar del servicio ni las categorías genéricas de productos con una contratación concreta.
+
+Cumplir los tres genera una posible oportunidad. Un incumplimiento explícito genera un descarte, aunque otro pilar esté pendiente; si hay varios incumplimientos, se muestra el primero según la jerarquía. Sin incumplimientos, cualquier dato esencial desconocido conserva el caso para revisión y muestra el primer pilar pendiente. Cada pilar guarda su motivo y evidencia. Documentación, presupuesto, capacidad, disponibilidad y relación con el comprador no agregan condiciones de clasificación; la información documental se conserva como metadatos complementarios. Todavía no ejecuta embeddings, ML o LLM ni decide postular.
+
+Cambiar la versión del motor o del catálogo invalida la firma de evaluación. Al entrar al dashboard se comprueba el plan y se recalculan las entradas pendientes desde la sesión autenticada; **Actualizar preselección** permite repetirlo. La activación de un catálogo nuevo necesita esa sesión para registrar su autor, por lo que una ejecución sin actor no sustituye el perfil activo.
 
 ## Instalación
 

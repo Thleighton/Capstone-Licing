@@ -2,6 +2,7 @@
 // reemplazar DEMO_REQUESTS por las recomendaciones que entregue la API.
 import { useState } from "react";
 import { DEMO_REQUESTS, demoDate, demoRecommendation, seleccionDemo } from "../../../shared/demo/hotel";
+import { moduloHabilitado } from "../../habilitados";
 
 const PRIORITIES = { high: "Alta prioridad", medium: "Prioridad media", low: "Baja prioridad" };
 const ORDEN = ["high", "medium", "low"];
@@ -35,7 +36,7 @@ export default function AsistenteIA() {
               <li>{client.known ? (available.length ? "Prioridad adicional por relación comercial previa." : "Cliente conocido; la relación previa no elimina el conflicto de disponibilidad.") : "Sin historial previo; revisar condiciones comerciales."}</li>
               <li>{available.length ? "Capacidad, montaje y equipos coinciden en el ejemplo. Servicios adicionales por confirmar." : "Revisar alternativas de fecha, montaje o capacidad."}</li>
             </ul>
-            <a className="button" href="#disponibilidad" onClick={() => seleccionDemo.set({ requestId: r.id, date: r.date })}>Ver encaje y disponibilidad →</a>
+            {moduloHabilitado("disponibilidad") && <a className="button" href="#disponibilidad" onClick={() => seleccionDemo.set({ requestId: r.id, date: r.date })}>Ver encaje y disponibilidad →</a>}
           </article>
         )) : <p className="empty">Sin ejemplos para esta prioridad.</p>}
       </div>

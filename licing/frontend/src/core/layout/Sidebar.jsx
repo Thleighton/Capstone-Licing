@@ -5,7 +5,7 @@ export default function Sidebar({ modulos, activo }) {
   const { status } = useLicitaciones();
   const textoBD = status.kind === "ok" ? "Base de datos conectada" : status.kind === "err" ? "Sin conexión" : "Conectando...";
   return (
-    <aside>
+    <aside className="sidebar">
       <div className="logo"><Icon name="logo" />LICING</div>
       <div className="hotel"><Icon name="hotel" />Plaza San Francisco</div>
       <nav aria-label="Módulos de Licing">

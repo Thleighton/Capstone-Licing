@@ -24,6 +24,7 @@ from ..services import filtradas, documentos_origen
 from ..services.enlaces import ficha_oficial
 from ..services.pdf_bases import extraer_pdf, MAX_BYTES
 from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE, VERSION_MOTOR
+from ..services.clientes_importantes import identificar_clientes_importantes
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -133,6 +134,10 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
     actuales = dict(db.execute(select(Licitacion.id, Licitacion.raw_id)).all())
     entradas_actuales = cargar_entradas(db, [f["id"] for f in respuesta.get("filas", [])])
     for fila in respuesta.get("filas", []):
+        entrada = entradas_actuales.get(str(fila["id"]), {})
+        fila["nombre_organismo"] = entrada.get("nombre_organismo")
+        fila["nombre_unidad"] = entrada.get("nombre_unidad")
+        fila["clientes_importantes"] = identificar_clientes_importantes(entrada)
         if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or
                 fila.get("hash_fuente") != firma_fuente(entradas_actuales.get(str(fila["id"]), {}))):
             fila.update(estado_seleccion="pendiente_evaluacion", motivo_seleccion="La fuente cambió; actualiza la preselección.")

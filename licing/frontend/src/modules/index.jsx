@@ -13,9 +13,10 @@ import analisis from "./analisis";
 import seguimiento from "./seguimiento";
 import reportes from "./reportes";
 import configuracion from "./configuracion";
+import { moduloHabilitado } from "./habilitados";
 
-// Activación temporal de la interfaz; conserva todos los módulos para reactivarlos.
-export const SOLO_DASHBOARD = true;
+// Mostrar el menú completo de módulos habilitados.
+export const SOLO_DASHBOARD = false;
 
 export const TODOS_LOS_MODULOS = [
   dashboard,
@@ -29,8 +30,8 @@ export const TODOS_LOS_MODULOS = [
   configuracion,
 ];
 
-// La pausa visual afecta solo al menú; el dashboard conserva todos sus accesos y componentes.
-export const MODULOS = TODOS_LOS_MODULOS;
+// Las pantallas, las rutas y el menú incluyen solo los módulos habilitados.
+export const MODULOS = TODOS_LOS_MODULOS.filter(m => moduloHabilitado(m.id));
 export const MODULOS_MENU = SOLO_DASHBOARD ? [dashboard] : MODULOS;
 export const MODULO_INICIAL = dashboard;
 

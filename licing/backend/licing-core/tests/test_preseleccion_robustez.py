@@ -53,7 +53,6 @@ def test_servicios_del_hotel_con_ubicacion_explicita(nombre):
     "Compra de proyectores para salón en Santiago", "Reparación de salón en Santiago",
     "Capacitación con docentes en un hotel en Santiago",
     "Servicios de producción integral con salón en Santiago",
-    "Coffee break en Santiago", "Catering para una conferencia en Santiago",
     "Arriendo de equipos audiovisuales en Santiago", "Compra de desayunos en Santiago",
     "Servicio para residencia sanitaria en Santiago", "Habitaciones hospitalarias en Santiago",
     "El Hotel Ejemplo informa sus novedades. Evento en Santiago.",
@@ -207,7 +206,7 @@ def test_falta_de_pdf_se_expone_sin_afirmar_cumplimiento_de_las_bases():
     r = evaluar()
     assert r["clasificacion"] == "preseleccionada"
     assert r["cobertura"] == "sin_bases"
-    assert r["criterios"]["documentos"]["resultado"] == "sin_informacion"
+    assert r["documentacion"]["resultado"] == "sin_informacion"
     assert r["decision_postular"] is False
 
 

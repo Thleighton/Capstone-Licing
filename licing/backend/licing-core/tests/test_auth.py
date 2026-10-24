@@ -7,7 +7,7 @@ from app import auth
 from app.config import settings
 
 
-@pytest.mark.parametrize("ruta", ["/api/licitaciones", "/api/licitaciones/1", "/api/dashboard", "/api/ingestas"])
+@pytest.mark.parametrize("ruta", ["/api/licitaciones", "/api/licitaciones/1", "/api/dashboard", "/api/ingestas", "/api/clientes"])
 def test_consultas_exigen_sesion(client, ruta):
     r = client.get(ruta)
     assert r.status_code == 401

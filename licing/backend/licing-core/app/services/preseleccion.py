@@ -8,10 +8,12 @@ import re
 from .ubicacion import _texto_busqueda
 from zoneinfo import ZoneInfo
 from .revision_documental import evaluar_documentacion
+from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-5"
+VERSION_MOTOR = "reglas-hotel-7"
+PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
 MAX_DOCUMENTOS = 10
@@ -187,21 +189,55 @@ def _fragmento(texto: str, inicio: int, fin: int, posiciones=None) -> str:
     return texto[max(0, a - 110):min(len(texto), b + 150)].strip()
 
 
+def _mencion_ajena(grupo, m, normal):
+    """Desambiguación local: no borra otro servicio hotelero del mismo texto."""
+    antes = re.split(r"[.;\n]", normal[:m.start()])[-1][-120:]
+    despues = normal[m.end():]
+    if grupo == "alojamiento":
+        return bool(re.match(r"\s+(?:(?:de|para)\s+)?(?:infraestructura virtualizada|servidores?|maquinas virtuales|sitios? web|datos|aplicaciones?)\b", despues))
+    if grupo == "salones":
+        return bool(re.search(r"\b(?:sillas?|mesas?|muebles?|mobiliario)\s+(?:(?:de|para)\s+)(?:el\s+|los\s+)?$", antes))
+    if grupo == "actividades":
+        return bool((re.fullmatch(r"jornadas?|taller(?:es)?", m.group())
+                     and (re.match(r"\s+(?:normal|extraordinaria|laboral|particular|mecanico)\b", despues)
+                          or re.search(r"\b(?:mecanico|mecanica|fuera de|reparaciones? en)\s+$", antes)))
+                    or (m.group().startswith("capacitacion") and re.search(r"\bcursos? de\s+$", antes))
+                    or (m.group().startswith("reunion") and re.search(r"\bmesas?\s+(?:de\s+)?$", antes)))
+    return grupo == "alimentacion_asociada" and bool(
+        re.search(r"\b(?:sin|no se requiere|no incluye)\s+(?:servicio de\s+)?$", antes)
+        or (re.fullmatch(r"alimentacion", m.group()) and re.match(r"\s+(?:enteral|parenteral|electrica)\b", despues)))
+
+
+def _ambiguedad_administrativa(regla, m, normal):
+    # La orden de compra formaliza también servicios; no implica comprar bienes.
+    if regla != "compra_bienes_obras":
+        return False
+    antes = normal[max(0, m.start()-40):m.start()]
+    return ((m.group() == "compra" and bool(re.search(r"\borden(?:es)? de\s+$", antes)))
+            or (m.group() == "suministro" and bool(re.search(r"\bservicio de\s+$", antes))
+                and bool(re.match(r"\s+de\s+(?:cof+e+e?\s*[- ]?breaks?|coctel(?:es)?|banqueteria|catering|alimentacion|desayunos?|almuerzos?|cenas?)\b", normal[m.end():]))))
+
+
 def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     grupos, ambiguedades, _, _ = _patrones()
     coincidencias, dudas = [], []
+    lectura_truncada = False
     campos = _campos(datos)[0] if campos is None else campos
     for fuente, texto in campos:
+        # Las categorías amplias no describen el objeto contratado y sus
+        # repeticiones no deben agotar el límite de evidencias del servicio.
+        if fuente.endswith("categoria"):
+            continue
         normal, mapa = _texto_con_mapa(texto)
         for grupo, patrones in grupos:
             for patron in patrones:
-                m = patron.search(normal)
-                if m:
+                for n, m in enumerate(patron.finditer(normal)):
+                    if n > 100:
+                        lectura_truncada = True
+                        break
                     nivel = grupo["nivel"]
-                    if ((grupo["id"] == "alimentacion_asociada" and re.search(r"\balimentacion (?:enteral|parenteral)\b", normal))
-                            or (grupo["id"] == "actividades" and re.fullmatch(r"jornadas?|taller(?:es)?", m.group())
-                                and re.match(r"\s+(?:normal|extraordinaria|laboral|particular|mecanico)\b", normal[m.end():]))):
-                        nivel = "complemento"
+                    if _mencion_ajena(grupo["id"], m, normal):
+                        continue
                     if re.fullmatch(r"hotel(?:es)?|hoteleria", m.group()):
                         antes = re.split(r"[.;\n]", normal[:m.start()])[-1][-120:]
                         despues = re.split(r"[.;\n]", normal[m.end():], maxsplit=1)[0][:120]
@@ -215,8 +251,9 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
         # Un código UNSPSC genérico no identifica el objeto concreto de la contratación.
         if not fuente.endswith(("categoria", "nombre_producto")):
             for regla, patron in ambiguedades:
-                m = patron.search(normal)
-                if m:
+                m = next((m for m in patron.finditer(normal)
+                          if not _ambiguedad_administrativa(regla["id"], m, normal)), None)
+                if m is not None:
                     dudas.append({"codigo": regla["id"], "motivo": regla["motivo"], "fuente": fuente,
                         "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
     for fuente, texto in campos:
@@ -265,15 +302,12 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     return {"grupos": sorted({x["grupo"] for x in coincidencias}), "directa": bool(directas),
         "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30],
         "exclusiones_evidentes": exclusiones[:30],
-        "truncada": len(coincidencias) > 100 or len(dudas) > 30 or len(exclusiones) > 30}
+        "truncada": lectura_truncada or len(coincidencias) > 100 or len(dudas) > 30 or len(exclusiones) > 30}
 
 
 def detectar_cliente(datos):
     # Prioridad comercial, nunca una condición para excluir compradores nuevos.
-    texto = normalizar_texto(" ".join(str(datos.get(k) or "") for k in
-                                     ("nombre_organismo", "nombre_unidad")))
-    return [{"id": c["id"], "nombre": c["nombre"], "confirmacion": "por_nombre"}
-            for c in cargar_catalogo()["clientes_estrategicos"] if re.search(c["patron"], texto)]
+    return identificar_clientes_importantes(datos)
 
 
 def extraer_requisitos(campos):
@@ -299,9 +333,9 @@ def extraer_requisitos(campos):
     return {"hallazgos": hallazgos, "truncada": False}
 
 
-_SERVICIO = re.compile(r"\b(?:servicios?|alojamiento|hospedaje|hotel(?:es)?|hoteleria|habitacion(?:es)?|estadia|salon(?:es)?|salas?|recintos?|espacios?|auditorios?|jornadas?|eventos?|reunion(?:es)?|seminarios?|encuentros?|ceremonias?|realizara|desarrollara)\b")
+_SERVICIO = re.compile(r"\b(?:servicios?|alojamiento|hospedaje|hotel(?:es)?|hoteleria|habitacion(?:es)?|estadia|salon(?:es)?|salas?|recintos?|espacios?|auditorios?|jornadas?|eventos?|reunion(?:es)?|seminarios?|encuentros?|ceremonias?|realizara|desarrollara|cof+e+e?\s*[- ]?breaks?|coctel(?:es)?|cocktails?|banqueteria|catering|alimentacion|desayunos?|almuerzos?|cenas?|colaciones?|refrigerios?)\b")
 _ROTULO_LUGAR = re.compile(r"\b(?:ubicacion|lugar|direccion|comuna|region)\s+(?:(?:de|del)\s+)?(?:(?:la|el)\s+)?(?:prestacion|ejecucion|realizacion|servicio|evento)\s*:\s*$")
-_RELACION = re.compile(r"(?:\b(?:en|para)\s+(?:(?:la|el)\s+)?(?:(?:ciudad|comuna|region|centro|casco historico)\s+(?:de|del)\s+)?|\b(?:ciudad|comuna|region|centro)\s+de\s+)$")
+_RELACION = re.compile(r"(?:\b(?:en|para|derivad[oa]s? a)\s+(?:(?:la|el)\s+)?(?:(?:ciudad|comuna|region|centro|casco historico)\s+(?:de|del)\s+)?|\b(?:ciudad|comuna|region|centro)\s+de\s+)$")
 _LUGAR_EN_TITULO = re.compile(r"\b(?:(?:servicios? de )?(?:alojamiento|hospedaje|hoteleria)|(?:arriendo|alquiler) de (?:un |una )?(?:salon(?:es)?|salas?))\s*[-:–]?\s*$")
 _NEGACION = re.compile(r"\b(?:fuera de|excepto|excluy\w*|distint[oa]s? de|no\s+(?:(?:se\s+)?\w+\s+){0,4}en)\b")
 _ADMINISTRATIVO = re.compile(r"\b(?:domicilio|direccion|oficinas?|sede|comprador|unidad de compra|factur(?:as?|acion)|entrega de (?:ofertas?|antecedentes|documentos))\b")
@@ -425,6 +459,17 @@ def evaluar_vigencia(datos: dict, ahora: datetime) -> dict:
     return {"resultado": "cumple", "motivo": "Publicada y con cierre futuro según los datos guardados.", "fecha_cierre": cierre.isoformat()}
 
 
+def clasificar_pilares(criterios):
+    """Solo estos tres resultados deciden; un rechazo explícito prevalece a una duda."""
+    for codigo in PILARES:
+        if criterios[codigo]["resultado"] == "no_cumple":
+            return "descartada", criterios[codigo]["motivo"], codigo
+    for codigo in PILARES:
+        if criterios[codigo]["resultado"] != "cumple":
+            return "revision_manual", criterios[codigo]["motivo"], codigo
+    return ("preseleccionada", "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.", None)
+
+
 def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     datos, problemas = _entrada_segura(datos)
     if re.search(r"-COT\d*$", str(datos.get("codigo_externo") or ""), re.I):
@@ -444,26 +489,26 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     ubicacion = detectar_ubicacion(datos, campos=campos, pertinencia=pertinencia)
     parcial |= pertinencia["truncada"] or ubicacion["truncada"]
     documentacion = evaluar_documentacion(datos)
-    territorial = ("cumple" if ubicacion["estado"] == "rm" else
+    territorial = ("cumple" if ubicacion["estado"] == "rm" and not parcial else
         "no_cumple" if ubicacion["estado"] == "fuera_rm" and not parcial else "sin_informacion")
     rubro = ("no_cumple" if pertinencia["exclusiones_evidentes"] and not parcial else
-        "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion")
-    if vigencia["resultado"] == "no_cumple":
-        clasificacion, motivo = "descartada", vigencia["motivo"]
-    elif territorial == "no_cumple":
-        clasificacion, motivo = "descartada", "El servicio identificado se solicita fuera de la Región Metropolitana."
-    elif rubro == "no_cumple":
-        clasificacion, motivo = "descartada", pertinencia["exclusiones_evidentes"][0]["motivo"]
-    elif vigencia["resultado"] == territorial == rubro == "cumple" and not parcial and ubicacion["vinculo_servicio"]["completo"]:
-        clasificacion, motivo = "preseleccionada", "Oportunidad vigente, con servicio potencialmente hotelero y ubicación identificada en la RM."
-    else:
-        clasificacion = "revision_manual"
-        motivo = ("La ficha no permite confirmar la vigencia." if vigencia["resultado"] != "cumple" else
-            "La ficha no identifica con claridad el servicio contratado." if rubro != "cumple" else
-            "El servicio puede servir al hotel, pero su lugar de ejecución no está confirmado en la RM.")
-    if pertinencia["ambiguedades"] or parcial:
-        if clasificacion == "preseleccionada":
-            clasificacion, motivo = "revision_manual", "La información utilizada es ambigua o supera el límite de lectura."
+        "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] and not parcial else "sin_informacion")
+    motivo_ubicacion = (
+        "El lugar de prestación del servicio está identificado en la Región Metropolitana." if territorial == "cumple" else
+        "El servicio identificado se solicita fuera de la Región Metropolitana." if territorial == "no_cumple" else
+        "La lectura de la fuente es incompleta; falta confirmar el lugar de prestación del servicio." if parcial else
+        "El lugar del servicio es mixto o ambiguo; falta confirmar su cobertura en la RM." if ubicacion["estado"] in {"mixta", "ambigua"} else
+        "No se identifica dónde debe prestarse el servicio; la dirección del comprador no confirma el lugar.")
+    motivo_servicio = (
+        pertinencia["exclusiones_evidentes"][0]["motivo"] if rubro == "no_cumple" else
+        "Se solicita alojamiento, salones, alimentación o una combinación de estos servicios." if rubro == "cumple" else
+        "La lectura de la fuente es incompleta; falta confirmar el servicio contratado." if parcial else
+        "Falta aclarar si se contrata un servicio del hotel: " + pertinencia["ambiguedades"][0]["motivo"] if pertinencia["ambiguedades"] else
+        "La ficha no identifica una solicitud concreta de alojamiento, salones o alimentación.")
+    criterios = {"vigencia": vigencia,
+        "ubicacion": {"resultado": territorial, "motivo": motivo_ubicacion, **ubicacion},
+        "pertinencia": {"resultado": rubro, "motivo": motivo_servicio, **pertinencia}}
+    clasificacion, motivo, pilar_decisivo = clasificar_pilares(criterios)
     documentacion["bloquea_preseleccion"] = False
     entrada = {"campos": campos, "estado": datos.get("estado"), "codigo_estado": datos.get("codigo_estado"),
         "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id"),
@@ -480,8 +525,8 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "requisitos_detectados": extraer_requisitos(campos),
         "cliente_estrategico": detectar_cliente(datos),
         "huella_entrada": hashlib.sha256(json.dumps(entrada, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
-        "criterios": {"vigencia": vigencia, "ubicacion": {"resultado": territorial, **ubicacion},
-            "pertinencia": {"resultado": rubro, **pertinencia}, "documentos": documentacion},
+        "orden_pilares": list(PILARES), "pilar_decisivo": pilar_decisivo,
+        "criterios": criterios, "documentacion": documentacion,
         "semantica": {"estado": "pendiente", "motivo": "Esta etapa aplica reglas; no ejecuta embeddings ni LLM."},
         "modo": "preseleccion", "decision_postular": False,
     }

@@ -33,15 +33,15 @@ def test_fallos_documentales_no_anulan_ubicacion_explicita_de_la_api(estado, cod
         'estado_extraccion': estado, 'cobertura': {'motivo_codigo': codigo}, 'paginas_texto': []}])
     assert r['clasificacion'] == 'descartada'
     assert 'fuera' in r['motivo']
-    assert r['criterios']['documentos']['incidencias'][0]['codigo'] == codigo
-    assert r['criterios']['documentos']['bloquea_preseleccion'] is False
+    assert r['documentacion']['incidencias'][0]['codigo'] == codigo
+    assert r['documentacion']['bloquea_preseleccion'] is False
 
 
 def test_un_pdf_legible_no_oculta_otro_ilegible_y_los_retirados_no_bloquean():
     docs = [{'id': 1, 'estado_extraccion': 'extraido'}, {'id': 2, 'estado_extraccion': 'sin_texto'}]
     r = evaluar(documentos=docs)
     assert r['clasificacion'] == 'preseleccionada'
-    assert r['criterios']['documentos']['incidencias'][0]['documento_id'] == 2
+    assert r['documentacion']['incidencias'][0]['documento_id'] == 2
     docs[1]['vigente'] = False
     assert evaluar(documentos=docs)['clasificacion'] == 'preseleccionada'
 
@@ -49,7 +49,7 @@ def test_un_pdf_legible_no_oculta_otro_ilegible_y_los_retirados_no_bloquean():
 def test_fallo_de_descarga_no_obliga_a_revisar_una_ficha_suficiente():
     r = evaluar(incidencia_documental={'codigo':'archivo_vacio','motivo':'La descarga devolvió un archivo vacío (0 bytes).'})
     assert r['clasificacion'] == 'preseleccionada'
-    assert 'vacío' in r['criterios']['documentos']['motivo']
+    assert 'vacío' in r['documentacion']['motivo']
 
 
 def test_fallo_documental_no_conserva_licitaciones_que_ya_caducaron():
@@ -147,10 +147,10 @@ def test_bienes_obras_y_docencia_requieren_desambiguacion(texto):
 
 
 @pytest.mark.parametrize("texto", ["Coffee break en Santiago", "Coffe-break en Santiago", "COFFEEBREAK en Santiago"])
-def test_alimentacion_y_variantes_son_senales_no_oferta_independiente_confirmada(texto):
+def test_alimentacion_y_variantes_pueden_ser_oportunidad_independiente(texto):
     r = evaluar(nombre=texto)
     assert "alimentacion_asociada" in r["criterios"]["pertinencia"]["grupos"]
-    assert r["clasificacion"] == "revision_manual"
+    assert r["clasificacion"] == "preseleccionada"
 
 
 def test_sin_palabras_clave_se_conserva_para_semantica_o_revision():

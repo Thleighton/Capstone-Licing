@@ -15,11 +15,11 @@ export function EstadoVigencia({ resumen, estado }) {
   const { total, abiertas } = resumen, otras = total - abiertas, pct = total ? abiertas / total * 100 : 0;
   return <div className="chart-placeholder"><div className="donut-layout">
     <div className="donut" role="img" aria-label={abiertas + " abiertas; " + otras + " en otro estado o con cierre vencido"}
-      style={{ background: "conic-gradient(var(--accent) 0 " + pct + "%, var(--chart-muted, #e0e7f3) " + pct + "% 100%)" }}>
+      style={{ background: "conic-gradient(var(--accent) 0 " + pct + "%, var(--chart-muted) " + pct + "% 100%)" }}>
       <div className="donut-center"><strong>{total}</strong><span className="sub">guardadas</span></div>
     </div>
     <div><div className="legend-line"><i style={{ background: "var(--accent)" }} />Abiertas <b>{abiertas}</b></div>
-      <div className="legend-line"><i style={{ background: "var(--chart-muted, #e0e7f3)" }} />Otras o vencidas <b>{otras}</b></div>
+      <div className="legend-line"><i style={{ background: "var(--chart-muted)" }} />Otras o vencidas <b>{otras}</b></div>
       <p className="sub">{total ? Math.round(pct) + "% abiertas según los datos guardados" : "Sin datos todavía"}</p></div>
   </div></div>;
 }

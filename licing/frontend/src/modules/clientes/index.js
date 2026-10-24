@@ -1,12 +1,12 @@
-// Módulo Clientes — historial comercial que ajusta la prioridad (apoyo a E2/E7).
+// Organismos importantes definidos por el hotel; distinción comercial independiente de la clasificación.
 import ClientesPage from "./ClientesPage";
 
 export default {
   id: "clientes",
   nav: "Clientes",
   icono: "star",
-  titulo: "Clientes e historial",
-  descripcion: "Reconoce relaciones previas y prioriza oportunidades con contexto comercial.",
+  titulo: "Clientes importantes",
+  descripcion: "Organismos destacados por su importancia comercial para el hotel.",
   responsable: "Thomas Leighton",
   epicas: ["E7"],
   Page: ClientesPage,

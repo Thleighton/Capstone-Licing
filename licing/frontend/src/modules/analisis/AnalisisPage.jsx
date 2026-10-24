@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { EJEMPLOS, analizarEjemplo } from "./api";
+import { moduloHabilitado } from "../habilitados";
 
 function Resultado({ estado }) {
   if (!estado) return <><p className="empty">Selecciona un ejemplo y simula el análisis para explorar el resultado esperado.</p><div className="skeleton" /><div className="skeleton short" /></>;
@@ -17,7 +18,7 @@ function Resultado({ estado }) {
         <dt>Documentos</dt><dd>{r.documentos}</dd>
       </dl>
       <div className="notice"><strong>Pendiente de validar:</strong> {r.pendientes}</div>
-      <a className="button" href="#formulario">Revisar criterios →</a>
+      {moduloHabilitado("formulario") && <a className="button" href="#formulario">Revisar criterios →</a>}
     </>
   );
 }

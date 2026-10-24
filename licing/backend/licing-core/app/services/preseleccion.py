@@ -221,10 +221,26 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
             dudas.append({"codigo": "servicio_negado", "motivo": "La mención contiene una negación; revisar su alcance.", "fuente": fuente, "evidencia": texto[:500]})
     directas = [x for x in coincidencias if x["nivel"] == "directa"
         and not x["fuente"].endswith(("categoria", "nombre_producto"))]
+    exclusiones = []
+    senales = any(x["grupo"] in {"alojamiento", "salones", "actividades", "alimentacion_asociada"}
+                  for x in coincidencias)
+    # Excluir requiere un objeto ajeno explícito, nunca solo ausencia de palabras clave.
+    # Cualquier señal de un paquete hotelero mantiene el caso para desambiguación.
+    if not senales:
+        for regla in cargar_catalogo().get("exclusiones_evidentes", []):
+            for fuente, texto in campos:
+                if fuente.endswith(("categoria", "nombre_producto")):
+                    continue
+                normal, mapa = _texto_con_mapa(texto)
+                m = re.search(regla["patron"], normal)
+                if m:
+                    exclusiones.append({"codigo": regla["id"], "motivo": regla["motivo"],
+                        "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
     # El título de una línea genérica puede ser la única información disponible: conserva para revisar.
     return {"grupos": sorted({x["grupo"] for x in coincidencias}), "directa": bool(directas),
         "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30],
-        "truncada": len(coincidencias) > 100 or len(dudas) > 30}
+        "exclusiones_evidentes": exclusiones[:30],
+        "truncada": len(coincidencias) > 100 or len(dudas) > 30 or len(exclusiones) > 30}
 
 
 def detectar_cliente(datos):
@@ -401,13 +417,16 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     documentacion = evaluar_documentacion(datos)
     territorial = ("cumple" if ubicacion["estado"] == "rm" else
         "no_cumple" if ubicacion["estado"] == "fuera_rm" and not parcial else "sin_informacion")
-    rubro = "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion"
+    rubro = ("no_cumple" if pertinencia["exclusiones_evidentes"] and not parcial else
+        "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion")
     if vigencia["resultado"] == "no_cumple":
         clasificacion, motivo = "descartada", vigencia["motivo"]
     elif documentacion["requiere_revision"]:
         clasificacion, motivo = "revision_manual", "Pendiente de revisión documental. " + documentacion["motivo"]
     elif territorial == "no_cumple":
         clasificacion, motivo = "descartada", "El servicio identificado se solicita fuera de la Región Metropolitana."
+    elif rubro == "no_cumple":
+        clasificacion, motivo = "descartada", pertinencia["exclusiones_evidentes"][0]["motivo"]
     elif vigencia["resultado"] == territorial == rubro == "cumple" and not parcial and ubicacion["vinculo_servicio"]["completo"]:
         clasificacion, motivo = "preseleccionada", "Oportunidad vigente, con servicio potencialmente hotelero y ubicación identificada en la RM."
     else:

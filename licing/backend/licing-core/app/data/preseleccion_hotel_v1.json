@@ -1,12 +1,13 @@
 {
-  "version": "hotel-2026-10-v3",
+  "version": "hotel-2026-10-v4",
   "estado": "piloto",
   "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
   "notas": [
     "Las coincidencias son señales de pertinencia, no cumplimiento ni decisión de postular.",
     "La alimentación y los complementos se evalúan como posibles servicios asociados; su oferta independiente no está confirmada.",
     "OTEC, OTIC y capacitación no son palabras de exclusión.",
-    "La ausencia de palabras clave conserva el caso para evaluación semántica o revisión."
+    "La ausencia de palabras clave no descarta por sí sola: se contrasta con los productos publicados.",
+    "Las bases son complementarias; su descarga o carga manual no condiciona la preselección."
   ],
   "grupos": [
     {
@@ -528,6 +529,66 @@
     }
   ],
   "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
+  "codigos_producto_ajenos": {
+    "101101001": "licitaciones de obras",
+    "102101001": "consultorías de obras"
+  },
+  "familias_producto_ajenas": {
+    "8010": "servicios de asesoría y administración",
+    "8011": "servicios de personal",
+    "8012": "servicios legales"
+  },
+  "segmentos_producto_ajenos": {
+    "10": "bienes agrícolas, vegetales o animales",
+    "11": "materias primas minerales o textiles",
+    "12": "productos químicos",
+    "13": "plásticos, cauchos y resinas",
+    "14": "materiales y productos de papel",
+    "15": "combustibles y lubricantes",
+    "20": "equipos de minería y perforación",
+    "21": "maquinaria agrícola y forestal",
+    "22": "maquinaria de construcción",
+    "23": "maquinaria industrial",
+    "24": "equipos de manipulación y almacenamiento",
+    "25": "vehículos y repuestos",
+    "26": "equipos eléctricos y de generación de energía",
+    "27": "herramientas",
+    "30": "materiales de construcción",
+    "31": "componentes de fabricación",
+    "32": "componentes electrónicos",
+    "39": "equipos eléctricos e iluminación",
+    "40": "equipos de distribución y climatización",
+    "41": "equipos y suministros de laboratorio",
+    "42": "equipos y suministros médicos",
+    "43": "equipos y productos informáticos",
+    "44": "equipos y suministros de oficina",
+    "46": "equipos de seguridad",
+    "47": "equipos y suministros de limpieza",
+    "48": "maquinaria para servicios",
+    "49": "equipos deportivos y recreativos",
+    "50": "productos alimenticios",
+    "51": "medicamentos y productos farmacéuticos",
+    "52": "artículos domésticos",
+    "53": "vestuario y accesorios",
+    "54": "relojería y joyería",
+    "55": "productos publicados e impresos",
+    "56": "mobiliario",
+    "60": "materiales educativos y juegos",
+    "70": "servicios agrícolas, forestales o veterinarios",
+    "71": "servicios mineros",
+    "72": "servicios de construcción y mantenimiento",
+    "73": "servicios industriales",
+    "76": "servicios de limpieza y saneamiento",
+    "77": "servicios ambientales",
+    "78": "servicios de transporte y almacenamiento",
+    "81": "servicios técnicos, de ingeniería o investigación",
+    "83": "servicios públicos y de telecomunicaciones",
+    "84": "servicios financieros y seguros",
+    "85": "servicios de salud",
+    "92": "servicios de defensa y seguridad",
+    "93": "servicios políticos y cívicos",
+    "94": "servicios de organizaciones y asociaciones"
+  },
   "exclusiones_evidentes": [
     {
       "id": "insumos_clinicos",

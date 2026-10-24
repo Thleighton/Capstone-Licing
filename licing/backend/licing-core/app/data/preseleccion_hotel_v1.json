@@ -527,5 +527,27 @@
       }
     }
   ],
-  "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada."
+  "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
+  "exclusiones_evidentes": [
+    {
+      "id": "insumos_clinicos",
+      "patron": "\\b(?:adquisicion|adq\\.?|compra|suministro|suminstro|sum\\.?|kits? (?:para|de))\\b[^\\n]{0,180}\\b(?:medicamentos|farmacos|insumos (?:medicos|clinicos)|materiales clinicos|cateteres|suturas|reactivos|protesis|endovasculares|antisepticos|povidona|alcohol gel)\\b",
+      "motivo": "El objeto explícito es adquirir insumos o productos clínicos."
+    },
+    {
+      "id": "prestaciones_clinicas",
+      "patron": "\\b(?:prestaciones medicas|procedimientos (?:medicos|quirurgicos)|atencion (?:medica|odontologica)|examenes (?:medicos|de laboratorio))\\b",
+      "motivo": "El objeto explícito corresponde a prestaciones clínicas."
+    },
+    {
+      "id": "servicios_informaticos",
+      "patron": "\\b(?:servicios? (?:profesionales? )?(?:de )?(?:personal ti|soporte informatico|desarrollo de software|mantencion de sistemas)|(?:adquisicion|compra|suministro) de (?:computadores|notebooks|impresoras|licencias de software))\\b",
+      "motivo": "El objeto explícito corresponde a servicios o equipos informáticos."
+    },
+    {
+      "id": "obras_viales",
+      "patron": "\\b(?:construccion|reparacion|conservacion|mejoramiento|pavimentacion)\\b[^\\n]{0,100}\\b(?:caminos|carreteras|puentes|calzadas|veredas|pavimentos)\\b",
+      "motivo": "El objeto explícito corresponde a obras viales."
+    }
+  ]
 }

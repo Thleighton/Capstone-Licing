@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-10-v2",
+  "version": "hotel-2026-10-v3",
   "estado": "piloto",
   "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
   "notas": [
@@ -26,7 +26,9 @@
         "\\bhospederia\\b",
         "\\b(?:servicios? de )?residencia(?: temporal)?\\b",
         "\\bhospedamiento\\b",
-        "\\b(?:rooming|overnight|huespedes)\\b"
+        "\\b(?:rooming|overnight|huespedes)\\b",
+        "\\b(?:servicios? de )?(?:accommodation|lodging)\\b",
+        "\\bbed (?:and|&) breakfast\\b"
       ]
     },
     {
@@ -42,7 +44,9 @@
         "\\blocal(?:es)? (?:para|de) (?:reunion(?:es)?|eventos?|jornadas?)\\b",
         "\\barriendo de (?:un |una )?local\\b",
         "\\bcentros? de reuniones\\b",
-        "\\b(?:salas?|espacios?) para (?:talleres|seminarios|congresos|jornadas)\\b"
+        "\\b(?:salas?|espacios?) para (?:talleres|seminarios|congresos|jornadas)\\b",
+        "\\b(?:arriendo|arrendamiento|alquiler|reserva|contratacion) de (?:un |una |los |las )?salas?\\b",
+        "\\b(?:salas?|salones?|espacios?) (?:multiproposito|multiuso|para eventos|de convenciones)\\b"
       ]
     },
     {
@@ -61,7 +65,9 @@
         "\\bconferencias?\\b",
         "\\breunion(?:es)?\\b",
         "\\bactividades? presenciales?\\b",
-        "\\b(?:otec|otic)\\b"
+        "\\b(?:otec|otic)\\b",
+        "\\beventos? (?:institucionales?|corporativos?|presenciales?)\\b",
+        "\\b(?:recepciones?|aniversarios?)\\b"
       ]
     },
     {
@@ -116,6 +122,16 @@
       "id": "alojamiento_informatico",
       "patron": "\\b(?:hosting|datacenter|data center|infraestructura virtualizada|servidores?|maquinas virtuales|cloud|nube informatica)\\b",
       "motivo": "Comprobar alojamiento informático; no equivale a hospedaje de personas."
+    },
+    {
+      "id": "otros_servicios_en_hoteles",
+      "patron": "\\b(?:fumigacion|desratizacion|desinsectacion|lavanderia|lavado|limpieza|aseo|vigilancia|seguridad privada|transporte|traslados?|pasajes|turismo|excursiones?)\\b",
+      "motivo": "Comprobar si se contrata alojamiento o salones, o un servicio distinto relacionado con un hotel. No excluir paquetes que incluyan servicios hoteleros."
+    },
+    {
+      "id": "espacios_no_hoteleros",
+      "patron": "\\b(?:salon(?:es)? de belleza|salas? (?:de clases|cuna|clinicas?|de operaciones|de maquinas)|habitaciones? (?:hospitalarias?|clinicas?)|residencias? (?:sanitarias?|estudiantiles?|de menores|de proteccion|para adultos mayores))\\b",
+      "motivo": "La mención puede referirse a recintos sanitarios, educativos u otros servicios especializados."
     }
   ],
   "perfiles_no_hoteleros": [
@@ -511,5 +527,27 @@
       }
     }
   ],
-  "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada."
+  "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
+  "exclusiones_evidentes": [
+    {
+      "id": "insumos_clinicos",
+      "patron": "\\b(?:adquisicion|adq\\.?|compra|suministro|suminstro|sum\\.?|kits? (?:para|de))\\b[^\\n]{0,180}\\b(?:medicamentos|farmacos|insumos (?:medicos|clinicos)|materiales clinicos|cateteres|suturas|reactivos|protesis|endovasculares|antisepticos|povidona|alcohol gel)\\b",
+      "motivo": "El objeto explícito es adquirir insumos o productos clínicos."
+    },
+    {
+      "id": "prestaciones_clinicas",
+      "patron": "\\b(?:prestaciones medicas|procedimientos (?:medicos|quirurgicos)|atencion (?:medica|odontologica)|examenes (?:medicos|de laboratorio))\\b",
+      "motivo": "El objeto explícito corresponde a prestaciones clínicas."
+    },
+    {
+      "id": "servicios_informaticos",
+      "patron": "\\b(?:servicios? (?:profesionales? )?(?:de )?(?:personal ti|soporte informatico|desarrollo de software|mantencion de sistemas)|(?:adquisicion|compra|suministro) de (?:computadores|notebooks|impresoras|licencias de software))\\b",
+      "motivo": "El objeto explícito corresponde a servicios o equipos informáticos."
+    },
+    {
+      "id": "obras_viales",
+      "patron": "\\b(?:construccion|reparacion|conservacion|mejoramiento|pavimentacion)\\b[^\\n]{0,100}\\b(?:caminos|carreteras|puentes|calzadas|veredas|pavimentos)\\b",
+      "motivo": "El objeto explícito corresponde a obras viales."
+    }
+  ]
 }

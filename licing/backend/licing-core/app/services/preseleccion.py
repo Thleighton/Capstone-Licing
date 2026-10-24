@@ -11,13 +11,112 @@ from .revision_documental import evaluar_documentacion
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-3"
+VERSION_MOTOR = "reglas-hotel-4"
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
+MAX_DOCUMENTOS = 10
+MAX_PAGINAS = 120
+MAX_TEXTO_TOTAL = 500000
+
+
+def _texto_con_mapa(texto):
+    normal, mapa = _texto_busqueda(texto)
+    salida, posiciones = [], []
+    for caracter, posicion in zip(normal, mapa):
+        if caracter in "\u200b\ufeff":
+            continue
+        caracter = "\n" if caracter in "\r\n" else " " if caracter.isspace() else caracter
+        if salida and caracter == salida[-1] and caracter in {" ", "\n"}:
+            posiciones[-1] = (posiciones[-1][0], posicion[1])
+        else:
+            salida.append(caracter.replace("’", "'"))
+            posiciones.append(posicion)
+    return "".join(salida), posiciones
 
 
 def normalizar_texto(texto: str) -> str:
-    return _texto_busqueda(texto)[0].replace("’", "'")
+    return _texto_con_mapa(texto)[0]
+
+
+def _entrada_segura(datos):
+    """Una forma inválida de la fuente se conserva como duda, sin detener el lote."""
+    problemas = []
+    if not isinstance(datos, dict):
+        return {}, ["entrada: se esperaba un objeto"]
+    datos = dict(datos)
+
+    def texto(objeto, campo, ruta):
+        if objeto.get(campo) is not None and not isinstance(objeto[campo], str):
+            problemas.append(f"{ruta}{campo}: se esperaba texto")
+            objeto[campo] = None
+
+    def listado(objeto, campo, limite, ruta):
+        valor = objeto.get(campo)
+        if valor is None:
+            return []
+        if not isinstance(valor, list):
+            problemas.append(f"{ruta}{campo}: se esperaba una lista")
+            return []
+        if len(valor) > limite:
+            problemas.append(f"{ruta}{campo}: se superó el límite de lectura")
+        resultado = []
+        for n, item in enumerate(valor[:limite]):
+            if isinstance(item, dict):
+                resultado.append((n, dict(item)))
+            else:
+                problemas.append(f"{ruta}{campo}[{n}]: se esperaba un objeto")
+                resultado.append((n, {}))
+        return resultado
+
+    for campo in ("nombre", "descripcion", "nombre_organismo", "nombre_unidad",
+                  "direccion_entrega", "direccion_visita", "estado", "codigo_externo"):
+        texto(datos, campo, "")
+    codigo = datos.get("codigo_estado")
+    if codigo is not None and type(codigo) is not int:
+        problemas.append("codigo_estado: se esperaba un entero")
+        datos["codigo_estado"] = None
+    items = listado(datos, "items", MAX_ITEMS, "")
+    datos["items"] = []
+    for n, item in items:
+        for campo in ("nombre_producto", "descripcion", "categoria"):
+            texto(item, campo, f"items[{n}].")
+        datos["items"].append(item)
+    documentos = listado(datos, "documentos", MAX_DOCUMENTOS, "")
+    datos["documentos"] = []
+    for n, doc in documentos:
+        if doc.get("vigente") is False:
+            datos["documentos"].append(doc)
+            continue
+        if not isinstance(doc.get("vigente", True), bool):
+            problemas.append(f"documentos[{n}].vigente: se esperaba un booleano")
+            doc["vigente"] = True
+        if doc.get("id") is None:
+            problemas.append(f"documentos[{n}].id: identificador ausente")
+            doc["id"] = f"sin_identificador_{n}"
+        texto(doc, "nombre", f"documentos[{n}].")
+        texto(doc, "estado_extraccion", f"documentos[{n}].")
+        if doc.get("cobertura") is not None and not isinstance(doc["cobertura"], dict):
+            problemas.append(f"documentos[{n}].cobertura: se esperaba un objeto")
+            doc["cobertura"] = {}
+        if isinstance(doc.get("cobertura"), dict):
+            doc["cobertura"] = dict(doc["cobertura"])
+            texto(doc["cobertura"], "motivo_codigo", f"documentos[{n}].cobertura.")
+        paginas = listado(doc, "paginas_texto", MAX_PAGINAS, f"documentos[{n}].")
+        doc["paginas_texto"] = []
+        for p, pagina in paginas:
+            texto(pagina, "texto", f"documentos[{n}].paginas_texto[{p}].")
+            if type(pagina.get("pagina")) is not int or pagina["pagina"] < 1:
+                problemas.append(f"documentos[{n}].paginas_texto[{p}].pagina: número ausente o inválido")
+                pagina["pagina"] = "sin_numero"
+            doc["paginas_texto"].append(pagina)
+        datos["documentos"].append(doc)
+    incidencia = datos.get("incidencia_documental")
+    if incidencia is not None and (not isinstance(incidencia, dict)
+            or not isinstance(incidencia.get("motivo"), str)):
+        problemas.append("incidencia_documental: motivo ausente o inválido")
+        datos["incidencia_documental"] = {"codigo": "dato_invalido",
+            "motivo": "La incidencia documental guardada necesita revisión."}
+    return datos, problemas
 
 
 @cache
@@ -41,34 +140,36 @@ def _patrones():
         nombre = normalizar_texto(region).replace("’", "'")
         for prefijo in ("region de ", "region del ", "region de la "):
             lugares[prefijo + nombre] = ("fuera_rm", None, region)
-    patron_lugares = re.compile(r"\b(?:" + "|".join(re.escape(x) for x in sorted(lugares, key=len, reverse=True)) + r")\b")
+    patron_lugares = re.compile(r"(?<!\w)(?:" + "|".join(re.escape(x) for x in sorted(lugares, key=len, reverse=True)) + r")(?!\w)")
     return grupos, ambiguedades, lugares, patron_lugares
 
 
 def _campos(datos: dict):
-    campos, parcial = [], False
+    datos, problemas = _entrada_segura(datos)
+    campos, parcial, total = [], bool(problemas), 0
+
+    def agregar(fuente, valor):
+        nonlocal parcial, total
+        if not isinstance(valor, str) or not valor.strip():
+            return
+        limite = min(MAX_CAMPO, max(0, MAX_TEXTO_TOTAL - total))
+        parcial |= len(valor) > limite
+        if limite:
+            texto = valor[:limite]
+            campos.append((fuente, texto))
+            total += len(texto)
+
     for nombre in ("nombre", "descripcion"):
-        valor = datos.get(nombre)
-        if isinstance(valor, str) and valor.strip():
-            parcial |= len(valor) > MAX_CAMPO
-            campos.append((nombre, valor[:MAX_CAMPO]))
-    items = datos.get("items") or []
-    parcial |= len(items) > MAX_ITEMS
-    for n, item in enumerate(items[:MAX_ITEMS]):
+        agregar(nombre, datos.get(nombre))
+    for n, item in enumerate(datos["items"]):
         for nombre in ("nombre_producto", "descripcion", "categoria"):
-            valor = item.get(nombre)
-            if isinstance(valor, str) and valor.strip():
-                parcial |= len(valor) > MAX_CAMPO
-                campos.append((f"items[{n}].{nombre}", valor[:MAX_CAMPO]))
-    for doc in datos.get("documentos") or []:
+            agregar(f"items[{n}].{nombre}", item.get(nombre))
+    for doc in datos["documentos"]:
         if not doc.get("vigente", True):
             continue
         parcial |= doc.get("estado_extraccion") != "extraido"
         for pagina in doc.get("paginas_texto") or []:
-            texto = pagina.get("texto") or ""
-            parcial |= len(texto) > MAX_CAMPO
-            if texto.strip():
-                campos.append((f"documentos[{doc['id']}].paginas[{pagina['pagina']}]", texto[:MAX_CAMPO]))
+            agregar(f"documentos[{doc['id']}].paginas[{pagina['pagina']}]", pagina.get("texto"))
     return campos, parcial
 
 
@@ -77,8 +178,9 @@ def textos_servicio(datos: dict) -> list[dict]:
     return [{"fuente": fuente, "texto": texto} for fuente, texto in _campos(datos)[0]]
 
 
-def _fragmento(texto: str, inicio: int, fin: int) -> str:
-    _, posiciones = _texto_busqueda(texto)
+def _fragmento(texto: str, inicio: int, fin: int, posiciones=None) -> str:
+    if posiciones is None:
+        _, posiciones = _texto_con_mapa(texto)
     if not posiciones:
         return ""
     a = posiciones[min(inicio, len(posiciones)-1)][0]
@@ -86,32 +188,59 @@ def _fragmento(texto: str, inicio: int, fin: int) -> str:
     return texto[max(0, a - 110):min(len(texto), b + 150)].strip()
 
 
-def detectar_pertinencia(datos: dict) -> dict:
+def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     grupos, ambiguedades, _, _ = _patrones()
     coincidencias, dudas = [], []
-    for fuente, texto in _campos(datos)[0]:
-        normal = normalizar_texto(texto)
+    campos = _campos(datos)[0] if campos is None else campos
+    for fuente, texto in campos:
+        normal, mapa = _texto_con_mapa(texto)
         for grupo, patrones in grupos:
             for patron in patrones:
                 m = patron.search(normal)
                 if m:
-                    coincidencias.append({"grupo": grupo["id"], "nivel": grupo["nivel"], "fuente": fuente,
-                        "termino": m.group(), "evidencia": _fragmento(texto, m.start(), m.end())})
+                    nivel = grupo["nivel"]
+                    if re.fullmatch(r"hotel(?:es)?|hoteleria", m.group()):
+                        antes = re.split(r"[.;\n]", normal[:m.start()])[-1][-120:]
+                        despues = re.split(r"[.;\n]", normal[m.end():], maxsplit=1)[0][:120]
+                        contratacion = re.search(r"\b(?:requiere|requieren|solicita|solicitan|contrata|contratar|contratacion|arriendo|alquiler|reservas?|servicios? de)\b", antes)
+                        destino = re.search(r"\bpara\s+(?:\d+\s+)?(?:personas|participantes|delegaciones|funcionarios|alojar|hospedar)\b", despues)
+                        if not (contratacion or destino):
+                            nivel = "contexto"
+                    coincidencias.append({"grupo": grupo["id"], "nivel": nivel, "fuente": fuente,
+                        "termino": m.group(), "inicio": mapa[m.start()][0], "fin": mapa[m.end()-1][1],
+                        "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
         # Un código UNSPSC genérico no identifica el objeto concreto de la contratación.
         if not fuente.endswith(("categoria", "nombre_producto")):
             for regla, patron in ambiguedades:
                 m = patron.search(normal)
                 if m:
                     dudas.append({"codigo": regla["id"], "motivo": regla["motivo"], "fuente": fuente,
-                        "evidencia": _fragmento(texto, m.start(), m.end())})
-    for fuente, texto in _campos(datos)[0]:
+                        "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
+    for fuente, texto in campos:
         if re.search(r"\b(?:sin|no se requiere|no incluye)\s+(?:servicio de )?(?:alojamiento|hospedaje|salon|habitacion)", normalizar_texto(texto)):
             dudas.append({"codigo": "servicio_negado", "motivo": "La mención contiene una negación; revisar su alcance.", "fuente": fuente, "evidencia": texto[:500]})
     directas = [x for x in coincidencias if x["nivel"] == "directa"
         and not x["fuente"].endswith(("categoria", "nombre_producto"))]
+    exclusiones = []
+    senales = any(x["grupo"] in {"alojamiento", "salones", "actividades", "alimentacion_asociada"}
+                  for x in coincidencias)
+    # Excluir requiere un objeto ajeno explícito, nunca solo ausencia de palabras clave.
+    # Cualquier señal de un paquete hotelero mantiene el caso para desambiguación.
+    if not senales:
+        for regla in cargar_catalogo().get("exclusiones_evidentes", []):
+            for fuente, texto in campos:
+                if fuente.endswith(("categoria", "nombre_producto")):
+                    continue
+                normal, mapa = _texto_con_mapa(texto)
+                m = re.search(regla["patron"], normal)
+                if m:
+                    exclusiones.append({"codigo": regla["id"], "motivo": regla["motivo"],
+                        "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
     # El título de una línea genérica puede ser la única información disponible: conserva para revisar.
     return {"grupos": sorted({x["grupo"] for x in coincidencias}), "directa": bool(directas),
-        "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30]}
+        "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30],
+        "exclusiones_evidentes": exclusiones[:30],
+        "truncada": len(coincidencias) > 100 or len(dudas) > 30 or len(exclusiones) > 30}
 
 
 def detectar_cliente(datos):
@@ -133,46 +262,58 @@ def extraer_requisitos(campos):
     }
     hallazgos = []
     for fuente, texto in campos:
-        normal, mapa = _texto_busqueda(texto)
+        normal, mapa = _texto_con_mapa(texto)
         for tipo, patron in patrones.items():
             for m in re.finditer(patron, normal):
                 inicio, fin = mapa[m.start()][0], mapa[m.end()-1][1]
                 hallazgos.append({"tipo": tipo, "fuente": fuente, "inicio": inicio, "fin": fin,
-                                  "texto": texto[inicio:fin], "contexto": _fragmento(texto, m.start(), m.end()),
+                                  "texto": texto[inicio:fin], "contexto": _fragmento(texto, m.start(), m.end(), mapa),
                                   "estado": "por_revisar"})
                 if len(hallazgos) == 100:
                     return {"hallazgos": hallazgos, "truncada": True}
     return {"hallazgos": hallazgos, "truncada": False}
 
 
-_SERVICIO = re.compile(r"\b(?:servicios?|alojamiento|hospedaje|hoteles?|habitacion(?:es)?|estadia|salon(?:es)?|salas?|recintos?|espacios?|auditorios?|jornadas?|eventos?|reunion(?:es)?|seminarios?|encuentros?|ceremonias?|realizara|desarrollara)\b")
-_RELACION = re.compile(r"(?:\ben\s+(?:(?:la|el)\s+)?(?:(?:ciudad|comuna|region|centro|casco historico)\s+(?:de|del)\s+)?|\b(?:ciudad|comuna|region|centro)\s+de\s+|\b(?:ubicacion|lugar)\s+(?:de\s+)?(?:prestacion|ejecucion|realizacion|servicio|evento)\s*:\s*)$")
+_SERVICIO = re.compile(r"\b(?:servicios?|alojamiento|hospedaje|hotel(?:es)?|hoteleria|habitacion(?:es)?|estadia|salon(?:es)?|salas?|recintos?|espacios?|auditorios?|jornadas?|eventos?|reunion(?:es)?|seminarios?|encuentros?|ceremonias?|realizara|desarrollara)\b")
+_ROTULO_LUGAR = re.compile(r"\b(?:ubicacion|lugar|direccion|comuna|region)\s+(?:(?:de|del)\s+)?(?:(?:la|el)\s+)?(?:prestacion|ejecucion|realizacion|servicio|evento)\s*:\s*$")
+_RELACION = re.compile(r"(?:\b(?:en|para)\s+(?:(?:la|el)\s+)?(?:(?:ciudad|comuna|region|centro|casco historico)\s+(?:de|del)\s+)?|\b(?:ciudad|comuna|region|centro)\s+de\s+)$")
+_LUGAR_EN_TITULO = re.compile(r"\b(?:(?:servicios? de )?(?:alojamiento|hospedaje|hoteleria)|(?:arriendo|alquiler) de (?:un |una )?(?:salon(?:es)?|salas?))\s*[-:–]?\s*$")
 _NEGACION = re.compile(r"\b(?:fuera de|excepto|excluy\w*|distint[oa]s? de|no\s+(?:(?:se\s+)?\w+\s+){0,4}en)\b")
 _ADMINISTRATIVO = re.compile(r"\b(?:domicilio|direccion|oficinas?|sede|comprador|unidad de compra|factur(?:as?|acion)|entrega de (?:ofertas?|antecedentes|documentos))\b")
+_DESTINO_EXTRANJERO = re.compile(r"^\s*,?\s*(?:argentina|peru|brasil|bolivia|colombia|ecuador|mexico|espana|estados unidos|uruguay|paraguay|venezuela)\b")
 
 
-def detectar_ubicacion(datos: dict) -> dict:
+def detectar_ubicacion(datos: dict, *, campos=None, pertinencia=None) -> dict:
+    datos, _ = _entrada_segura(datos)
     _, _, lugares, patron = _patrones()
     evidencias, ambiguas = [], []
     comunas_ambiguas = {normalizar_texto(x) for x in cargar_catalogo()["comunas_ambiguas"]}
-    for fuente, texto in _campos(datos)[0]:
+    campos = _campos(datos)[0] if campos is None else campos
+    for fuente, texto in campos:
         if fuente.endswith(("categoria", "nombre_producto")):
             continue
-        normal = normalizar_texto(texto).replace("’", "'")
+        normal, mapa = _texto_con_mapa(texto)
         for m in patron.finditer(normal):
             antes = normal[max(0, m.start() - 160):m.start()]
             antes = re.split(r"[;\n.!?]", antes)[-1]
             # No deduce el lugar por una mención del comprador o por una ciudad sin relación al servicio.
+            despues = re.split(r"[;\n.!?]", normal[m.end():], maxsplit=1)[0][:160]
+            rotulo = bool(_ROTULO_LUGAR.search(antes))
             relacion = _RELACION.search(antes)
-            continuacion = bool(re.search(r"\b(?:y|o)\s+$", antes) and evidencias
-                and evidencias[-1]["fuente"] == fuente)
-            if not ((relacion and (_SERVICIO.search(antes) or re.search(r"(?:prestacion|ejecucion|realizacion)\s*:\s*$", antes))) or continuacion):
+            continuacion = bool(re.search(r"(?:\b(?:y|o)|[,/–-])\s+$", antes) and evidencias
+                and evidencias[-1]["fuente"] == fuente
+                and not re.search(r"[;\n.!?]", texto[evidencias[-1]["fin"]:mapa[m.start()][0]]))
+            if not (rotulo or _LUGAR_EN_TITULO.search(antes) or (relacion and (_SERVICIO.search(antes) or _SERVICIO.search(despues))) or continuacion):
                 continue
             tipo, comuna, region = lugares[m.group()]
             registro = {"cobertura": tipo, "comuna": comuna, "region": region,
-                "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end())}
-            extranjero = m.group() == "santiago" and re.match(r"\s+(?:de compostela|del estero|de cuba)", normal[m.end():])
-            dudosa = (_NEGACION.search(antes) or _ADMINISTRATIVO.search(antes) or extranjero
+                "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa),
+                "inicio": mapa[m.start()][0], "fin": mapa[m.end()-1][1],
+                "contexto_local": antes + m.group() + despues, "lugar_explicito": rotulo}
+            extranjero = (m.group() == "santiago" and re.match(r"\s+(?:de compostela|del estero|de cuba)", normal[m.end():]))
+            extranjero = extranjero or (m.group() == "san miguel" and re.match(r"\s+de tucuman\b", normal[m.end():]))
+            extranjero = extranjero or _DESTINO_EXTRANJERO.match(normal[m.end():])
+            dudosa = (_NEGACION.search(antes) or (_ADMINISTRATIVO.search(antes) and not rotulo) or extranjero
                 or (m.group() in comunas_ambiguas and not re.search(r"metropolitana|melipilla|\brm\b", normal)))
             (ambiguas if dudosa else evidencias).append(registro)
     tipos = {e["cobertura"] for e in evidencias}
@@ -187,16 +328,47 @@ def detectar_ubicacion(datos: dict) -> dict:
     # Una dirección de entrega/visita puede ser administrativa: se expone solo como pista.
     pistas = [{"fuente": campo, "texto": datos[campo][:500]} for campo in ("direccion_entrega", "direccion_visita")
         if isinstance(datos.get(campo), str) and datos[campo].strip()]
-    # No descarta un paquete por el lugar de una sola línea cuando hay otros servicios sin localizar.
-    if estado == "fuera_rm":
-        if any(re.search(r"\b(?:todo el pais|a nivel nacional|cobertura nacional|diversas regiones|distintas regiones|varias ciudades)\b", normalizar_texto(t)) for _, t in _campos(datos)[0]):
+    if pertinencia is None:
+        pertinencia = detectar_pertinencia(datos, campos=campos)
+    vinculo = _vincular_servicio(pertinencia=pertinencia, evidencias=evidencias)
+    # No combina el alojamiento de una línea con la ciudad de otra ni descarta líneas sin localizar.
+    if estado in {"rm", "fuera_rm"} and not vinculo["completo"] and vinculo["unidades_hoteleras"]:
+        estado = "ambigua"
+    if estado in {"rm", "fuera_rm"}:
+        if any(re.search(r"\b(?:todo el pais|a nivel nacional|cobertura nacional|diversas regiones|distintas regiones|varias ciudades)\b", normalizar_texto(t)) for _, t in campos):
             estado = "ambigua"
-        items_hotel = {x["fuente"].split(".")[0] for x in detectar_pertinencia(datos)["coincidencias"]
-            if x["nivel"] == "directa" and x["fuente"].startswith("items[")}
-        items_localizados = {e["fuente"].split(".")[0] for e in evidencias if e["fuente"].startswith("items[")}
-        if len(items_hotel) > 1 and items_hotel - items_localizados:
-            estado = "ambigua"
-    return {"estado": estado, "evidencias": evidencias[:50], "menciones_ambiguas": ambiguas[:30], "pistas": pistas}
+    return {"estado": estado, "alcance": "santiago_y_region_metropolitana",
+        "vinculo_servicio": vinculo, "evidencias": evidencias[:50],
+        "menciones_ambiguas": ambiguas[:30], "pistas": pistas,
+        "truncada": len(evidencias) > 50 or len(ambiguas) > 30}
+
+
+def _unidad(fuente):
+    if fuente.startswith("items["):
+        return fuente.split(".")[0]
+    if fuente.startswith("documentos["):
+        return fuente
+    return "cabecera"
+
+
+def _vincular_servicio(pertinencia, evidencias):
+    directas = [x for x in pertinencia["coincidencias"] if x["nivel"] == "directa"
+        and not x["fuente"].endswith(("categoria", "nombre_producto"))]
+    unidades = {_unidad(x["fuente"]) for x in directas}
+    # El título general no representa una línea adicional a los ítems concretos.
+    requeridas = {u for u in unidades if u.startswith("items[")} or unidades
+    localizadas = set()
+    for e in evidencias:
+        unidad = _unidad(e["fuente"])
+        if unidad not in unidades:
+            continue
+        local = detectar_pertinencia({"descripcion": e["contexto_local"]})
+        actividad = re.search(r"\b(?:eventos?|jornadas?|seminarios?|reunion(?:es)?|conferencias?|encuentros?)\b", e["contexto_local"])
+        if local["directa"] or e["lugar_explicito"] or actividad:
+            localizadas.add(unidad)
+    return {"completo": bool(requeridas) and requeridas <= localizadas,
+        "unidades_hoteleras": sorted(requeridas), "unidades_localizadas": sorted(localizadas),
+        "motivo": "La ubicación debe corresponder al servicio hotelero de la misma línea o contexto."}
 
 
 def _fecha(valor):
@@ -229,6 +401,7 @@ def evaluar_vigencia(datos: dict, ahora: datetime) -> dict:
 
 
 def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
+    datos, problemas = _entrada_segura(datos)
     if re.search(r"-COT\d*$", str(datos.get("codigo_externo") or ""), re.I):
         raise ValueError("Esta etapa admite solamente licitaciones normales, no Compra Ágil.")
     ahora = ahora or datetime.now(CHILE)
@@ -236,20 +409,25 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         raise ValueError("La hora de evaluación debe indicar su zona horaria.")
     ahora = ahora.astimezone(CHILE)
     campos, parcial = _campos(datos)
+    parcial |= bool(problemas)
     vigencia = evaluar_vigencia(datos, ahora)
-    ubicacion = detectar_ubicacion(datos)
-    pertinencia = detectar_pertinencia(datos)
+    pertinencia = detectar_pertinencia(datos, campos=campos)
+    ubicacion = detectar_ubicacion(datos, campos=campos, pertinencia=pertinencia)
+    parcial |= pertinencia["truncada"] or ubicacion["truncada"]
     documentacion = evaluar_documentacion(datos)
     territorial = ("cumple" if ubicacion["estado"] == "rm" else
         "no_cumple" if ubicacion["estado"] == "fuera_rm" and not parcial else "sin_informacion")
-    rubro = "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion"
+    rubro = ("no_cumple" if pertinencia["exclusiones_evidentes"] and not parcial else
+        "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion")
     if vigencia["resultado"] == "no_cumple":
         clasificacion, motivo = "descartada", vigencia["motivo"]
     elif documentacion["requiere_revision"]:
         clasificacion, motivo = "revision_manual", "Pendiente de revisión documental. " + documentacion["motivo"]
     elif territorial == "no_cumple":
         clasificacion, motivo = "descartada", "El servicio identificado se solicita fuera de la Región Metropolitana."
-    elif vigencia["resultado"] == territorial == rubro == "cumple" and not parcial:
+    elif rubro == "no_cumple":
+        clasificacion, motivo = "descartada", pertinencia["exclusiones_evidentes"][0]["motivo"]
+    elif vigencia["resultado"] == territorial == rubro == "cumple" and not parcial and ubicacion["vinculo_servicio"]["completo"]:
         clasificacion, motivo = "preseleccionada", "Oportunidad vigente, con servicio potencialmente hotelero y ubicación identificada en la RM."
     else:
         clasificacion = "revision_manual"
@@ -259,12 +437,15 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
             clasificacion, motivo = "revision_manual", "Hay requisitos ambiguos o documentos parcialmente leídos."
     entrada = {"campos": campos, "estado": datos.get("estado"), "codigo_estado": datos.get("codigo_estado"),
         "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id"),
-        "documentacion": documentacion}
+        "documentacion": documentacion, "calidad_datos": problemas,
+        "version_motor": VERSION_MOTOR, "catalogo_version": cargar_catalogo()["version"]}
     return {
         "version_motor": VERSION_MOTOR,
         "codigo_externo": datos.get("codigo_externo"), "catalogo_version": cargar_catalogo()["version"],
         "clasificacion": clasificacion, "motivo": motivo, "evaluado_en": ahora.isoformat(),
         "fuente_raw_id": datos.get("raw_id"), "entrada_parcial": parcial,
+        "calidad_datos": {"resultado": "sin_informacion" if parcial else "cumple",
+            "incidencias": problemas[:30], "lectura_acotada": parcial},
         "cobertura": "parcial" if datos.get("documentos") else "sin_bases",
         "requisitos_detectados": extraer_requisitos(campos),
         "cliente_estrategico": detectar_cliente(datos),

@@ -74,3 +74,9 @@ def test_pdf_sin_paginas_y_lectura_parcial_tienen_motivos_distintos():
     assert r['estado_extraccion'] == 'parcial'
     assert r['cobertura']['motivo_codigo'] == 'lectura_parcial'
     assert r['cobertura']['paginas_pendientes'] == [2]
+
+
+def test_lector_aislado_no_depende_del_directorio_actual(tmp_path, monkeypatch):
+    # En Vercel el proceso arranca fuera de licing-core: Core se agrega a sys.path desde api/index.py.
+    monkeypatch.chdir(tmp_path)
+    assert extraer_pdf(pdf('Arriendo de salon en Santiago para 50 personas.'))['estado_extraccion'] == 'extraido'

@@ -20,7 +20,14 @@ from ..services.normalizacion_compra_agil import (
 from ..services.procesamiento_compra_agil import (
     procesar_compra_agil_guardada,
 )
+from app.services.lote_compra_agil import (
+    ejecutar_lote_compra_agil,
+    EjecucionEnCursoError,
+)
 
+from typing import Literal
+
+from app.models.ejecucion_compra_agil import EjecucionCompraAgil
 router = APIRouter(prefix="/ingesta")
 
 
@@ -767,3 +774,153 @@ def procesar_compra_agil(
         raise
 
     return resultado
+
+
+@router.post(
+    "/compra-agil/lote/ejecutar",
+    tags=["Compras Ágiles"],
+    summary="Procesar Compras Ágiles nuevas o pendientes por lote",
+)
+async def ejecutar_lote_compra_agil_endpoint(
+    paginas: int = Query(default=1, ge=1, le=10),
+    maximo_detalles: int = Query(default=3, ge=1, le=5),
+    pausa_entre_detalles: float = Query(
+        default=5.0,
+        ge=1,
+        le=300,
+    ),
+    region: int | None = Query(default=None, ge=1, le=16),
+    tamano_pagina: int = Query(default=10, ge=10, le=50),
+    db: Session = Depends(get_db),
+) -> dict:
+    client = CompraAgilClient()
+
+    try:
+        return await ejecutar_lote_compra_agil(
+            db=db,
+            client=client,
+            paginas=paginas,
+            maximo_detalles=maximo_detalles,
+            pausa_entre_detalles=pausa_entre_detalles,
+            region=region,
+            tamano_pagina=tamano_pagina,
+        )
+
+    except EjecucionEnCursoError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    finally:
+        await client.cerrar()
+
+EstadoEjecucionCompraAgil = Literal[
+    "en_curso",
+    "completada",
+    "parcial",
+    "error",
+    "interrumpida",
+]
+
+
+def serializar_ejecucion_compra_agil(
+    ejecucion: EjecucionCompraAgil,
+    *,
+    incluir_detalle: bool = False,
+) -> dict:
+    datos = {
+        "id": ejecucion.id,
+        "inicio": ejecucion.inicio,
+        "fin": ejecucion.fin,
+        "estado": ejecucion.estado,
+        "paginas_solicitadas": ejecucion.paginas_solicitadas,
+        "maximo_detalles": ejecucion.maximo_detalles,
+        "paginas_consultadas": ejecucion.paginas_consultadas,
+        "codigos_encontrados": ejecucion.codigos_encontrados,
+        "omitidos_ya_procesados": ejecucion.omitidos_ya_procesados,
+        "codigos_invalidos": ejecucion.codigos_invalidos,
+        "detalles_intentados": ejecucion.detalles_intentados,
+        "descargados": ejecucion.descargados,
+        "reutilizados": ejecucion.reutilizados,
+        "detalles_procesados": ejecucion.detalles_procesados,
+        "compras_nuevas": ejecucion.compras_nuevas,
+        "detenido_por_limite": ejecucion.detenido_por_limite,
+        "detenido_por_error_api": ejecucion.detenido_por_error_api,
+        "detenido_por_429": ejecucion.detenido_por_429,
+    }
+
+    if incluir_detalle:
+        datos.update({
+            "listados_raw_ids": ejecucion.listados_raw_ids,
+            "resultados": ejecucion.resultados,
+            "errores": ejecucion.errores,
+        })
+
+    return datos
+
+
+@router.get(
+    "/compra-agil/lote/ejecuciones",
+    tags=["Compras ágiles"],
+    summary="Listar el historial de ejecuciones de Compras Ágiles",
+)
+def listar_ejecuciones_compra_agil(
+    estado: EstadoEjecucionCompraAgil | None = Query(default=None),
+    limite: int = Query(default=20, ge=1, le=100),
+    desplazamiento: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> dict:
+    consulta = db.query(EjecucionCompraAgil)
+
+    if estado is not None:
+        consulta = consulta.filter(
+            EjecucionCompraAgil.estado == estado
+        )
+
+    total = consulta.count()
+
+    ejecuciones = (
+        consulta
+        .order_by(
+            EjecucionCompraAgil.inicio.desc(),
+            EjecucionCompraAgil.id.desc(),
+        )
+        .offset(desplazamiento)
+        .limit(limite)
+        .all()
+    )
+
+    return {
+        "total": total,
+        "limite": limite,
+        "desplazamiento": desplazamiento,
+        "items": [
+            serializar_ejecucion_compra_agil(ejecucion)
+            for ejecucion in ejecuciones
+        ],
+    }
+
+
+@router.get(
+    "/compra-agil/lote/ejecuciones/{ejecucion_id}",
+    tags=["Compras ágiles"],
+    summary="Consultar el detalle de una ejecución de Compras Ágiles",
+)
+def obtener_ejecucion_compra_agil(
+    ejecucion_id: int = Path(..., ge=1),
+    db: Session = Depends(get_db),
+) -> dict:
+    ejecucion = db.get(EjecucionCompraAgil, ejecucion_id)
+
+    if ejecucion is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró la ejecución de Compras Ágiles.",
+        )
+
+    return serializar_ejecucion_compra_agil(
+        ejecucion,
+        incluir_detalle=True,
+    )

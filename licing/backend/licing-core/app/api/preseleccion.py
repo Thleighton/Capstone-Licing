@@ -18,10 +18,11 @@ from ..database import get_db
 from ..models.licitacion import Licitacion
 from ..models.licitacion_item import LicitacionItem
 from ..models.raw import RawMercadoPublico
-from ..services import filtradas
+from ..models.licitacion_documento import LicitacionDocumento
+from ..services import filtradas, documentos_origen
 from ..services.enlaces import ficha_oficial
 from ..services.pdf_bases import extraer_pdf, MAX_BYTES
-from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, CHILE
+from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -37,11 +38,14 @@ def serializable(valor):
 def cargar_entradas(db, ids):
     filas = db.scalars(select(Licitacion).where(Licitacion.id.in_(ids))).all()
     entradas = {}
+    versiones = documentos_origen.versiones(db, ids)
     for fila in filas:
-        datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns}
+        datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns if c.name != "ingesta_documental"}
         raw = db.get(RawMercadoPublico, fila.raw_id)
-        datos.update(items=[], url_oficial=ficha_oficial(fila.codigo_externo),
+        datos.update(items=[], documentos_version=versiones[fila.id], url_oficial=ficha_oficial(fila.codigo_externo),
                      fuente_verificada_en=raw.verificado_en if raw else None)
+        if fila.ingesta_documental.get("incidencia_documental"):
+            datos["incidencia_documental"] = fila.ingesta_documental["incidencia_documental"]
         entradas[fila.id] = datos
     for item in db.scalars(select(LicitacionItem).where(LicitacionItem.licitacion_id.in_(ids))
                            .order_by(LicitacionItem.licitacion_id, LicitacionItem.posicion_fuente)):
@@ -62,11 +66,10 @@ async def evaluar_lote(db, ids, actor=None):
     entradas = cargar_entradas(db, ids)
     if len(entradas) != len(set(ids)):
         raise HTTPException(404, "Alguna licitación ya no está disponible. Actualiza la lista.")
-    codigos = [d["codigo_externo"] for d in entradas.values()]
-    documentos = await filtradas.operar("documentos", {"codigos": codigos})
+    documentos = documentos_origen.cargar(db, ids)
     lote = []
     for datos in entradas.values():
-        docs = documentos.get(datos["codigo_externo"], [])
+        docs = documentos.get(datos["id"], [])
         entrada = {**datos, "documentos": docs}
         resultado = evaluar_preseleccion(entrada)
         # No duplicar RAW ni PDF completos en las evaluaciones: conservar referencias y evidencias.
@@ -77,6 +80,9 @@ async def evaluar_lote(db, ids, actor=None):
     actuales = dict(db.execute(select(Licitacion.id, Licitacion.raw_id).where(Licitacion.id.in_(ids))).all())
     if any(actuales.get(d["id"]) != d["raw_id"] for d in entradas.values()):
         raise HTTPException(409, "La fuente cambió durante la evaluación. Actualiza y vuelve a intentarlo.")
+    versiones = documentos_origen.versiones(db, ids)
+    if any(versiones[d["id"]] != d["documentos_version"] for d in entradas.values()):
+        raise HTTPException(409, "Los documentos cambiaron durante la evaluación. Vuelve a intentarlo.")
     return await filtradas.operar("guardar", {"lote": lote, "perfil": cargar_catalogo(), "actor": actor})
 
 
@@ -108,8 +114,10 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
     respuesta = await filtradas.operar("listar", {"codigos": codigos, "fuentes": fuentes, "clasificacion": clasificacion,
                                                    "q": q, "limite": limite, "offset": offset})
     actuales = dict(db.execute(select(Licitacion.id, Licitacion.raw_id)).all())
+    entradas_actuales = cargar_entradas(db, [f["id"] for f in respuesta.get("filas", [])])
     for fila in respuesta.get("filas", []):
-        if actuales.get(fila["id"]) != fila.get("fuente_raw_id"):
+        if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or
+                fila.get("hash_fuente") != firma_fuente(entradas_actuales.get(str(fila["id"]), {}))):
             fila.update(estado_seleccion="pendiente_evaluacion", motivo_seleccion="La fuente cambió; actualiza la preselección.")
     respuesta["ids_fuente"] = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
     response.headers["Cache-Control"] = "no-store"
@@ -121,12 +129,45 @@ async def evaluar(entrada: Lote, usuario=Depends(usuario_actual), db: Session = 
     return await evaluar_lote(db, entrada.ids, str(UUID(usuario["id"])))
 
 
+@router.post("/documentos/obtener")
+async def obtener_documentos(usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
+    from ..services.ingesta_documental import procesar_documentos
+    return await procesar_documentos(db, str(UUID(usuario["id"])))
+
+
+@router.get("/pendientes-documentales", dependencies=[Depends(usuario_actual)])
+def pendientes_documentales(response: Response, limite: int = Query(default=25, ge=1, le=100),
+                            offset: int = Query(default=0, ge=0), db: Session = Depends(get_db)):
+    # Lee la fuente original: también funciona si filtradas todavía no se ha evaluado o no responde.
+    fuentes = list(db.execute(select(Licitacion.id, Licitacion.codigo_externo, Licitacion.nombre,
+        Licitacion.fecha_cierre, Licitacion.codigo_estado, Licitacion.estado)
+        .order_by(Licitacion.fecha_cierre.asc().nulls_last(), Licitacion.id)).mappings())
+    incidencias = documentos_origen.incidencias(db, [f["id"] for f in fuentes])
+    ahora = datetime.now(CHILE)
+    filas = []
+    for f in fuentes:
+        fallos = incidencias[f["id"]]
+        if not fallos or evaluar_vigencia(dict(f), ahora)["resultado"] == "no_cumple":
+            continue
+        filas.append({**dict(f), "fecha_cierre": serializable(f["fecha_cierre"]) if f["fecha_cierre"] else None,
+            "estado_seleccion": "revision_manual", "url_oficial": ficha_oficial(f["codigo_externo"]),
+            "motivo_seleccion": fallos[0]["motivo"], "incidencias_documentales": fallos})
+    response.headers["Cache-Control"] = "no-store"
+    return {"filas": filas[offset:offset+limite], "total": len(filas), "ids_fuente": [f["id"] for f in fuentes]}
+
+
 @router.get("/{licitacion_id}", dependencies=[Depends(usuario_actual)])
 async def detalle(licitacion_id: int, response: Response, db: Session = Depends(get_db)):
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    resultado = await filtradas.operar("detalle", {"codigo": fila.codigo_externo})
+    try:
+        resultado = await filtradas.operar("detalle", {"codigo": fila.codigo_externo})
+    except filtradas.FiltradasNoDisponible:
+        resultado = {"evaluacion": None, "criterios": [], "hash_fuente": None}
+    resultado["documentos"] = await documentos_origen.detalle(db, licitacion_id)
+    resultado["ingesta_documental"] = {k: v for k, v in fila.ingesta_documental.items() if k != "token"}
+    resultado["incidencias_documentales"] = documentos_origen.incidencias(db, [licitacion_id])[licitacion_id]
     resultado["fuente_actualizada"] = resultado.get("hash_fuente") == firma_fuente(cargar_entradas(db, [licitacion_id])[str(licitacion_id)])
     response.headers["Cache-Control"] = "no-store"
     return resultado
@@ -162,15 +203,23 @@ async def documento(licitacion_id: int, request: Request, usuario=Depends(usuari
             raise ValueError()
     except (ValueError, KeyError, TypeError, binascii.Error):
         raise HTTPException(422, "Adjunta un PDF válido e indica su tipo.") from None
+    if not contenido:
+        incidencia = documentos_origen.registrar_incidencia(db, licitacion_id, "archivo_vacio", nombre)
+        try:
+            evaluacion = await evaluar_lote(db, [licitacion_id], str(UUID(usuario["id"])))
+        except filtradas.FiltradasNoDisponible:
+            evaluacion = {"pendiente": True}
+        return {"documento": None, "incidencia": incidencia, "evaluacion": evaluacion}
     from starlette.concurrency import run_in_threadpool
     try:
         extraccion = await run_in_threadpool(extraer_pdf, contenido)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
-    await evaluar_lote(db, [licitacion_id], str(UUID(usuario["id"])))
-    guardado = await filtradas.operar("guardar_documento", {"codigo": fila.codigo_externo,
-        "nombre": nombre, "tipo": tipo, "extraccion": extraccion,
-        "contenido_base64": entrada["contenido_base64"], "usuario": str(UUID(usuario["id"]))})
+    try:
+        guardado = await documentos_origen.guardar(db, licitacion_id, nombre, tipo,
+            ficha_oficial(fila.codigo_externo), contenido, extraccion, str(UUID(usuario["id"])))
+    except documentos_origen.StorageNoDisponible as exc:
+        raise HTTPException(503, str(exc)) from None
     try:
         evaluacion = await evaluar_lote(db, [licitacion_id], str(UUID(usuario["id"])))
     except filtradas.FiltradasNoDisponible:
@@ -183,5 +232,13 @@ async def retirar_documento(licitacion_id: int, documento_id: int, usuario=Depen
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    await filtradas.operar("retirar_documento", {"codigo": fila.codigo_externo, "documento_id": documento_id})
-    return await evaluar_lote(db, [licitacion_id], str(UUID(usuario["id"])))
+    doc = db.scalar(select(LicitacionDocumento).where(LicitacionDocumento.id == documento_id,
+                                                     LicitacionDocumento.licitacion_id == licitacion_id))
+    if not doc:
+        raise HTTPException(404, "Documento no encontrado en esta licitación.")
+    doc.vigente = False
+    db.commit()
+    try:
+        return await evaluar_lote(db, [licitacion_id], str(UUID(usuario["id"])))
+    except filtradas.FiltradasNoDisponible:
+        return {"pendiente": True, "retirado": True}

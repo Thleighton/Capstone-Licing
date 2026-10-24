@@ -1,7 +1,5 @@
 # Preselección del Hotel Plaza San Francisco
 
-Para continuar el PR y configurar cron-job.org, ver [Relevo del cron documental](../docs/RELEVO_CRON_DOCUMENTOS.md).
-
 Usuarios/Licitaciones es la capa de entrada: conserva RAW, normalización y documentos originales en `licitacion_documento`, vinculados por `licitacion_id`. Los PDF están en el bucket privado `licitacion-bases` de **ese mismo proyecto**. El texto se conserva una sola vez, con índices que permiten reconstruir cada página; los filtros leen esa fuente.
 
 LicitacionesFiltradas guarda oportunidades evaluadas, ítems, criterios, revisiones y referencias `documento_id/version/hash` en `evaluacion_filtro.entrada_evaluada`. No almacena PDF ni su texto completo. La migración `documentos_solo_en_origen` retira la tabla documental vacía y el control de descargas equivocados de filtradas; se detiene si encuentra documentos para evitar pérdida de datos. El bucket anterior queda deshabilitado para PDF.

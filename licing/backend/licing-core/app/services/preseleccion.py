@@ -7,10 +7,11 @@ from pathlib import Path
 import re
 from .ubicacion import _texto_busqueda
 from zoneinfo import ZoneInfo
+from .revision_documental import evaluar_documentacion
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-2"
+VERSION_MOTOR = "reglas-hotel-3"
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
 
@@ -238,11 +239,14 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     vigencia = evaluar_vigencia(datos, ahora)
     ubicacion = detectar_ubicacion(datos)
     pertinencia = detectar_pertinencia(datos)
+    documentacion = evaluar_documentacion(datos)
     territorial = ("cumple" if ubicacion["estado"] == "rm" else
         "no_cumple" if ubicacion["estado"] == "fuera_rm" and not parcial else "sin_informacion")
     rubro = "cumple" if pertinencia["directa"] and not pertinencia["ambiguedades"] else "sin_informacion"
     if vigencia["resultado"] == "no_cumple":
         clasificacion, motivo = "descartada", vigencia["motivo"]
+    elif documentacion["requiere_revision"]:
+        clasificacion, motivo = "revision_manual", "Pendiente de revisión documental. " + documentacion["motivo"]
     elif territorial == "no_cumple":
         clasificacion, motivo = "descartada", "El servicio identificado se solicita fuera de la Región Metropolitana."
     elif vigencia["resultado"] == territorial == rubro == "cumple" and not parcial:
@@ -254,7 +258,8 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         if clasificacion == "preseleccionada":
             clasificacion, motivo = "revision_manual", "Hay requisitos ambiguos o documentos parcialmente leídos."
     entrada = {"campos": campos, "estado": datos.get("estado"), "codigo_estado": datos.get("codigo_estado"),
-        "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id")}
+        "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id"),
+        "documentacion": documentacion}
     return {
         "version_motor": VERSION_MOTOR,
         "codigo_externo": datos.get("codigo_externo"), "catalogo_version": cargar_catalogo()["version"],
@@ -265,7 +270,7 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "cliente_estrategico": detectar_cliente(datos),
         "huella_entrada": hashlib.sha256(json.dumps(entrada, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
         "criterios": {"vigencia": vigencia, "ubicacion": {"resultado": territorial, **ubicacion},
-            "pertinencia": {"resultado": rubro, **pertinencia}},
+            "pertinencia": {"resultado": rubro, **pertinencia}, "documentos": documentacion},
         "semantica": {"estado": "pendiente", "motivo": "Esta etapa aplica reglas; no ejecuta embeddings ni LLM."},
         "modo": "preseleccion", "decision_postular": False,
     }

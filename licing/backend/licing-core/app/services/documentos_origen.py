@@ -9,11 +9,16 @@ from sqlalchemy import func, select, text, update
 from ..config import settings
 from ..models.licitacion import Licitacion
 from ..models.licitacion_documento import LicitacionDocumento as Documento
-from .revision_documental import incidencia_descarga, incidencia_documento
+from .revision_documental import incidencia_descarga, incidencia_documento, incidencia_omitidos
 
 
 class StorageNoDisponible(RuntimeError):
     pass
+
+
+class LimiteDocumentos(HTTPException):
+    def __init__(self):
+        super().__init__(409, "Máximo 10 documentos activos por licitación.")
 
 
 async def storage(operacion, datos):
@@ -53,13 +58,14 @@ def cargar(db, ids):
     return salida
 
 
-async def guardar(db, licitacion_id, nombre, tipo, url_origen, contenido, extraccion, actor=None, token=None):
+async def guardar(db, licitacion_id, nombre, tipo, url_origen, contenido, extraccion, actor=None, token=None,
+                  extension="pdf"):
     huella = extraccion["hash_archivo"]
     # El mismo objeto para la misma licitación y huella; la carga es idempotente.
     codigo = db.scalar(select(Licitacion.codigo_externo).where(Licitacion.id == licitacion_id))
     if codigo is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    path = f"{codigo}/{huella}.pdf"
+    path = f"{codigo}/{huella}.{extension}"
     await storage("subir", {"path": path, "contenido_base64": base64.b64encode(contenido).decode("ascii")})
     # Serializa versiones, retiros y la baja física de la licitación.
     fila = db.scalar(select(Licitacion).where(Licitacion.id == licitacion_id)
@@ -78,13 +84,14 @@ async def guardar(db, licitacion_id, nombre, tipo, url_origen, contenido, extrac
         db.commit()
         return {"id": anterior.id, "reutilizado": True}
     if token:
-        db.execute(update(Documento).where(Documento.licitacion_id == licitacion_id,
-            Documento.cobertura["origen_captura"].astext == "portal_bases").values(vigente=False))
+        # Una nueva versión automática retira solo la anterior del mismo origen (bases o ese anexo).
+        db.execute(update(Documento).where(Documento.licitacion_id == licitacion_id, Documento.url_origen == url_origen,
+            Documento.cobertura["origen_captura"].astext.in_(("portal_bases", "portal_anexos"))).values(vigente=False))
     activos = db.scalar(select(func.count()).select_from(Documento).where(
         Documento.licitacion_id == licitacion_id, Documento.vigente))
     if activos >= 10:
         db.rollback()
-        raise HTTPException(409, "Máximo 10 documentos activos por licitación.")
+        raise LimiteDocumentos()
     version = db.scalar(select(func.coalesce(func.max(Documento.version), 0)).where(
         Documento.licitacion_id == licitacion_id, Documento.url_origen == url_origen)) + 1
     partes, indice, posicion = [], [], 0
@@ -114,6 +121,7 @@ async def detalle(db, licitacion_id):
     except StorageNoDisponible:
         enlaces = {}
     return [{"id": d.id, "nombre": d.nombre, "tipo": d.tipo, "paginas": d.paginas,
+             "formato": d.storage_path.rpartition(".")[2],
              "version": d.version, "url_origen": d.url_origen, "estado_extraccion": d.estado_extraccion,
              "incidencia": incidencia_documento({"id": d.id, "nombre": d.nombre,
                  "estado_extraccion": d.estado_extraccion, "cobertura": d.cobertura}),
@@ -169,22 +177,34 @@ def reservar(db):
         "intentos": fila["ingesta_documental"].get("intentos", 0) + 1, "raw_id": fila["raw_id"]}
     db.execute(update(Licitacion).where(Licitacion.id == fila["id"]).values(ingesta_documental=control))
     hashes = list(db.scalars(select(Documento.hash_archivo).where(Documento.licitacion_id == fila["id"])))
+    # Capturas automáticas vigentes: un anexo con la misma fecha del portal no se vuelve a descargar.
+    fuentes = {tuple(f) for f in db.execute(select(Documento.url_origen, Documento.cobertura["fecha_portal"].astext)
+        .where(Documento.licitacion_id == fila["id"], Documento.vigente,
+               Documento.cobertura["origen_captura"].astext.in_(("portal_bases", "portal_anexos"))))}
     db.commit()
-    return {"id": fila["id"], "codigo": fila["codigo_externo"], "token": control["token"], "hashes": hashes}
+    return {"id": fila["id"], "codigo": fila["codigo_externo"], "token": control["token"], "hashes": hashes,
+            "fuentes": fuentes, "continuacion": fila["ingesta_documental"].get("estado") == "pendiente_continuar"}
 
 
-def finalizar(db, tarea, estado):
+def finalizar(db, tarea, estado, omitidos=()):
     fila = db.scalar(select(Licitacion).where(Licitacion.id == tarea["id"])
                      .with_for_update().execution_options(populate_existing=True))
     if not fila or fila.ingesta_documental.get("token") != tarea["token"]:
         db.rollback()
         return
-    control = {k: v for k, v in fila.ingesta_documental.items() if k not in {"token", "reservada_hasta"}}
-    if estado == "descargada":
-        control.pop("incidencia_documental", None)
+    control = {k: v for k, v in fila.ingesta_documental.items()
+               if k not in {"token", "reservada_hasta", "incidencia_documental", "omitidos"}}
+    # Un turno que continúa la captura conserva lo omitido en los turnos anteriores.
+    omitidos = [*fila.ingesta_documental.get("omitidos", []), *omitidos] if tarea.get("continuacion") else list(omitidos)
+    if estado == "pendiente_continuar":
+        control["omitidos"] = omitidos
+    if estado in {"descargada", "pendiente_continuar"}:
+        if omitidos:
+            control["incidencia_documental"] = incidencia_omitidos(omitidos)
     else:
         control["incidencia_documental"] = incidencia_descarga(estado)
-    horas = 168 if estado == "descargada" else 24 if estado != "error_temporal" or control["intentos"] >= 3 else 1
+    horas = (168 if estado == "descargada" else 0 if estado == "pendiente_continuar"
+             else 24 if estado != "error_temporal" or control["intentos"] >= 3 else 1)
     ahora = datetime.now(timezone.utc)
     fila.ingesta_documental = {**control, "estado": estado, "anexos_completos": False,
         "finalizado_en": ahora.isoformat(), "proximo_intento": (ahora + timedelta(hours=horas)).isoformat()}

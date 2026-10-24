@@ -4,7 +4,8 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from app.services.bases_mercado_publico import descargar_bases, BasesNoDisponibles, MAX_BYTES
+from app.services.bases_mercado_publico import (descargar_bases, BasesNoDisponibles, MAX_BYTES, abrir_ficha,
+    descargar_anexo, listar_anexos, sesion)
 
 CODIGO = "564162-152-L126"
 FICHA = f'''<form action="DetailsAcquisition.aspx?qs=ejemplo">
@@ -75,3 +76,93 @@ def test_limita_y_clasifica_error_temporal():
         raise httpx.ReadTimeout("No exponer detalles", request=req)
     with pytest.raises(BasesNoDisponibles, match="error_temporal"):
         asyncio.run(descargar_bases(CODIGO, transporte=httpx.MockTransport(responder)))
+
+
+HREF = '../Attachment/VerAntecedentes.aspx?enc=abc%3d'
+FICHA_ANEXOS = f'''<form action="DetailsAcquisition.aspx?qs=ejemplo">
+<input type="hidden" name="__VIEWSTATE" value="token">
+<span id="lblNumLicitacion">{CODIGO}</span>
+<input type="image" id="imgAdjuntos" onclick="open('../Attachment/ViewAttachment.aspx?enc=protegido')">
+<input type="image" id="grvTecnico_ctl02_grvDescargar" class="fancyAdjunto" href="{HREF}">
+<input type="image" id="grvTecnico_ctl02_grvDescargarLink" class="fancyAdjunto" href="{HREF}"></form>'''
+ANTECEDENTES = '''<form name="form1" method="post" action="./VerAntecedentes.aspx?enc=abc%3d" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="estado">
+<table id="grdAttachment"><tr><th>Anexo</th></tr>
+<tr><td><span id="grdAttachment_ctl02_grdLblSourceFileName">Anexo técnico.docx</span></td>
+<td><span id="grdAttachment_ctl02_grdLblFileDescription">Especificaciones</span></td>
+<td><span id="grdAttachment_ctl02_grdLblFileDate">09-10-2026 16:17:05</span></td>
+<td><input type="image" name="grdAttachment$ctl02$grdIbtnView" id="grdAttachment_ctl02_grdIbtnView"></td></tr>
+<tr><td><span id="grdAttachment_ctl03_grdLblSourceFileName">Planilla.zip</span></td>
+<td><input type="image" name="grdAttachment$ctl03$grdIbtnView" id="grdAttachment_ctl03_grdIbtnView"></td></tr>
+</table></form>'''
+
+
+def listar(responder):
+    async def flujo():
+        async with sesion(httpx.MockTransport(responder)) as cliente:
+            ficha = await abrir_ficha(cliente, CODIGO)
+            return ficha, await listar_anexos(cliente, ficha)
+    return asyncio.run(flujo())
+
+
+def test_descarga_anexos_de_antecedentes_sin_tocar_adjuntos_protegidos():
+    llamadas = []
+    def responder(req):
+        llamadas.append(req)
+        if req.url.path.lower().endswith('detailsacquisition.aspx'):
+            return httpx.Response(200, text=FICHA_ANEXOS)
+        assert req.url.path.lower().endswith('verantecedentes.aspx')
+        if req.method == 'GET':
+            return httpx.Response(200, text=ANTECEDENTES)
+        formulario = parse_qs(req.content.decode())
+        assert formulario['__VIEWSTATE'] == ['estado'] and 'grdAttachment$ctl02$grdIbtnView.x' in formulario
+        return httpx.Response(200, content=b'PKdocx')
+    async def flujo():
+        async with sesion(httpx.MockTransport(responder)) as cliente:
+            ficha = await abrir_ficha(cliente, CODIGO)
+            anexos = await listar_anexos(cliente, ficha)
+            return ficha, anexos, await descargar_anexo(cliente, anexos[0])
+    ficha, anexos, descarga = asyncio.run(flujo())
+    assert not ficha.boton and [a['nombre'] for a in anexos] == ['Anexo técnico.docx', 'Planilla.zip']
+    assert anexos[0]['categoria'] == 'tecnico' and anexos[0]['fecha'] == '09-10-2026 16:17:05'
+    assert anexos[0]['url_origen'].endswith('idlicitacion=' + CODIGO + '#anexo=tecnico/Anexo%20t%C3%A9cnico.docx')
+    assert descarga['extension'] == 'docx' and descarga['tipo'] == 'anexo' and descarga['contenido'].startswith(b'PK')
+    assert not any('viewattachment' in str(r.url).lower() for r in llamadas)
+    # Los dos botones de la fila apuntan a la misma ventana: se consulta una sola vez.
+    assert sum(r.method == 'GET' and 'verantecedentes' in str(r.url).lower() for r in llamadas) == 1
+
+
+@pytest.mark.parametrize("respuesta,motivo", [
+ (lambda: httpx.Response(200, text='<script src="https://www.google.com/recaptcha/enterprise.js"></script>'), "acceso_restringido"),
+ (lambda: httpx.Response(302, headers={"location": "/Procurement/Modules/Attachment/ViewAttachment.aspx?enc=x"}), "redireccion_no_admitida"),
+ (lambda: httpx.Response(429), "acceso_restringido"),
+])
+def test_desafio_o_salto_a_adjuntos_protegidos_detiene_la_lista(respuesta, motivo):
+    def responder(req):
+        if req.url.path.lower().endswith('detailsacquisition.aspx'):
+            return httpx.Response(200, text=FICHA_ANEXOS)
+        return respuesta()
+    with pytest.raises(BasesNoDisponibles, match=motivo):
+        listar(responder)
+
+
+@pytest.mark.parametrize("nombre,contenido,motivo", [
+ ("Planilla.zip", b"PK", "formato_no_admitido"),
+ ("Anexo.docx", b"<html>error</html>", "respuesta_no_reconocida"),
+ ("Anexo.doc", b"PK", "respuesta_no_reconocida"),
+ ("Anexo.xlsx", b"", "archivo_vacio"),
+])
+def test_anexo_fuera_de_formato_no_se_acepta(nombre, contenido, motivo):
+    llamadas = []
+    def responder(req):
+        llamadas.append(req)
+        return httpx.Response(200, content=contenido)
+    anexo = {"nombre": nombre, "boton": "grdAttachment$ctl02$grdIbtnView", "campos": {"__VIEWSTATE": "estado"},
+             "action": "https://www.mercadopublico.cl/Procurement/Modules/Attachment/VerAntecedentes.aspx?enc=a",
+             "url_origen": "https://www.mercadopublico.cl/ficha#anexo=tecnico/x"}
+    async def flujo():
+        async with sesion(httpx.MockTransport(responder)) as cliente:
+            return await descargar_anexo(cliente, anexo)
+    with pytest.raises(BasesNoDisponibles, match=motivo):
+        asyncio.run(flujo())
+    assert len(llamadas) == (0 if motivo == "formato_no_admitido" else 1)

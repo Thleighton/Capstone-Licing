@@ -109,12 +109,12 @@ export default function Preseleccion() {
           {detalle.evaluacion.metadatos.requisitos_detectados.hallazgos.map((h, i) => <p key={i}><strong>{h.texto}</strong><br /><span className="sub">{h.fuente}</span><br />{h.contexto}</p>)}</details>}
         <h4>Bases y anexos</h4><p className="sub">PDF de hasta 3 MB y 120 páginas. Las páginas escaneadas o ilegibles requieren revisión; no se consideran información confirmada.</p>
         <p className="sub">{detalle.ingesta_documental?.estado === "descargada"
-          ? "Bases obtenidas desde Mercado Público. Puede haber anexos adicionales pendientes."
-          : detalle.ingesta_documental?.estado === "procesando" ? "Descarga automática en curso."
+          ? "Documentos públicos obtenidos desde Mercado Público. Los archivos adjuntos protegidos no se descargan automáticamente."
+          : ["procesando", "pendiente_continuar"].includes(detalle.ingesta_documental?.estado) ? "Descarga automática en curso."
           : detalle.ingesta_documental?.estado ? "No se completó la descarga automática. Se reintentará; puedes adjuntar las bases manualmente."
           : "Bases pendientes de descarga automática."}</p>
         {detalle.documentos.map(d => <div className="pre-documento" key={d.id}><div>{d.url_descarga ? <a href={d.url_descarga} target="_blank" rel="noreferrer">{d.nombre} ↗</a> : d.nombre}<br />
-          <span className="sub">{({ extraido: "Texto leído", parcial: "Lectura parcial", sin_texto: "Requiere OCR o lectura manual", error: "No se pudo leer", pendiente: "Pendiente" })[d.estado_extraccion]} · {d.paginas || "?"} páginas</span></div>
+          <span className="sub">{({ extraido: "Texto leído", parcial: "Lectura parcial", sin_texto: "Requiere OCR o lectura manual", error: "No se pudo leer", pendiente: "Pendiente" })[d.estado_extraccion]} · {d.formato === "xlsx" ? `${d.paginas || "?"} hojas` : ["docx", "doc", "xls"].includes(d.formato) ? d.formato.toUpperCase() : `${d.paginas || "?"} páginas`}</span></div>
           {d.incidencia && <p>Motivo orientativo: {d.incidencia.motivo}</p>}
           <button disabled={!!ocupado} onClick={() => retirar(d.id)}>Retirar de la evaluación</button></div>)}
         <form onSubmit={subir} className="pre-carga"><label>Documento de {seleccion.codigo_externo}<input ref={archivoInput} type="file" accept="application/pdf,.pdf" disabled={!!ocupado} onChange={e => setArchivo(e.target.files?.[0] || null)} /></label>

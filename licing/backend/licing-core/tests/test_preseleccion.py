@@ -28,25 +28,28 @@ def test_candidata_no_equivale_a_decision_de_postular():
 
 @pytest.mark.parametrize('estado,codigo', [('error','pdf_corrupto'),('error','pdf_protegido'),
     ('sin_texto','sin_texto_legible'),('parcial','lectura_parcial')])
-def test_fallos_documentales_van_a_revision_con_motivo_aunque_la_api_indique_fuera_rm(estado, codigo):
+def test_fallos_documentales_no_anulan_ubicacion_explicita_de_la_api(estado, codigo):
     r = evaluar(nombre='Alojamiento en Valparaíso', documentos=[{'id': 1, 'nombre': 'Bases.pdf',
         'estado_extraccion': estado, 'cobertura': {'motivo_codigo': codigo}, 'paginas_texto': []}])
-    assert r['clasificacion'] == 'revision_manual'
-    assert 'Bases.pdf' in r['motivo']
+    assert r['clasificacion'] == 'descartada'
+    assert 'fuera' in r['motivo']
     assert r['criterios']['documentos']['incidencias'][0]['codigo'] == codigo
+    assert r['criterios']['documentos']['bloquea_preseleccion'] is False
 
 
 def test_un_pdf_legible_no_oculta_otro_ilegible_y_los_retirados_no_bloquean():
     docs = [{'id': 1, 'estado_extraccion': 'extraido'}, {'id': 2, 'estado_extraccion': 'sin_texto'}]
-    assert evaluar(documentos=docs)['clasificacion'] == 'revision_manual'
+    r = evaluar(documentos=docs)
+    assert r['clasificacion'] == 'preseleccionada'
+    assert r['criterios']['documentos']['incidencias'][0]['documento_id'] == 2
     docs[1]['vigente'] = False
     assert evaluar(documentos=docs)['clasificacion'] == 'preseleccionada'
 
 
-def test_fallo_de_descarga_sin_pdf_guardado_tambien_se_conserva_para_revisar():
+def test_fallo_de_descarga_no_obliga_a_revisar_una_ficha_suficiente():
     r = evaluar(incidencia_documental={'codigo':'archivo_vacio','motivo':'La descarga devolvió un archivo vacío (0 bytes).'})
-    assert r['clasificacion'] == 'revision_manual'
-    assert 'vacío' in r['motivo']
+    assert r['clasificacion'] == 'preseleccionada'
+    assert 'vacío' in r['criterios']['documentos']['motivo']
 
 
 def test_fallo_documental_no_conserva_licitaciones_que_ya_caducaron():

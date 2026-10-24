@@ -27,6 +27,7 @@ def fila(integration_db, client):
 
 def test_rutas_privadas_sin_token(client):
     assert client.get('/api/preseleccion').status_code==401
+    assert client.get('/api/preseleccion/plan').status_code==401
     assert client.post('/api/preseleccion/evaluar',json={'ids':[1]}).status_code==401
     assert client.get('/api/preseleccion/pendientes-documentales').status_code==401
 
@@ -72,6 +73,75 @@ def test_cambio_raw_durante_evaluacion_no_se_persiste(client,fila,monkeypatch,in
 def test_fecha_verificacion_no_invalida_revision():
     assert firma_fuente({'raw_id':1,'fuente_verificada_en':'antes'})==firma_fuente({'raw_id':1,'fuente_verificada_en':'despues'})
     assert firma_fuente({'raw_id':1})!=firma_fuente({'raw_id':2})
+
+
+def test_plan_omite_resultados_vigentes_y_detecta_reglas_nuevas(client, fila, monkeypatch, integration_db):
+    from app.api import preseleccion
+    datos = preseleccion.cargar_entradas(integration_db, [fila.id])[str(fila.id)]
+    operar = AsyncMock(return_value={'filas': [{'id': fila.id, 'hash_fuente': firma_fuente(datos),
+        'estado_seleccion': 'revision_manual'}], 'total': 1})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    r = client.get('/api/preseleccion/plan')
+    assert r.status_code == 200, r.text
+    assert r.json()['ids'] == []
+    assert r.headers['cache-control'] == 'no-store'
+    monkeypatch.setattr(preseleccion, 'VERSION_MOTOR', 'reglas-nuevas')
+    r = client.get('/api/preseleccion/plan')
+    assert r.json()['ids'] == [fila.id]
+    assert all(c.args[0] == 'listar' for c in operar.call_args_list)
+
+
+def test_plan_incluye_fuentes_aun_no_evaluadas(client, fila, monkeypatch):
+    monkeypatch.setattr(filtradas, 'operar', AsyncMock(return_value={'filas': [], 'total': 0}))
+    r = client.get('/api/preseleccion/plan')
+    assert r.status_code == 200, r.text
+    assert r.json()['ids'] == [fila.id]
+
+
+def test_lote_grande_carga_raw_en_una_consulta_y_guarda_en_partes_acotadas(client, fila, monkeypatch, integration_db):
+    import asyncio
+    from sqlalchemy import event
+    db = integration_db
+    filas = [fila] + [Licitacion(codigo_externo=f'123-{n}-LE26', raw_id=fila.raw_id,
+        nombre='Arriendo de salón en Santiago', estado='Publicada', codigo_estado=5,
+        fecha_cierre=datetime(2099, 1, 1)) for n in range(2, 46)]
+    db.add_all(filas[1:]); db.flush()
+    ids = [f.id for f in filas]
+    en_curso = maximo = 0
+    async def persistir(operacion, datos):
+        nonlocal en_curso, maximo
+        if operacion == 'sincronizar_fuente':
+            return {}
+        en_curso += 1; maximo = max(maximo, en_curso)
+        await asyncio.sleep(0)
+        en_curso -= 1
+        assert 1 <= len(datos['lote']) <= 20
+        return {'evaluadas': [{'codigo': e['datos']['codigo_externo']} for e in datos['lote']]}
+    operar = AsyncMock(side_effect=persistir)
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    consultas = []
+    def consulta(conn, cursor, statement, parameters, context, executemany):
+        if 'FROM raw_mercado_publico' in statement:
+            consultas.append(statement)
+    conexion = db.connection()
+    event.listen(conexion, 'before_cursor_execute', consulta)
+    try:
+        r = client.post('/api/preseleccion/evaluar', json={'ids': ids})
+    finally:
+        event.remove(conexion, 'before_cursor_execute', consulta)
+    assert r.status_code == 200, r.text
+    assert len(r.json()['evaluadas']) == 45
+    assert len(consultas) == 1
+    assert maximo == 2
+    assert [c.args[0] for c in operar.call_args_list].count('sincronizar_fuente') == 1
+
+
+def test_lote_no_guarda_ni_sincroniza_si_falta_una_fuente(client, fila, monkeypatch):
+    operar = AsyncMock()
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    r = client.post('/api/preseleccion/evaluar', json={'ids': [fila.id, 99999999]})
+    assert r.status_code == 404
+    operar.assert_not_called()
 
 
 def test_pdf_vacio_queda_pendiente_aunque_filtradas_este_caida(client, fila, monkeypatch, integration_db):

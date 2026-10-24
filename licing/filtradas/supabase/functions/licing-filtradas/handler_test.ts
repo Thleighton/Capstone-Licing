@@ -22,8 +22,9 @@ Deno.test('credencial privada no se devuelve al navegador y conflictos son 409',
  const response=await h(req({operacion:'revision',datos:{}}));assert(response.status===409);
  assert(!(await response.text()).includes('detalle interno'));
 });
-Deno.test('no guarda PDF cuya huella difiere',async()=>{
+Deno.test('filtradas rechaza cargas y tareas documentales del proyecto original',async()=>{
  let calls=0;const h=crearHandler('https://db.test','private',async()=>{calls++;return Response.json({autorizada:true});});
- const response=await h(req({operacion:'guardar_documento',datos:{codigo:'123-1-LE26',contenido_base64:btoa('%PDF-example'),extraccion:{hash_archivo:'incorrecto'}}}));
- assert(response.status===422);assert(calls===1);
+ for(const operacion of ['guardar_documento','retirar_documento','documental_reservar','documentos'])
+  assert((await h(req({operacion,datos:{}}))).status===422);
+ assert(calls===4);
 });

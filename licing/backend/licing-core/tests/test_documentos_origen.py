@@ -87,3 +87,27 @@ def test_sin_storage_no_se_crea_registro_falso(integration_db, lic, monkeypatch)
     monkeypatch.setattr(origen, 'storage', AsyncMock(side_effect=origen.StorageNoDisponible('Sin conexión')))
     with pytest.raises(origen.StorageNoDisponible): guardar(integration_db, lic)
     assert list(integration_db.scalars(select(LicitacionDocumento))) == []
+
+
+def test_anexo_versiona_su_origen_sin_retirar_bases_y_continua_la_captura(integration_db, lic):
+    tarea = origen.reservar(integration_db)
+    ficha = 'https://www.mercadopublico.cl/ficha'
+    def automatico(huella, url, captura, extension='pdf', fecha=None):
+        datos = {**extraccion(huella), 'cobertura': {'origen_captura': captura, 'fecha_portal': fecha}}
+        return asyncio.run(origen.guardar(integration_db, lic.id, 'Documento', 'anexo', url, b'x', datos,
+                                          token=tarea['token'], extension=extension))
+    bases = automatico('a'*64, ficha, 'portal_bases')
+    automatico('b'*64, ficha + '#anexo=tecnico/A.docx', 'portal_anexos', 'docx', '09-10-2026 16:17:05')
+    nueva = automatico('c'*64, ficha + '#anexo=tecnico/A.docx', 'portal_anexos', 'docx', '10-10-2026 10:00:00')
+    vigentes = {d.id: d for d in integration_db.scalars(select(LicitacionDocumento).where(LicitacionDocumento.vigente))}
+    assert set(vigentes) == {bases['id'], nueva['id']}
+    assert vigentes[nueva['id']].storage_path == f"123-1-LE26/{'c'*64}.docx" and vigentes[nueva['id']].version == 2
+    origen.finalizar(integration_db, tarea, 'pendiente_continuar', [{'nombre': 'B.zip', 'codigo': 'formato_no_admitido'}])
+    siguiente = origen.reservar(integration_db)
+    assert siguiente['id'] == lic.id and siguiente['continuacion']
+    assert {(ficha, None), (ficha + '#anexo=tecnico/A.docx', '10-10-2026 10:00:00')} <= siguiente['fuentes']
+    origen.finalizar(integration_db, siguiente, 'descargada', [{'nombre': 'C.rar', 'codigo': 'formato_no_admitido'}])
+    integration_db.refresh(lic)
+    assert lic.ingesta_documental['estado'] == 'descargada' and 'omitidos' not in lic.ingesta_documental
+    assert [o['nombre'] for o in lic.ingesta_documental['incidencia_documental']['omitidos']] == ['B.zip', 'C.rar']
+    assert origen.incidencias(integration_db, [lic.id])[lic.id][0]['codigo'] == 'documentos_omitidos'

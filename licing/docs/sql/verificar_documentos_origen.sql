@@ -2,7 +2,7 @@
 SELECT to_regclass('public.licitacion_documento') AS tabla_documental,
        (SELECT version_num FROM public.alembic_version) AS version_alembic;
 
-SELECT id,public,file_size_limit FROM storage.buckets WHERE id='licitacion-bases';
+SELECT id,public,file_size_limit,allowed_mime_types FROM storage.buckets WHERE id='licitacion-bases';
 
 SELECT (SELECT count(*) FROM public.licitacion) AS licitaciones,
        (SELECT count(*) FROM public.licitacion_documento) AS documentos,

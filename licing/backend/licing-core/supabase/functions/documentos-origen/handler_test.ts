@@ -36,3 +36,18 @@ Deno.test('limpieza usa Storage y solo los huérfanos informados por origen',asy
  });
  assert((await h(req('limpiar',{}))).status===200);assert(borrado);
 });
+Deno.test('guarda anexos de Office con su tipo y rechaza firmas o extensiones ajenas',async()=>{
+ const docx=new Uint8Array([0x50,0x4b,0x03,0x04,1,2,3]);
+ const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',docx)),v=>v.toString(16).padStart(2,'0')).join('');
+ let tipo='';
+ const h=crearHandler('https://original.test','private',async(url,opts)=>{
+  if(String(url).includes('/integracion/verificar'))return Response.json({autorizada:true});
+  assert(String(url)===`https://original.test/storage/v1/object/licitacion-bases/123-1-LE26/${hash}.docx`);
+  tipo=new Headers(opts?.headers).get('content-type')||'';return Response.json({Key:'archivo'});
+ });
+ const contenido=btoa(String.fromCharCode(...docx));
+ assert((await h(req('subir',{path:`123-1-LE26/${hash}.docx`,contenido_base64:contenido}))).status===200);
+ assert(tipo==='application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+ assert((await h(req('subir',{path:`123-1-LE26/${hash}.doc`,contenido_base64:contenido}))).status===422);
+ assert((await h(req('subir',{path:`123-1-LE26/${hash}.zip`,contenido_base64:contenido}))).status===422);
+});

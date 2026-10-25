@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-10-v6",
+  "version": "hotel-2026-10-v7",
   "estado": "piloto",
   "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
   "notas": [
@@ -26,7 +26,7 @@
         "\\bestadias?\\b",
         "\\bpension completa\\b",
         "\\bhospederia\\b",
-        "\\b(?:servicios? de )?residencia(?: temporal)?\\b",
+        "\\b(?:servicios? de residencia(?: temporal)?|residencia temporal)\\b",
         "\\bhospedamiento\\b",
         "\\b(?:rooming|overnight|huespedes)\\b",
         "\\b(?:servicios? de )?(?:accommodation|lodging)\\b",

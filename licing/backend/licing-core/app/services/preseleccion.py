@@ -12,7 +12,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-7"
+VERSION_MOTOR = "reglas-hotel-8"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -264,8 +264,32 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     exclusiones = []
     senales = any(x["nivel"] != "complemento" and x["grupo"] in {"alojamiento", "salones", "actividades", "alimentacion_asociada"}
                   and not x["fuente"].endswith("categoria") for x in coincidencias)
+    items = datos.get("items") or []
+    segmentos = cargar_catalogo().get("segmentos_producto_ajenos", {})
+    familias = cargar_catalogo().get("familias_producto_ajenas", {})
+    especiales = cargar_catalogo().get("codigos_producto_ajenos", {})
+    def objeto_ajeno(item):
+        codigo = item.get("codigo_producto")
+        if not isinstance(codigo, str):
+            return None
+        if codigo in especiales:
+            return especiales[codigo]
+        if re.fullmatch(r"\d{8}", codigo):
+            return familias.get(codigo[:4]) or segmentos.get(codigo[:2])
+        return None
+    # Todas las líneas deben tener un código conocido ajeno; una línea desconocida
+    # conserva la oportunidad completa.
+    lineas_ajenas = bool(items) and all(objeto_ajeno(i) for i in items)
     # Excluir requiere un objeto ajeno explícito, nunca solo ausencia de palabras clave.
     # Cualquier señal de un paquete hotelero mantiene el caso para desambiguación.
+    if senales and lineas_ajenas:
+        # Una palabra hotelera dentro de líneas que son todas ajenas no confirma el servicio.
+        objetos = sorted({objeto_ajeno(i) for i in items})
+        dudas.insert(0, {"codigo": "lineas_ajenas", "fuente": "items",
+            "motivo": "Todas las líneas publicadas corresponden a " + ", ".join(objetos[:5])
+                + "; la mención de servicios del hotel puede no ser lo contratado.",
+            "evidencia": "; ".join(f"{i['codigo_producto']}: {i.get('nombre_producto') or objeto_ajeno(i)}"
+                for i in items[:10])})
     if not senales:
         for regla in cargar_catalogo().get("exclusiones_evidentes", []):
             for fuente, texto in campos:
@@ -276,22 +300,7 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
                 if m:
                     exclusiones.append({"codigo": regla["id"], "motivo": regla["motivo"],
                         "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
-        items = datos.get("items") or []
-        segmentos = cargar_catalogo().get("segmentos_producto_ajenos", {})
-        familias = cargar_catalogo().get("familias_producto_ajenas", {})
-        especiales = cargar_catalogo().get("codigos_producto_ajenos", {})
-        def objeto_ajeno(item):
-            codigo = item.get("codigo_producto")
-            if not isinstance(codigo, str):
-                return None
-            if codigo in especiales:
-                return especiales[codigo]
-            if re.fullmatch(r"\d{8}", codigo):
-                return familias.get(codigo[:4]) or segmentos.get(codigo[:2])
-            return None
-        # Todas las líneas deben tener un código conocido ajeno; una línea desconocida
-        # o una señal de servicios hoteleros conserva la oportunidad completa.
-        if items and all(objeto_ajeno(i) for i in items):
+        if lineas_ajenas:
             for n, item in enumerate(items[:10]):
                 codigo = item["codigo_producto"]
                 exclusiones.append({"codigo": "producto_ajeno", "fuente": f"items[{n}].codigo_producto",

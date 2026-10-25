@@ -211,7 +211,7 @@ la región del comprador no prueba el lugar del servicio. La guía indica una cu
 por ticket (10.000 solicitudes en la práctica). Considera también las solicitudes de la
 ingesta de licitaciones si ambas APIs comparten la cuota.
 
-**Preselección.** Las Compras Ágiles pasan por el mismo motor (`reglas-hotel-7`) y los
+**Preselección.** Las Compras Ágiles pasan por el mismo motor (`reglas-hotel-8`) y los
 mismos tres pilares que las licitaciones: vigencia, lugar de prestación en la RM y
 alojamiento, salones o alimentación. No tienen bases, así que la cobertura es
 `sin_bases`. Como su ficha es toda la información y se entrega, por lo general, donde está
@@ -223,9 +223,16 @@ cuando el texto no ubica el servicio:
 - Comprador en la RM y sin otro lugar en el texto: cumple, y decide el servicio solicitado.
 - Si el texto ubica el servicio o lo menciona de forma ambigua, decide el motor común.
 
+En el servicio solicitado también pesan los códigos de producto. Si todas las líneas tienen
+códigos ajenos al hotel (por ejemplo, 52 artículos domésticos o 56 mobiliario), la compra se
+descarta cuando el texto no menciona servicios del hotel y queda en revisión cuando sí los
+menciona: una palabra suelta no la convierte en posible oportunidad. «Residencia» cuenta
+como alojamiento solo como «servicio de residencia» o «residencia temporal»; la
+«residencia de internos» de un hospital no lo es.
+
 En las licitaciones la región del comprador sigue sin probar el lugar del servicio. Las
 evaluaciones se guardan en LicitacionesFiltradas con `oportunidad.modalidad='compra_agil'`,
-`version_motor` `reglas-hotel-7+ca-1` y los productos como ítems (`correlativo` = posición).
+`version_motor` `reglas-hotel-8+ca-1` y los productos como ítems (`correlativo` = posición).
 
 A la vez que cada lote de ingesta, con su propia sesión, Core evalúa hasta 100 compras
 abiertas sin evaluación vigente, en llamadas de 20, durante 15 s como máximo, y confirma el

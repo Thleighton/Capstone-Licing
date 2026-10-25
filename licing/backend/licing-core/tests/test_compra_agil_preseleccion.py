@@ -320,6 +320,21 @@ def test_el_lugar_del_texto_prevalece_sobre_la_region_del_comprador():
     assert fuera["clasificacion"] != "preseleccionada" and "regla_compra_agil" not in fuera["criterios"]["ubicacion"]
 
 
+def test_bienes_para_una_residencia_de_internos_se_descartan():
+    # Caso real: «HBLT RESIDENCIA INTERNOS CIRUGIA» se leía como alojamiento.
+    r = preseleccion.evaluar(compra(nombre="Equipamiento residencia internos cirugía", descripcion=None, items=[
+        {"posicion_fuente": 1, "codigo_producto": "52141501", "nombre_producto": "Refrigeradores domésticos",
+         "descripcion": "REFRIGERADOR 236LT NO FROST, (O EQUIVALENTE)."},
+        {"posicion_fuente": 2, "codigo_producto": "52141534", "nombre_producto": "Sandwichera eléctrica de uso doméstico",
+         "descripcion": "SANGUCHERA PANINI 2000 W HBLT RESIDENCIA INTERNOS CIRUGIA, (O EQUIVALENTE)."},
+        {"posicion_fuente": 3, "codigo_producto": "56101508", "nombre_producto": "Colchones o sets de cama",
+         "descripcion": "COLCHON 1 PLAZA 90 X 190 CM, (O EQUIVALENTE)."},
+        {"posicion_fuente": 4, "codigo_producto": "56101700", "nombre_producto": "Mueble de almacenaje no modular",
+         "descripcion": "VELADOR BLANCO HBLT RESIDENCIA CIRUGIA, SE REQUIERE ARMADO."}]))
+    assert r["clasificacion"] == "descartada" and r["pilar_decisivo"] == "pertinencia"
+    assert "artículos domésticos" in r["motivo"]
+
+
 def test_sin_region_conocida_se_mantiene_el_motor_comun():
     r = preseleccion.evaluar(compra(codigo_region=None, region_comprador=None))
     assert r["clasificacion"] == "revision_manual" and r["pilar_decisivo"] == "ubicacion"

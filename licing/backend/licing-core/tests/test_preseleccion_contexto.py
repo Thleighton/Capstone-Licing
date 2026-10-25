@@ -99,3 +99,46 @@ def test_limite_de_menciones_no_oculta_un_servicio_al_final_del_texto():
         items=[{"codigo_producto": "43211503"}])
     assert r["entrada_parcial"]
     assert r["clasificacion"] == "revision_manual"
+
+
+def test_residencia_de_internos_no_es_alojamiento():
+    r = evaluar("Equipamiento residencia internos cirugía", items=[
+        {"codigo_producto": "52141534", "nombre_producto": "Sandwichera eléctrica de uso doméstico",
+         "descripcion": "SANGUCHERA PANINI 2000 W HBLT RESIDENCIA INTERNOS CIRUGIA, (O EQUIVALENTE)."},
+        {"codigo_producto": "56101508", "nombre_producto": "Colchones o sets de cama",
+         "descripcion": "COLCHON 1 PLAZA 90 X 190 CM, (O EQUIVALENTE)."}])
+    assert r["clasificacion"] == "descartada"
+    p = r["criterios"]["pertinencia"]
+    assert not p["coincidencias"]
+    assert {e["codigo"] for e in p["exclusiones_evidentes"]} == {"producto_ajeno"}
+
+
+def test_residencia_de_internos_en_las_bases_de_una_licitacion():
+    r = evaluar_preseleccion({"codigo_externo": "1057-12-LE26", "estado": "Publicada", "codigo_estado": 5,
+        "fecha_cierre": "2026-11-01T15:00:00", "nombre": "Adquisición de electrodomésticos",
+        "items": [{"codigo_producto": "52141501", "nombre_producto": "Refrigeradores domésticos"}],
+        "documentos": [{"id": 1, "estado_extraccion": "extraido", "paginas_texto": [{"pagina": 2,
+            "texto": "Los equipos se entregarán en la Residencia de Internos del Hospital, Santiago."}]}]},
+        ahora=datetime(2026, 10, 24, 12, tzinfo=CHILE))
+    assert r["clasificacion"] == "descartada"
+    assert "alojamiento" not in r["criterios"]["pertinencia"]["grupos"]
+
+
+@pytest.mark.parametrize("texto",["Servicio de residencia temporal para delegaciones",
+                                   "Residencia temporal para 20 personas"])
+def test_residencia_contratada_como_servicio_sigue_siendo_alojamiento(texto):
+    p = evaluar(texto)["criterios"]["pertinencia"]
+    assert p["grupos"] == ["alojamiento"] and p["directa"]
+
+
+@pytest.mark.parametrize("descripcion", ["Colchón para habitación en Santiago",
+    "Cortinas para salón de eventos en Santiago", "Hervidor para coffee break en Santiago"])
+def test_mencion_hotelera_en_lineas_que_son_todas_bienes_requiere_revision(descripcion):
+    r = evaluar("Equipamiento para funcionarios", items=[
+        {"codigo_producto": "56101508", "descripcion": descripcion},
+        {"codigo_producto": "52141501", "nombre_producto": "Refrigeradores domésticos"}])
+    assert r["clasificacion"] == "revision_manual" and r["pilar_decisivo"] == "pertinencia"
+    duda = r["criterios"]["pertinencia"]["ambiguedades"][0]
+    assert duda["codigo"] == "lineas_ajenas"
+    assert "artículos domésticos, mobiliario" in duda["motivo"]
+    assert "52141501: Refrigeradores domésticos" in duda["evidencia"]

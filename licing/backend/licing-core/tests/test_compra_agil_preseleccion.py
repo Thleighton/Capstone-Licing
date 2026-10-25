@@ -335,6 +335,17 @@ def test_bienes_para_una_residencia_de_internos_se_descartan():
     assert "artículos domésticos" in r["motivo"]
 
 
+def test_tension_de_alimentacion_de_un_equipo_se_descarta():
+    # Caso real: «Tensión de alimentación: 220V» se leía como servicio de alimentación.
+    r = preseleccion.evaluar(compra(nombre="Regulador de velocidad para extractor",
+        descripcion="Regulador de velocidad REB-2,5 N. Req. técnicos: Tensión de alimentación: 220V, "
+                    "Intensidad máxima: 2,5A, Protección: IP44.",
+        items=[{"posicion_fuente": 1, "codigo_producto": "26101766", "nombre_producto": "Reguladores",
+                "descripcion": "Regulador de velocidad para extractor que se utiliza en campana de extracción"}]))
+    assert r["clasificacion"] == "descartada" and r["pilar_decisivo"] == "pertinencia"
+    assert not r["criterios"]["pertinencia"]["coincidencias"]
+
+
 def test_sin_region_conocida_se_mantiene_el_motor_comun():
     r = preseleccion.evaluar(compra(codigo_region=None, region_comprador=None))
     assert r["clasificacion"] == "revision_manual" and r["pilar_decisivo"] == "ubicacion"

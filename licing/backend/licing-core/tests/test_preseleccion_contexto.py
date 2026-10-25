@@ -142,3 +142,15 @@ def test_mencion_hotelera_en_lineas_que_son_todas_bienes_requiere_revision(descr
     assert duda["codigo"] == "lineas_ajenas"
     assert "artículos domésticos, mobiliario" in duda["motivo"]
     assert "52141501: Refrigeradores domésticos" in duda["evidencia"]
+
+
+@pytest.mark.parametrize("texto", ["Tensión de alimentación: 220V", "Fuente de alimentación de 12 V",
+    "Cable de alimentación de 2 metros", "Alimentación 220 V monofásica", "Bomba de alimentación enteral"])
+def test_alimentacion_electrica_o_clinica_no_es_servicio_de_comida(texto):
+    assert "alimentacion_asociada" not in evaluar("Equipos", texto)["criterios"]["pertinencia"]["grupos"]
+
+
+@pytest.mark.parametrize("texto", ["Alimentación para 40 asistentes", "Servicio de alimentación: desayuno",
+    "Alimentación de los participantes durante 2 días"])
+def test_alimentacion_de_personas_sigue_siendo_servicio(texto):
+    assert "alimentacion_asociada" in evaluar("Jornada", texto)["criterios"]["pertinencia"]["grupos"]

@@ -205,7 +205,12 @@ def _mencion_ajena(grupo, m, normal):
                     or (m.group().startswith("reunion") and re.search(r"\bmesas?\s+(?:de\s+)?$", antes)))
     return grupo == "alimentacion_asociada" and bool(
         re.search(r"\b(?:sin|no se requiere|no incluye)\s+(?:servicio de\s+)?$", antes)
-        or (re.fullmatch(r"alimentacion", m.group()) and re.match(r"\s+(?:enteral|parenteral|electrica)\b", despues)))
+        or (re.fullmatch(r"alimentacion", m.group()) and (
+            re.match(r"\s+(?:enteral|parenteral|electrica)\b", despues)
+            # Alimentación eléctrica de un equipo o equipamiento clínico, no comida.
+            or re.search(r"\b(?:tension|voltaje|fuentes?|cables?|conectores?|corriente|enchufes?|adaptador(?:es)?"
+                         r"|baterias?|circuitos?|bombas?|sondas?|sets?) de\s+$", antes)
+            or re.match(r"\s*:?\s*\d+(?:[.,]\d+)?\s*(?:v|vac|vdc|volts?|w|hz)\b", despues))))
 
 
 def _ambiguedad_administrativa(regla, m, normal):

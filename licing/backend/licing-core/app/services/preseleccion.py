@@ -1,4 +1,4 @@
-"""Preselección conservadora sobre datos guardados; sin escrituras ni llamadas externas."""
+"""Preselección sobre datos guardados; sin escrituras y con clasificación NLI opcional."""
 from datetime import datetime
 from functools import cache
 import hashlib
@@ -9,10 +9,11 @@ from .ubicacion import _texto_busqueda
 from zoneinfo import ZoneInfo
 from .revision_documental import evaluar_documentacion
 from .clientes_importantes import identificar_clientes_importantes
+from . import semantica_hotel
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-8"
+VERSION_MOTOR = "reglas-hotel-9"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -497,6 +498,17 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     parcial |= any(not p.startswith(("documentos", "incidencia_documental")) for p in problemas)
     vigencia = evaluar_vigencia(datos, ahora)
     pertinencia = detectar_pertinencia(datos, campos=campos)
+    semantica = (semantica_hotel.analizar(utilizables)
+        if vigencia["resultado"] != "no_cumple" and not pertinencia["exclusiones_evidentes"] else
+        {"estado": "omitida", "motivo": "Hay un incumplimiento confirmado de vigencia o servicio."})
+    semantica_activa = semantica.get("modo") == "activa"
+    # La semántica puede resolver dudas de rubro, conservando los rechazos explícitos.
+    if semantica_activa and semantica.get("resultado") == "cumple" and not pertinencia["exclusiones_evidentes"]:
+        for e in semantica.get("evidencias", []):
+            for categoria in e.get("categorias", []):
+                fuente = e["fuente"]
+                pertinencia["coincidencias"].append({"grupo": categoria, "nivel": "directa", "fuente": fuente,
+                    "termino": "servicio reconocido semánticamente", "evidencia": e["evidencia"]})
     ubicacion = detectar_ubicacion(datos, campos=campos, pertinencia=pertinencia)
     parcial |= pertinencia["truncada"] or ubicacion["truncada"]
     documentacion = evaluar_documentacion(datos)
@@ -516,6 +528,26 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "La lectura de la fuente es incompleta; falta confirmar el servicio contratado." if parcial else
         "Falta aclarar si se contrata un servicio del hotel: " + pertinencia["ambiguedades"][0]["motivo"] if pertinencia["ambiguedades"] else
         "La ficha no identifica una solicitud concreta de alojamiento, salones o alimentación.")
+    if semantica_activa and not pertinencia["exclusiones_evidentes"]:
+        explicita = rubro == "cumple" and any(re.search(
+            r"\b(?:servicios?|arriendo|arrendamiento|alquiler|reserva|contratacion) (?:de )?(?:(?:un|una|los|las) )?"
+            r"(?:alojamiento|hospedaje|habitaciones|salon(?:es)?|salas?|alimentacion|banqueteria|catering|cof+e+e?\s*[- ]?breaks?|coctel(?:es)?|desayunos?|almuerzos?|cenas?)\b",
+            normalizar_texto(t)) for f, t in campos if not f.endswith(("categoria", "nombre_producto")))
+        if parcial or (pertinencia["ambiguedades"] and semantica.get("resultado") != "no_cumple"):
+            rubro, motivo_servicio = "sin_informacion", "La información es incompleta o contiene una ambigüedad explícita de las reglas; requiere revisión."
+        elif explicita and semantica.get("resultado") == "no_cumple":
+            rubro, motivo_servicio = "sin_informacion", "La contratación explícita y el análisis semántico discrepan; requiere revisión."
+        elif explicita and semantica.get("estado") == "evaluada" and semantica.get("resultado") == "sin_informacion":
+            # Un modelo no concluyente no borra una contratación explícita ya confirmada.
+            # No aplica a simples menciones (servilletas cóctel, sábanas de hotel, etc.).
+            semantica["aplicacion"] = "contratacion_explicita"
+        else:
+            rubro, motivo_servicio = semantica.get("resultado", "sin_informacion"), semantica["motivo"]
+    if semantica.get("modo") in {"activa", "sombra"}:
+        pertinencia["semantica"] = semantica
+        if semantica_activa:
+            pertinencia["evidencias"] = [{"fuente": e["fuente"], "evidencia": e["evidencia"]}
+                                        for e in semantica.get("evidencias", [])]
     criterios = {"vigencia": vigencia,
         "ubicacion": {"resultado": territorial, "motivo": motivo_ubicacion, **ubicacion},
         "pertinencia": {"resultado": rubro, "motivo": motivo_servicio, **pertinencia}}
@@ -524,7 +556,8 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
     entrada = {"campos": campos, "estado": datos.get("estado"), "codigo_estado": datos.get("codigo_estado"),
         "fecha_cierre": str(datos.get("fecha_cierre")), "raw_id": datos.get("raw_id"),
         "documentacion": documentacion, "calidad_datos": problemas,
-        "version_motor": VERSION_MOTOR, "catalogo_version": cargar_catalogo()["version"]}
+        "version_motor": VERSION_MOTOR, "catalogo_version": cargar_catalogo()["version"],
+        "semantica": semantica_hotel.firma_configuracion()}
     return {
         "version_motor": VERSION_MOTOR,
         "codigo_externo": datos.get("codigo_externo"), "catalogo_version": cargar_catalogo()["version"],
@@ -538,6 +571,6 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "huella_entrada": hashlib.sha256(json.dumps(entrada, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
         "orden_pilares": list(PILARES), "pilar_decisivo": pilar_decisivo,
         "criterios": criterios, "documentacion": documentacion,
-        "semantica": {"estado": "pendiente", "motivo": "Esta etapa aplica reglas; no ejecuta embeddings ni LLM."},
+        "semantica": semantica,
         "modo": "preseleccion", "decision_postular": False,
     }

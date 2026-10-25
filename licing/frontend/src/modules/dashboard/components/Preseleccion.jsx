@@ -7,6 +7,7 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import "./preseleccion.css";
 
 const URL = "/api/preseleccion";
+const TAMANO_EVALUACION = 20;
 const etiquetas = { preseleccionada: "Posible oportunidad", revision_manual: "Revisión necesaria", descartada: "Descartada por regla", pendiente_evaluacion: "Sin evaluar" };
 const tonos = { preseleccionada: "green", revision_manual: "amber", descartada: "", pendiente_evaluacion: "violet" };
 const pilares = [
@@ -62,9 +63,9 @@ export default function Preseleccion({ onActualizada }) {
     setOcupado("Comprobando licitaciones nuevas o modificadas…"); setError("");
     try {
       const { ids, total } = await apiJson(URL + "/plan");
-      for (let i = 0; i < ids.length; i += 100) {
-        setOcupado(`Filtrando ${Math.min(i + 100, ids.length)} de ${ids.length}…`);
-        await apiJson(URL + "/evaluar", { method: "POST", body: { ids: ids.slice(i, i + 100) } });
+      for (let i = 0; i < ids.length; i += TAMANO_EVALUACION) {
+        setOcupado(`Filtrando ${Math.min(i + TAMANO_EVALUACION, ids.length)} de ${ids.length}…`);
+        await apiJson(URL + "/evaluar", { method: "POST", body: { ids: ids.slice(i, i + TAMANO_EVALUACION) } });
         huboCambios = true;
       }
       setResumen(ids.length ? `${ids.length} licitaciones filtradas automáticamente con la ficha y sus ítems.` : `${total} licitaciones al día. No hay cambios por evaluar.`);

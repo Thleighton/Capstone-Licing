@@ -1,0 +1,197 @@
+[
+  {
+    "nombre": "67/B5/SP 1072363/IZ (ORGANIZADOR MODULAR, SANGUCHERA, COLCHON, REFRIGERADOR Y VELADOR)",
+    "descripcion": "Requisitos de admisibilidad, adjuntar cotización formal como archivo en formato PDF (o similar) con detalle los productos ofertados, ficha técnica e indicar plazo de entrega. Los criterios de evaluación son cumplimiento técnico 50% y precio 50%. Se evaluará el comportamiento contractual previo con esta entidad.",
+    "id": "5178-5277-COT26",
+    "modalidad": "compra_agil",
+    "tipo": "negativo",
+    "esperado": "descartada",
+    "items": [
+      {
+        "descripcion": "REFRIGERADOR 236LT, ESPECIFICACIONES CONDICION DEL PRODUCTO NUEVO MODELO RT22FARADS8ZS CAPACIDAD TIL DEL REFRIGERADOR 234 LITROS NO FROST S ALTO 154.5 CM ANCHO 55.5 CM, (O EQUIVALENTE).",
+        "codigo_producto": "52141501",
+        "nombre_producto": "Refrigeradores domésticos"
+      },
+      {
+        "descripcion": "SANGUCHERA PANINI 2000 W UTSTULK2000 HBLT RESIDENCIA INTERNOS CIRUGIA ESPECIFICACIONES DETALLE DE LA GARANTA 2 AOS PLAZO DE DISPONIBILIDAD DE SERVICIO TCNICO 3 AOS MODELO UTSTULK2000 POTENCIA 2000 W CARACTERSTICAS CUERPO DE ACERO INOXIDABLE, CUENTA CON PLACAS ANTIADHERENTES Y LUZ INDICADORA DE FUNCIONAMIENTO. ANTIADHERENTE S ALTO 38 CM ANCHO 15 CM, (O EQUIVALENTE).",
+        "codigo_producto": "52141534",
+        "nombre_producto": "Sandwichera eléctrica de uso doméstico"
+      },
+      {
+        "descripcion": "COLCHON ERGO T NEW 1 PLAZA 90 X 190 CM, CARACTERSTICAS PRINCIPALES TAMAO 1 PLAZA 90X190 NIVEL DE FIRMEZA FIRME TIPO DE COLCHN RESORTES DIMENSIONES ALTO 27 CM ANCHO 90 CM LARGO 190 CM, (O EQUIVALENTE).",
+        "codigo_producto": "56101508",
+        "nombre_producto": "Colchones o sets de cama"
+      },
+      {
+        "descripcion": "ORGANIZADOR MODULAR ESTANTE COCINA, ESPECIFICACIONES MATERIAL MADERA METAL NIVELES 4 NIVELES CAPACIDAD MXIMA ESTANTE SUPERIOR 50 LB 22,7 KG CAPACIDAD MXIMA ESTANTES DE MADERA 65 LB 29,5 KG MEDIDAS DEL EMPAQUE 87 X 47 X 6,5 CM PESO DEL EMPAQUE14.4KG CONTENIDO DEL PAQUETE ACCESORIOS PARA MONTAJE 6 GANCHOS, (O EQUIVALENTE), DEBE VENIR ARMADO.",
+        "codigo_producto": "56111508",
+        "nombre_producto": "Muebles modulares para funcionarios"
+      },
+      {
+        "descripcion": "VELADOR AMANDA NATURA BLANCO HBLT RESIDENCIA CIRUGIA ESPECIFICACIONES DEL PRODUCTO SE REQUIERE ARMADO OBLIGATORIO MARCA FORM DESIGN DETALLE MATERIALES MDF, TABLERO AGLOMERADO FOTOLAMINADO Y MADERA DE PINO GARANTA 6 MESES TIEMPO DESPACHO DESDE 3 A 5 DAS HBILES EN LA RM MEDIDAS PRODUCTO 45 X 35 X 58 MEDIDAS BULTO 61,5 X 44,7 X 22,5, (O EQUIVALENTE), DEBE VENIR ARMADO.",
+        "codigo_producto": "56111703",
+        "nombre_producto": "Mueble de almacenaje no modular"
+      }
+    ]
+  },
+  {
+    "nombre": "Contratación del servicio de catering",
+    "descripcion": "El proveedor deberá adjuntar cotización formal y/o ficha técnica del producto o servicio de lo contrario su oferta quedará inadmisible (requisito excluyente). En las cotizaciones deben ofertar con todas las especificaciones solicitadas y ajustarse al presupuesto disponible y en el plazo de entrega máximo. Además, aquel que resulte seleccionado deberá cumplir con la entrega de los productos en los plazos indicados. - Las cotizaciones deberán tener vigencia mínima de 30 días.",
+    "id": "867990-728-COT26",
+    "modalidad": "compra_agil",
+    "tipo": "positivo",
+    "esperado": "preseleccionada",
+    "items": [
+      {
+        "descripcion": "Servicio de catering – Ceremonia de \nGraduación y Aniversario de \nIngeniería Civil Biomédica \nFecha del evento: 06.11.2026 \nHorario del evento: 17:00 hrs. \nUbicación: Aula Magna, Universidad de \nSantiago de Chile, Av. Libertador \nBernardo O’Higgins 3363, Estación \nCentral. \nCantidad de personas: 100 \nDetalles del servicio: FAVOR VER ARCHIVO ADJUNTO",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      }
+    ]
+  },
+  {
+    "nombre": "SOL. ADQ. N°946116 / ALIMENTACIÓN PARA JORNADA MASIVA.",
+    "descripcion": "NECESIDAD DE SERVICIOS.\nSEGUN ANEXO ADJUNTO, ES DE CARACTER OBLIGATORIO COTIZAR PAQUETE COMPLETO Y ADJUNTAR COTIZACIÓN DE LO OFERTADO, DE LO CONTRARIO LA OFERTA SERA. INADMISIBLE.",
+    "id": "2422-691-COT26",
+    "modalidad": "compra_agil",
+    "tipo": "positivo",
+    "esperado": "preseleccionada",
+    "items": [
+      {
+        "descripcion": "SEGUN ANEXO ADJUNTO, ES DE CARACTER OBLIGATORIO COTIZAR PAQUETE COMPLETO Y ADJUNTAR COTIZACIÓN DE LO OFERTADO, DE LO CONTRARIO LA OFERTA SERA. INADMISIBLE.",
+        "codigo_producto": "50221202",
+        "nombre_producto": "Cereales en barra"
+      }
+    ]
+  },
+  {
+    "nombre": "INST. Reconocimiento a funcionarios",
+    "descripcion": "Para evaluar se debe enviar cotización con detalle del producto y/o ficha técnica, valor unitario. Productos deben ser enviados al centro de salud solicitado, (no se realizan retiros), valor de envío debe venir incluido en el producto no como ítem aparte. Postular solo si se tiene stock disponible. De no cumplir con plazo estipulado de envío se cancela OC. El proveedor debe postular con precios reales, no se evaluarán los que ponen un monto diferente al de la cotización que adjuntan.",
+    "id": "2703-256-COT26",
+    "modalidad": "compra_agil",
+    "tipo": "positivo",
+    "esperado": "preseleccionada",
+    "items": [
+      {
+        "descripcion": "Servicio de Banquetería para 60 personas, según detalle adjunto:",
+        "codigo_producto": "90101601",
+        "nombre_producto": "Banquetes"
+      }
+    ]
+  },
+  {
+    "nombre": "Regulador de velocidad para extractor",
+    "descripcion": "SE ADJUNTA REFERENCIA DE LO SOLICITADO. Regulador de velocidad REB-2,5 N para regular la rotación de los motores eléctricos monofásicos de los ventiladores. Req. técnicos: Tensión de alimentación: 220V, Intensidad máxima: 2,5A, Protección: IP44, Medidas 80x80x60mm, Plástico ABS, material resistente a impactos.*//DEBE ADJUNTAR FICHA TÉCNICA PARA EVALUACIÓN//*",
+    "id": "1057490-226-COT26",
+    "modalidad": "compra_agil",
+    "tipo": "negativo",
+    "esperado": "descartada",
+    "items": [
+      {
+        "descripcion": "Regulador de velocidad para extractor que se utiliza en campana de extracción",
+        "codigo_producto": "26101766",
+        "nombre_producto": "Reguladores"
+      }
+    ]
+  },
+  {
+    "nombre": "Servicios de Alojamiento en Santiago para la Universidad de Talca",
+    "descripcion": "La Universidad de Talca requiere contratar Servicios de Alojamiento para los Campus de Santiago de la Universidad de Talca, por período desde la aceptación de la orden de compra de mercado público por 4 meses o hasta la total utilización de los recursos asignados.",
+    "id": "1469-316-L126",
+    "modalidad": "licitacion",
+    "tipo": "positivo",
+    "esperado": "preseleccionada",
+    "items": [
+      {
+        "descripcion": "Servicios de Alojamiento en Santiago para la Universidad de Talca",
+        "codigo_producto": "30222507",
+        "nombre_producto": "Hotel"
+      }
+    ]
+  },
+  {
+    "nombre": "Servicio de alojamiento y alimentación transitoria",
+    "descripcion": "Contratar el Servicio de alojamiento y alimentación transitoria",
+    "id": "355-18-LR26",
+    "modalidad": "licitacion",
+    "tipo": "positivo",
+    "esperado": "preseleccionada",
+    "items": [
+      {
+        "descripcion": "Servicio de alojamiento y alimentación transitoria a pacientes del Hospital Hanga Roa derivados a Santiago",
+        "codigo_producto": "90111801",
+        "nombre_producto": "Habitación sencilla"
+      }
+    ]
+  },
+  {
+    "nombre": "SERVICIO DE COFFEE BREAK Y COCTEL PARA LA CORDEP",
+    "descripcion": "La Corporación del Deporte de La Florida desarrolla y participa en diversas actividades deportivas, recreativas, formativas, institucionales, comunitarias y administrativas, tales como eventos deportivos, ceremonias, capacitaciones, charlas, reuniones y otras actividades propias de su quehacer institucional, las cuales requieren disponer de servicios de alimentación y atención para sus asistentes",
+    "id": "1237853-22-LE26",
+    "modalidad": "licitacion",
+    "tipo": "positivo",
+    "esperado": "revision_manual",
+    "items": [
+      {
+        "descripcion": "Contratar el servicio de suministro de coffee break y cóctel para las distintas actividades deportivas, recreativas, formativas, institucionales y comunitarias desarrolladas por la Corporación del Deporte de La Florida, de acuerdo con requerimientos",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      }
+    ]
+  },
+  {
+    "nombre": "SERVICIO DE BANQUETERÍA PARA LA DIRECCIÓN DE SALUD",
+    "descripcion": "Apoyar jornadas de capacitación, actividades de formación, promoción de la salud, participación comunitaria, conmemoraciones y otras actividades programadas por la Dirección de Salud y sus programas, en las condiciones que se establecen en las presentes bases administrativas y técnicas. RES.552",
+    "id": "1247197-83-LE26",
+    "modalidad": "licitacion",
+    "tipo": "positivo",
+    "esperado": "revision_manual",
+    "items": [
+      {
+        "descripcion": "LÍNEA N° 1: PROGRAMA MÁS ADULTOS MAYORES AUTOVALENTES",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      },
+      {
+        "descripcion": "LÍNEA N° 2: PROGRAMA PROMOCIÓN DE LA SALUD",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      },
+      {
+        "descripcion": "LÍNEA N° 3: DIRECCIÓN DE SALUD",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      },
+      {
+        "descripcion": "LÍNEA N°4: PROGRAMA MIGRANTES",
+        "codigo_producto": "90101603",
+        "nombre_producto": "Servicios de catering"
+      }
+    ]
+  },
+  {
+    "nombre": "SERV. MANTENCIÓN REPARACIÓN TALLER FISCAL LAZARETO",
+    "descripcion": "La Dirección de Vialidad Región de Ñuble, solicita ofertas para el servicios de mantención, reparación y mejoramiento de Taller de Maquinarias de Administración Directa de la Dirección de Vialidad, región de Ñuble, conforme a los requerimientos administrativos y técnicos descritos en las presentes Bases de Licitación.",
+    "id": "1051425-61-LP26",
+    "modalidad": "licitacion",
+    "tipo": "negativo",
+    "esperado": "descartada",
+    "items": [
+      {
+        "descripcion": "Servicio de mejoramiento Integral, mantención y reparación de los recintos fiscales del Taller de Maquinarias de la Administración Directa de la Dirección de Vialidad, según bases de licitación.",
+        "codigo_producto": "72131501",
+        "nombre_producto": "Construcción de edificios y departamentos"
+      },
+      {
+        "descripcion": "Servicio mejoramiento de bodega de residuos peligrosos (RESPEL) del Taller de Maquinarias de la Administración Directa de la Dirección de Vialidad, según bases de licitación.",
+        "codigo_producto": "72131501",
+        "nombre_producto": "Construcción de edificios y departamentos"
+      },
+      {
+        "descripcion": "Servicio mejoramiento de áreas de circulación peatonal entre los distintos edificios de oficinas del Taller Fiscal Lazareto de la Dirección de Vialidad de la Región de Ñuble, según bases de licitación.",
+        "codigo_producto": "72131501",
+        "nombre_producto": "Construcción de edificios y departamentos"
+      }
+    ]
+  }
+]

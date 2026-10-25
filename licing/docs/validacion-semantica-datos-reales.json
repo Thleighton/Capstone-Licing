@@ -1,0 +1,133 @@
+{
+  "modelo": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+  "revision": "8adb042d524ecd5c26d3e3ba0e3fbcf7e2d0864c",
+  "version": "nli-hotel-1",
+  "casos": 10,
+  "correctos": 10,
+  "falsos_positivos": 0,
+  "resultados": [
+    {
+      "id": "5178-5277-COT26",
+      "modalidad": "compra_agil",
+      "tipo": "negativo",
+      "esperado": "descartada",
+      "clasificacion": "descartada",
+      "correcto": true,
+      "rubro": "no_cumple",
+      "estado_semantica": "omitida",
+      "motivo": "Las líneas publicadas corresponden a artículos domésticos; no se identifica contratación de servicios del hotel.",
+      "segundos": 0.046
+    },
+    {
+      "id": "867990-728-COT26",
+      "modalidad": "compra_agil",
+      "tipo": "positivo",
+      "esperado": "preseleccionada",
+      "clasificacion": "preseleccionada",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.",
+      "segundos": 8.464
+    },
+    {
+      "id": "2422-691-COT26",
+      "modalidad": "compra_agil",
+      "tipo": "positivo",
+      "esperado": "preseleccionada",
+      "clasificacion": "preseleccionada",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.",
+      "segundos": 2.764
+    },
+    {
+      "id": "2703-256-COT26",
+      "modalidad": "compra_agil",
+      "tipo": "positivo",
+      "esperado": "preseleccionada",
+      "clasificacion": "preseleccionada",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.",
+      "segundos": 3.83
+    },
+    {
+      "id": "1057490-226-COT26",
+      "modalidad": "compra_agil",
+      "tipo": "negativo",
+      "esperado": "descartada",
+      "clasificacion": "descartada",
+      "correcto": true,
+      "rubro": "no_cumple",
+      "estado_semantica": "omitida",
+      "motivo": "Las líneas publicadas corresponden a equipos eléctricos y de generación de energía; no se identifica contratación de servicios del hotel.",
+      "segundos": 0.01
+    },
+    {
+      "id": "1469-316-L126",
+      "modalidad": "licitacion",
+      "tipo": "positivo",
+      "esperado": "preseleccionada",
+      "clasificacion": "preseleccionada",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.",
+      "segundos": 1.835
+    },
+    {
+      "id": "355-18-LR26",
+      "modalidad": "licitacion",
+      "tipo": "positivo",
+      "esperado": "preseleccionada",
+      "clasificacion": "preseleccionada",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "Cumple los tres pilares: abierta y con plazo, servicio en la RM y alojamiento, salones o alimentación.",
+      "segundos": 1.86
+    },
+    {
+      "id": "1237853-22-LE26",
+      "modalidad": "licitacion",
+      "tipo": "positivo",
+      "esperado": "revision_manual",
+      "clasificacion": "revision_manual",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "No se identifica dónde debe prestarse el servicio; la dirección del comprador no confirma el lugar.",
+      "segundos": 3.835
+    },
+    {
+      "id": "1247197-83-LE26",
+      "modalidad": "licitacion",
+      "tipo": "positivo",
+      "esperado": "revision_manual",
+      "clasificacion": "revision_manual",
+      "correcto": true,
+      "rubro": "cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "No se identifica dónde debe prestarse el servicio; la dirección del comprador no confirma el lugar.",
+      "segundos": 3.849
+    },
+    {
+      "id": "1051425-61-LP26",
+      "modalidad": "licitacion",
+      "tipo": "negativo",
+      "esperado": "descartada",
+      "clasificacion": "descartada",
+      "correcto": true,
+      "rubro": "no_cumple",
+      "estado_semantica": "evaluada",
+      "motivo": "El objeto solicitado corresponde a bienes, obras; no se identifica contratación de servicios del hotel.",
+      "segundos": 5.108
+    }
+  ],
+  "evaluadas_semanticamente": 8,
+  "omitidas_por_reglas": 2,
+  "no_disponibles": 0
+}

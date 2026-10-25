@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,13 @@ class Settings(BaseSettings):
 
     usuarios_url: str = ""
     usuarios_anon_key: str = ""
+
+    # El modelo vive en un worker CPU o en un directorio local, nunca en el navegador.
+    semantica_modo: Literal["desactivada", "sombra", "activa"] = "desactivada"
+    semantica_modelo_dir: str = ""
+    semantica_url: str = ""
+    semantica_token: str = ""
+    semantica_timeout_segundos: float = Field(default=8, gt=0, le=20)
 
     # Secreto del planificador externo. Vacío desactiva /api/cron/ingesta.
     cron_secret: str = ""

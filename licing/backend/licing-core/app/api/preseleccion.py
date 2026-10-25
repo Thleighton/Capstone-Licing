@@ -1,4 +1,4 @@
-"""Preselección explicable y documentos del hotel; LLM fuera de esta etapa."""
+"""Preselección explicable y documentos del hotel, con clasificación semántica opcional."""
 import base64
 import binascii
 import asyncio
@@ -10,6 +10,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,6 +26,7 @@ from ..services.enlaces import ficha_oficial
 from ..services.pdf_bases import extraer_pdf, MAX_BYTES
 from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE, VERSION_MOTOR
 from ..services.clientes_importantes import identificar_clientes_importantes
+from ..services.semantica_hotel import firma_configuracion
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -61,7 +63,8 @@ def cargar_entradas(db, ids):
 
 def firma_fuente(datos):
     estables = {k: v for k, v in datos.items() if k not in {"fuente_verificada_en", "normalizado_en"}}
-    estables.update(version_motor=VERSION_MOTOR, catalogo_version=cargar_catalogo()["version"])
+    estables.update(version_motor=VERSION_MOTOR, catalogo_version=cargar_catalogo()["version"],
+                    semantica=firma_configuracion())
     return hashlib.sha256(json.dumps(estables, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -75,9 +78,11 @@ async def evaluar_lote(db, ids, actor=None):
     for datos in entradas.values():
         docs = documentos.get(datos["id"], [])
         entrada = {**datos, "documentos": docs}
-        resultado = evaluar_preseleccion(entrada)
+        resultado = await run_in_threadpool(evaluar_preseleccion, entrada)
         # No duplicar RAW ni PDF completos en las evaluaciones: conservar referencias y evidencias.
         firma = firma_fuente(datos)
+        if resultado["semantica"]["estado"] == "no_disponible":
+            firma += ":semantica_pendiente"
         lote.append({"datos": datos, "resultado": resultado, "hash_fuente": firma,
                      "documentos_version": [[d["id"], d["version"], d["hash_archivo"]]
                                              for d in sorted(docs, key=lambda x: x["id"])]})

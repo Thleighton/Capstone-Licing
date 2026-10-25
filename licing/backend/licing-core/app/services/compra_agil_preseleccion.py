@@ -6,9 +6,11 @@ recuerda qué firma y versión del motor se guardaron, para reintentar lo pendie
 import asyncio
 import hashlib
 import json
+from time import monotonic
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
@@ -18,6 +20,7 @@ from ..models.raw import RawMercadoPublico
 from . import filtradas
 from .enlaces import ficha_compra_agil
 from .preseleccion import CHILE, VERSION_MOTOR, cargar_catalogo, clasificar_pilares, evaluar_preseleccion
+from .semantica_hotel import firma_configuracion
 
 MODALIDAD = "compra_agil"
 # Reglas propias sobre el motor común: cambiarlas reevalúa solo las Compras Ágiles,
@@ -35,7 +38,7 @@ COLUMNAS = (
 
 
 def version_preseleccion() -> str:
-    return f"{VERSION_MOTOR}|{VERSION_REGLAS}|{cargar_catalogo()['version']}"
+    return f"{VERSION_MOTOR}|{VERSION_REGLAS}|{cargar_catalogo()['version']}|{firma_configuracion()}"
 
 
 def evaluar(datos: dict) -> dict:
@@ -129,10 +132,15 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
     if not entradas:
         return {"evaluadas": [], "pendientes": 0}
     version = version_preseleccion()
+    if firma_configuracion() != "desactivada":
+        return await _evaluar_con_semantica(db, entradas, actor, version)
     lote = []
     for datos in entradas.values():
-        lote.append({"datos": datos, "resultado": evaluar(datos),
-                     "hash_fuente": firma(datos), "documentos_version": []})
+        resultado = await run_in_threadpool(evaluar, datos)
+        huella = firma(datos)
+        if resultado["semantica"]["estado"] == "no_disponible":
+            huella += ":semantica_pendiente"
+        lote.append({"datos": datos, "resultado": resultado, "hash_fuente": huella, "documentos_version": []})
     semaforo = asyncio.Semaphore(2)
 
     async def guardar(parte):
@@ -161,6 +169,39 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
             "sincronizada": bool(evaluadas) and await _sincronizar(db)}
 
 
+async def _evaluar_con_semantica(db, entradas, actor, version):
+    """Confirmar progreso durante la inferencia, antes del límite del turno de ingesta."""
+    evaluadas, errores, lote = [], [], []
+    inicio = monotonic()
+
+    async def guardar():
+        nonlocal lote, inicio
+        try:
+            respuesta = await filtradas.operar("guardar", {"lote": lote, "perfil": cargar_catalogo(), "actor": actor})
+            evaluadas.extend(_registrar(db, lote, respuesta, version))
+            db.commit()
+        except (filtradas.FiltradasNoDisponible, HTTPException) as exc:
+            errores.append(exc)
+        lote, inicio = [], monotonic()
+
+    for datos in entradas.values():
+        resultado = await run_in_threadpool(evaluar, datos)
+        huella = firma(datos)
+        if resultado["semantica"]["estado"] == "no_disponible":
+            huella += ":semantica_pendiente"
+        lote.append({"datos": datos, "resultado": resultado, "hash_fuente": huella, "documentos_version": []})
+        # No esperar a clasificar 100 compras antes de guardar la primera.
+        if len(lote) >= TAMANO_GUARDADO or monotonic() - inicio >= 1.5:
+            await guardar()
+    if lote:
+        await guardar()
+    if errores and not evaluadas:
+        raise errores[0]
+    return {"evaluadas": evaluadas, "pendientes": contar_pendientes(db),
+            "sin_guardar": len(entradas) - len(evaluadas),
+            "sincronizada": bool(evaluadas) and await _sincronizar(db)}
+
+
 def _registrar(db: Session, parte: list[dict], respuesta: dict, version: str) -> list[dict]:
     """Anota en Core las compras que filtradas aceptó; sin commit."""
     guardadas = {e["codigo"]: e["evaluacion_id"] for e in respuesta.get("evaluadas", [])}
@@ -173,7 +214,9 @@ def _registrar(db: Session, parte: list[dict], respuesta: dict, version: str) ->
         db.execute(update(CompraAgil).where(
             CompraAgil.id == datos["id"], CompraAgil.raw_id == datos["raw_id"],
         ).values(preseleccion={
-            "firma": entrada["hash_fuente"], "version": version, "clasificacion": resultado["clasificacion"],
+            "firma": entrada["hash_fuente"],
+            "version": "pendiente:" + version if resultado["semantica"]["estado"] == "no_disponible" else version,
+            "clasificacion": resultado["clasificacion"],
             "evaluacion_id": guardadas[datos["codigo_externo"]], "evaluado_en": resultado["evaluado_en"],
         }))
         evaluadas.append({"compra_agil_id": datos["id"], "codigo_externo": datos["codigo_externo"],

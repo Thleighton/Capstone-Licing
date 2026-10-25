@@ -1,0 +1,4 @@
+# Solo para el proceso que ejecuta el modelo; Core remoto no necesita estos paquetes.
+onnxruntime==1.31.0
+tokenizers==0.23.3
+numpy==2.5.4

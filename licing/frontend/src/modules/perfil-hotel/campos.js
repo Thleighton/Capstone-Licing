@@ -52,7 +52,7 @@ export const INTAKE_GROUPS = [
     ["validador_final", "¿Quién valida la decisión final?", "text", "Cargo o persona"],
     ["estado_ficha", "Estado del perfil", "select", ["Borrador por validar con el cliente", "Revisado con la encargada de eventos"]],
   ] },
-  { title: "08 · Palabras y frases de interés", help: "Escriba sus términos a mano o incorpore sugerencias revisadas. Separe cada palabra o frase con un salto de línea. Estos criterios orientarían el filtrado y la interpretación del futuro LLM.", interests: true, fields: [
+  { title: "08 · Palabras y frases de interés", help: "Escriba sus términos a mano o incorpore sugerencias revisadas. Separe cada palabra o frase con un salto de línea. Estos criterios orientan el filtrado.", interests: true, fields: [
     ["intereses_palabras", "Palabras de interés y sinónimos", "textarea", "Ej. alojamiento\nhospedaje\nseminario"],
     ["intereses_frases", "Frases que describen oportunidades de interés", "textarea", "Ej. Organización de seminarios con coffee break"],
     ["exclusiones_busqueda", "Palabras o frases que desea excluir", "textarea", "Solo exclusiones confirmadas por el equipo. Ej. venta de mobiliario"],

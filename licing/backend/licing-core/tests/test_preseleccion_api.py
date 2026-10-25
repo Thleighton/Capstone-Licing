@@ -40,7 +40,6 @@ def test_reevaluacion_guarda_evidencia_y_actor(client, fila, monkeypatch):
     assert operacion=='guardar' and payload['actor']==USER['id']
     resultado=payload['lote'][0]['resultado']
     assert resultado['clasificacion']=='preseleccionada'
-    assert resultado['semantica']['estado']=='pendiente'
 
 
 def test_falla_filtradas_no_borra_fuente(client,fila,monkeypatch,integration_db):

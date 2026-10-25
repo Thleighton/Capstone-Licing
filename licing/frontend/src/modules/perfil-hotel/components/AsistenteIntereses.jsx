@@ -25,8 +25,8 @@ export default function AsistenteIntereses({ formRef, candidatos, setCandidatos,
 
   return (
     <div className="interest-assistant">
-      <div className="section-title"><h3>Ayuda para encontrar las palabras</h3><span className="badge blue">Futura IA · simulación</span></div>
-      <p>En el producto final, el LLM propondría términos según la oferta que complete. Ahora usamos reglas de ejemplo con los servicios, eventos y montaje declarados. Revise cada propuesta antes de añadirla; podrá editarla o borrarla en los campos de arriba.</p>
+      <div className="section-title"><h3>Ayuda para encontrar las palabras</h3><span className="badge blue">Reglas de ejemplo</span></div>
+      <p>Proponemos términos con reglas de ejemplo según los servicios, eventos y montaje declarados. Revise cada propuesta antes de añadirla; podrá editarla o borrarla en los campos de arriba.</p>
       <button type="button" className="primary" onClick={sugerir}>Sugerir según mi formulario ✦</button>
       <p role="status">{status}</p>
       <div className="suggestion-list">

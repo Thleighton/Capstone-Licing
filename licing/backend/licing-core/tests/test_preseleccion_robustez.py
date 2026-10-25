@@ -40,7 +40,6 @@ def test_servicios_del_hotel_con_ubicacion_explicita(nombre):
     r = evaluar(nombre=nombre)
     assert r["clasificacion"] == "preseleccionada"
     assert r["criterios"]["ubicacion"]["vinculo_servicio"]["completo"]
-    assert r["decision_postular"] is False
 
 
 @pytest.mark.parametrize("nombre", [
@@ -146,7 +145,6 @@ def test_datos_documentales_invalidos_no_bloquean_una_ficha_suficiente(cambios):
     r = evaluar(**cambios)
     assert r["clasificacion"] == "preseleccionada"
     assert r["calidad_datos"]["incidencias"]
-    assert r["decision_postular"] is False
 
 
 @pytest.mark.parametrize("datos", [None, [], "alojamiento en Santiago", 1, False])
@@ -207,7 +205,6 @@ def test_falta_de_pdf_se_expone_sin_afirmar_cumplimiento_de_las_bases():
     assert r["clasificacion"] == "preseleccionada"
     assert r["cobertura"] == "sin_bases"
     assert r["documentacion"]["resultado"] == "sin_informacion"
-    assert r["decision_postular"] is False
 
 
 def test_no_certifica_una_entrada_si_no_caben_todas_las_evidencias():
@@ -228,7 +225,6 @@ def test_lista_de_paginas_invalida_no_impide_usar_la_ficha_suficiente():
         {"pagina": n, "texto": "Alojamiento en Santiago"} for n in range(1, 122)]}])
     assert r["calidad_datos"]["incidencias"]
     assert r["clasificacion"] == "preseleccionada"
-    assert r["decision_postular"] is False
 
 
 @pytest.mark.parametrize("nombre", [

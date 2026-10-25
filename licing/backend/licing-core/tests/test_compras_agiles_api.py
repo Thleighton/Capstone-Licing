@@ -78,8 +78,28 @@ def test_detalle_con_items_ordenados(client_usuario, compras):
     assert client_usuario.get("/api/compras-agiles/999999999").status_code == 404
 
 
+def test_resumen_para_el_dashboard(client_usuario, compras, integration_db):
+    from app.services.compra_agil_preseleccion import version_preseleccion
+    vigente = {"version": version_preseleccion(), "firma": "x"}
+    compras[0].preseleccion = {**vigente, "clasificacion": "preseleccionada"}
+    # Cerrada: su propuesta no cuenta entre las oportunidades abiertas.
+    compras[2].preseleccion = {**vigente, "clasificacion": "revision_manual"}
+    integration_db.commit()
+    r = client_usuario.get("/api/compras-agiles/resumen")
+    assert r.status_code == 200, r.text
+    datos = r.json()
+    assert (datos["total"], datos["abiertas"], datos["cierran_pronto"], datos["nuevas"]) == (3, 2, 1, 3)
+    assert datos["preseleccion"] == {"preseleccionada": 1, "revision_manual": 0, "descartada": 0, "pendientes": 1}
+    assert datos["carga_inicial_completa"] is False
+    assert r.headers["cache-control"] == "no-store"
+    clasificaciones = {i["codigo_externo"]: i["clasificacion"] for i in client_usuario.get("/api/compras-agiles").json()["items"]}
+    assert clasificaciones == {"90-1-COT26": "preseleccionada", "91-1-COT26": None, "92-1-COT26": "revision_manual"}
+    assert "preseleccion" not in client_usuario.get("/api/compras-agiles").json()["items"][0]
+
+
 def test_consultas_requieren_sesion(client):
     assert client.get("/api/compras-agiles").status_code == 401
+    assert client.get("/api/compras-agiles/resumen").status_code == 401
 
 
 @pytest.mark.parametrize("metodo,ruta", [

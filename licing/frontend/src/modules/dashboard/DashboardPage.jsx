@@ -4,6 +4,7 @@ import Indicadores from "./components/Indicadores";
 import ProximasACerrar from "./components/ProximasACerrar";
 
 import Preseleccion from "./components/Preseleccion";
+import PanelComprasAgiles from "../compras-agiles/components/PanelDashboard";
 import Icon from "../../core/ui/Icon";
 import "./dashboard.css";
 
@@ -16,7 +17,7 @@ function PanelHeading({ icono, tono, titulo, nota, children }) {
 }
 
 export default function DashboardPage({ soloDashboard = false }) {
-  const { dashboard, dashboardError, dashboardCargando, abrirFicha, cargarResumen } = useLicitaciones();
+  const { dashboard, dashboardError, dashboardCargando, abrirFicha, cargarResumen, actualizado } = useLicitaciones();
   const estado = dashboard ? "ok" : dashboardCargando ? "" : "err";
 
   return (
@@ -31,6 +32,8 @@ export default function DashboardPage({ soloDashboard = false }) {
         <section className="card panel dashboard-panel panel-amber dashboard-deadlines"><PanelHeading icono="clock" tono="amber" titulo="Próximas a cerrar" nota="Alertas desde 4 días antes del cierre" />
           <ProximasACerrar rows={dashboard?.proximas || []} disponibles={dashboard?.proximas_disponibles !== false} estado={estado} abrirFicha={abrirFicha} mostrarFicha={!soloDashboard} /></section>
       </div>
+
+      <PanelComprasAgiles version={actualizado} />
 
       <div className={"dashboard-workspace" + (soloDashboard ? " dashboard-only" : "")}>
         {!soloDashboard && <AsistenteIA />}

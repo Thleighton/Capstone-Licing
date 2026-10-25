@@ -18,6 +18,7 @@ const ICONS = {
   sliders: <><path d="M3 6h4M11 6h10M3 12h10M17 12h4M3 18h4M11 18h10" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   activity: <path d="M2 12h5l3-8 4 16 3-8h5" />,
+  bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
 };
 
 export default function Icon({ name }) {

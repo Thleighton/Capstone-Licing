@@ -6,6 +6,7 @@
 // ============================================================
 import dashboard from "./dashboard";
 import oportunidades from "./oportunidades";
+import comprasAgiles from "./compras-agiles";
 import perfilHotel from "./perfil-hotel";
 import disponibilidad from "./disponibilidad";
 import clientes from "./clientes";
@@ -21,6 +22,7 @@ export const SOLO_DASHBOARD = false;
 export const TODOS_LOS_MODULOS = [
   dashboard,
   oportunidades,
+  comprasAgiles,
   perfilHotel,
   disponibilidad,
   clientes,

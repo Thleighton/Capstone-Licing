@@ -12,7 +12,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-7"
+VERSION_MOTOR = "reglas-hotel-8"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -194,6 +194,12 @@ def _mencion_ajena(grupo, m, normal):
     antes = re.split(r"[.;\n]", normal[:m.start()])[-1][-120:]
     despues = normal[m.end():]
     if grupo == "alojamiento":
+        if re.fullmatch(r"residencia(?: temporal)?", m.group()):
+            # Un electrodoméstico destinado a una residencia no contrata estadías.
+            contratacion = re.search(r"\b(?:requiere|requieren|solicita|solicitan|contrata|contratar|contratacion|arriendo|alquiler|reservas?)\s+(?:(?:de|un|una|el|la)\s+)*$", antes)
+            personas = re.search(r"\bpara\s+(?:(?:los|las)\s+)?(?:\d+\s+)?(?:personas|participantes|asistentes|delegaciones|funcionarios|estudiantes|alumnos|pacientes|internos)\b", despues[:120])
+            if not (contratacion or personas):
+                return True
         return bool(re.match(r"\s+(?:(?:de|para)\s+)?(?:infraestructura virtualizada|servidores?|maquinas virtuales|sitios? web|datos|aplicaciones?)\b", despues))
     if grupo == "salones":
         return bool(re.search(r"\b(?:sillas?|mesas?|muebles?|mobiliario)\s+(?:(?:de|para)\s+)(?:el\s+|los\s+)?$", antes))
@@ -203,9 +209,15 @@ def _mencion_ajena(grupo, m, normal):
                           or re.search(r"\b(?:mecanico|mecanica|fuera de|reparaciones? en)\s+$", antes)))
                     or (m.group().startswith("capacitacion") and re.search(r"\bcursos? de\s+$", antes))
                     or (m.group().startswith("reunion") and re.search(r"\bmesas?\s+(?:de\s+)?$", antes)))
-    return grupo == "alimentacion_asociada" and bool(
-        re.search(r"\b(?:sin|no se requiere|no incluye)\s+(?:servicio de\s+)?$", antes)
-        or (re.fullmatch(r"alimentacion", m.group()) and re.match(r"\s+(?:enteral|parenteral|electrica)\b", despues)))
+    if grupo == "alimentacion_asociada":
+        if re.search(r"\b(?:sin|no se requiere|no incluye)\s+(?:servicio de\s+)?$", antes):
+            return True
+        if m.group() == "alimentacion":
+            return bool(
+                re.match(r"\s+(?:enteral|parenteral|electrica)\b", despues)
+                or re.search(r"\b(?:tension|voltaje|fuentes?|cables?|conector(?:es)?|adaptador(?:es)?|puertos?)\s+de\s+$", antes)
+                or re.match(r"\s*[:=]?\s*(?:(?:a|de)\s+)?\d+(?:[.,]\d+)?(?:\s*[-/–]\s*\d+(?:[.,]\d+)?)?\s*(?:v(?:ac|dc)?|voltios?|watts?|w|hz)\b", despues))
+    return False
 
 
 def _ambiguedad_administrativa(regla, m, normal):

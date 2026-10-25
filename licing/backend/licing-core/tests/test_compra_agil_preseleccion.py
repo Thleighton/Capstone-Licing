@@ -309,6 +309,32 @@ def test_comprador_en_la_rm_sin_otro_lugar_cumple_ubicacion():
     assert r["clasificacion"] == "preseleccionada"
 
 
+def test_regulador_1057490_226_no_es_alimentacion_para_personas():
+    r = preseleccion.evaluar(compra(codigo_externo="1057490-226-COT26",
+        nombre="Regulador de velocidad para extractor",
+        descripcion="Regulador de velocidad REB-2,5 N para motores eléctricos monofásicos. "
+                    "Req. técnicos: Tensión de alimentación: 220V, Intensidad máxima: 2,5A, Protección: IP44.",
+        items=[{"codigo_producto": "26101766", "nombre_producto": "Reguladores",
+                "descripcion": "Regulador de velocidad para extractor que se utiliza en campana de extracción"}]))
+    assert r["clasificacion"] == "descartada"
+    assert r["pilar_decisivo"] == "pertinencia"
+    assert r["criterios"]["ubicacion"]["resultado"] == "cumple"
+    assert r["criterios"]["pertinencia"]["exclusiones_evidentes"][0]["codigo"] == "producto_ajeno"
+
+
+def test_electrodomesticos_para_una_residencia_no_contratan_alojamiento():
+    r = preseleccion.evaluar(compra(codigo_externo="5178-5277-COT26",
+        nombre="ORGANIZADOR MODULAR, SANGUCHERA, COLCHON, REFRIGERADOR Y VELADOR",
+        descripcion="Adjuntar cotización formal con detalle de productos y ficha técnica.",
+        items=[{"codigo_producto": "52141534", "nombre_producto": "Sandwichera eléctrica",
+                "descripcion": "SANGUCHERA PANINI 2000 W HBLT RESIDENCIA INTERNOS CIRUGIA"},
+               {"codigo_producto": "56111703", "nombre_producto": "Mueble de almacenaje",
+                "descripcion": "VELADOR HBLT RESIDENCIA CIRUGIA. MDF, 45 X 35 X 58 CM"}]))
+    assert r["clasificacion"] == "descartada"
+    assert r["pilar_decisivo"] == "pertinencia"
+    assert not r["criterios"]["pertinencia"]["directa"]
+
+
 def test_el_lugar_del_texto_prevalece_sobre_la_region_del_comprador():
     en_santiago = preseleccion.evaluar(compra(codigo_region=5, region_comprador="Región de Valparaíso",
                                               descripcion="Coffee break para jornada en Santiago, 40 personas."))

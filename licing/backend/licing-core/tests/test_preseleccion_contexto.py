@@ -23,6 +23,37 @@ CASOS_AJENOS = [
 ]
 
 
+@pytest.mark.parametrize("especificacion", [
+    "Tensión de alimentación: 220V", "Voltaje de alimentación: 12 VDC",
+    "Alimentación 220-240 V, 50 Hz", "Alimentación: 12/24V",
+    "Fuente de alimentación de 500W", "Cable de alimentación para computador",
+    "Conector de alimentación", "Adaptador de alimentación universal",
+    "Puerto de alimentación", "Alimentación eléctrica 220 V",
+])
+def test_especificacion_electrica_no_se_confunde_con_comida(especificacion):
+    r = evaluar("Regulador de velocidad para extractor", especificacion,
+        items=[{"codigo_producto": "26101766", "descripcion": "Regulador de velocidad para extractor"}])
+    assert r["clasificacion"] == "descartada"
+    assert r["criterios"]["pertinencia"]["resultado"] == "no_cumple"
+    assert not r["criterios"]["pertinencia"]["directa"]
+
+
+def test_otra_alimentacion_real_se_conserva_en_el_mismo_texto():
+    r = evaluar("Servicio de alimentación en Santiago",
+        "Equipamiento con tensión de alimentación: 220V. Se requiere alimentación para 40 personas.")
+    assert r["clasificacion"] == "preseleccionada"
+    menciones = r["criterios"]["pertinencia"]["coincidencias"]
+    assert any("40 personas" in m["evidencia"] for m in menciones)
+    assert not any(m["fuente"] == "descripcion" and m["inicio"] < 55 for m in menciones)
+
+
+@pytest.mark.parametrize("servicio", ["Servicio de residencia temporal en Santiago",
+    "Se requiere residencia en Santiago", "Residencia para 20 estudiantes en Santiago"])
+def test_residencia_contratada_para_personas_sigue_siendo_servicio(servicio):
+    r = evaluar(servicio)
+    assert r["criterios"]["pertinencia"]["directa"]
+
+
 @pytest.mark.parametrize("nombre,descripcion,codigo", CASOS_AJENOS,
     ids=["mecanica", "mobiliario", "investigacion", "informatica", "cursos", "publicidad"])
 def test_objeto_ajeno_se_descarta_con_motivo_y_evidencia(nombre, descripcion, codigo):

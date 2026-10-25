@@ -14,16 +14,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from .config import CORE_DIR
 from .database import Base, engine
 from .models import ejecucion_ingesta, licitacion, licitacion_item, licitacion_documento, raw  # noqa: F401
+from .models import compra_agil, compra_agil_item, compra_agil_sincronizacion  # noqa: F401
 
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
-REVISION_ACTUAL = "b5df9fcc5f0d"
+REVISION_PREVIA_COMPRA_AGIL = "b5df9fcc5f0d"
+REVISION_ACTUAL = "e3a17c52d9b4"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
+TABLAS_COMPRA_AGIL = {"compra_agil", "compra_agil_item", "compra_agil_pendiente", "compra_agil_sincronizacion"}
 COLUMNAS_NUEVAS = {
     "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental"},
     "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente", "posicion_fuente"},
     "raw_mercado_publico": {"verificado_en"},
+    "ejecucion_ingesta": {"fuente"},
 }
 
 
@@ -34,11 +38,15 @@ def _solo_core(objeto, nombre, tipo, reflected, compare_to):
     return tabla is None or tabla.name in TABLAS
 
 
-def verificar_esquema(connection, *, legado=False) -> list[str]:
-    """Compara columnas, tipos, defaults, índices, relaciones y restricciones."""
+def verificar_esquema(connection, *, legado=False, sin_compra_agil=False) -> list[str]:
+    """Compara columnas, tipos, defaults, índices, relaciones y restricciones.
+
+    sin_compra_agil verifica un esquema manual anterior a la ingesta de Compra Ágil.
+    """
     inspector = inspect(connection)
     presentes = set(inspector.get_table_names(schema="public"))
-    tablas = TABLAS_BASE if legado else TABLAS
+    sin_compra_agil = sin_compra_agil or legado
+    tablas = TABLAS_BASE if legado else TABLAS - TABLAS_COMPRA_AGIL if sin_compra_agil else TABLAS
     faltantes = tablas - presentes
     if faltantes:
         return ["Faltan tablas: " + ", ".join(sorted(faltantes))]
@@ -48,6 +56,8 @@ def verificar_esquema(connection, *, legado=False) -> list[str]:
             return nombre in tablas
         tabla = getattr(objeto, "table", None)
         if tabla is not None and tabla.name not in tablas:
+            return False
+        if sin_compra_agil and tabla is not None and tabla.name == "ejecucion_ingesta" and nombre == "fuente":
             return False
         if legado and tabla is not None:
             if tipo == "column" and nombre in COLUMNAS_NUEVAS.get(tabla.name, set()):
@@ -84,6 +94,8 @@ def verificar_esquema(connection, *, legado=False) -> list[str]:
         for restriccion in tabla.constraints:
             if legado and restriccion.name in {"ck_item_posicion_positiva", "ck_licitacion_ubicacion_evidencia"}:
                 continue
+            if sin_compra_agil and restriccion.name == "ck_ejecucion_ingesta_fuente":
+                continue
             if isinstance(restriccion, CheckConstraint) and restriccion.name not in checks:
                 errores.append(f"{nombre}: falta la restricción {restriccion.name}")
         if legado and nombre == "licitacion_item":
@@ -97,7 +109,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_PREVIA_COMPRA_AGIL, REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))
@@ -113,7 +125,9 @@ def registrar_esquema(connection):
     legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (
         not versiones and not COLUMNAS_NUEVAS["licitacion"] <= columnas_licitacion
     )
-    errores = verificar_esquema(connection, legado=legado)
+    # Una base manual sin las tablas de Compra Ágil se registra en la revisión anterior y se migra.
+    sin_compra_agil = not versiones and not legado and not TABLAS_COMPRA_AGIL <= set(inspector.get_table_names(schema="public"))
+    errores = verificar_esquema(connection, legado=legado, sin_compra_agil=sin_compra_agil)
     if errores:
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
 
@@ -121,7 +135,13 @@ def registrar_esquema(connection):
         if not legado and inspector.has_table("licitacion_documento", schema="public"):
             if connection.execute(text("SELECT to_regprocedure('public.purgar_licitaciones_no_disponibles(text,boolean)')")).scalar() is None:
                 raise ValueError("El esquema no coincide: falta la función de limpieza de Core.")
-            command.stamp(config, REVISION_ACTUAL)
+            if not sin_compra_agil:
+                if connection.execute(text("SELECT to_regprocedure('public.purgar_compras_agiles_no_disponibles(text[],boolean)')")).scalar() is None:
+                    raise ValueError("El esquema no coincide: falta la función de limpieza de Compra Ágil.")
+                command.stamp(config, REVISION_ACTUAL)
+                return
+            command.stamp(config, REVISION_PREVIA_COMPRA_AGIL)
+            command.upgrade(config, "head")
             return
         # La comparación de tablas no detecta la función de limpieza.
         command.stamp(config, REVISION_BASE if legado else "b9a70e6d4a93")

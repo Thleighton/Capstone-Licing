@@ -85,9 +85,14 @@ También puedes ejecutar `uvicorn api.index:app --reload --port 8000` desde `lic
 | GET /api/licitaciones | Listado con q, region, solo_abiertas, limite y offset | Usuario activo |
 | GET /api/licitaciones/{id} | Detalle e ítems normalizados | Usuario activo |
 | GET /api/dashboard | Indicadores de toda la base y próximos cierres | Usuario activo |
-| GET /api/ingestas | Últimas ejecuciones | Usuario activo |
+| GET /api/compras-agiles | Compras Ágiles guardadas, con q, region, solo_abiertas, limite y offset | Usuario activo |
+| GET /api/compras-agiles/{id} | Detalle y productos solicitados | Usuario activo |
+| /api/compras-agiles/preseleccion... | Clasificación hotelera, evaluación y criterios de cada Compra Ágil | Usuario activo |
+| GET /api/ingestas | Últimas ejecuciones, con su `fuente` | Usuario activo |
 | /api/ingesta/licitaciones/... | Rutas originales de descarga y procesamiento de Core | Administrador |
-| GET o POST /api/cron/ingesta | Lote programado, con limite de 1 a 5 (predeterminado 1) | `Authorization: Bearer <CRON_SECRET>` |
+| /api/ingesta/compras-agiles/... | Lote, estado de la sincronización y descarga por código | Administrador |
+| GET o POST /api/cron/ingesta | Lote programado, con limite de 1 a 5 (predeterminado 1); suma un lote de Compra Ágil en paralelo | `Authorization: Bearer <CRON_SECRET>` |
+| GET o POST /api/cron/compras-agiles | Solo el lote de Compra Ágil, con limite de 1 a 20 (predeterminado 20) | `Authorization: Bearer <CRON_SECRET>` |
 
 Las rutas originales `/ingesta/...` siguen disponibles con los mismos permisos para compatibilidad. Envía el token de Supabase Usuarios/Licitaciones como `Authorization: Bearer <token>`. El frontend lo adjunta y renueva automáticamente.
 
@@ -106,7 +111,8 @@ Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem
 - Las pantallas de perfil, disponibilidad, clientes, seguimiento y reportes conservan su demostración. El análisis de bases utiliza ejemplos locales, sin depender del backend retirado.
 - El contexto de la API y las categorías de los ítems se conservan para futuras búsquedas. Véase [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md).
 - Se pueden registrar versiones de documentos, texto y hechos extraídos mediante la API. No se almacenan PDF ni se ejecuta extracción o IA automáticamente.
-- Compra Ágil y filtros comerciales o semánticos todavía no forman parte del Core actual.
+- La ingesta de Compra Ágil usa la API v2 (`api2.mercadopublico.cl`) con el mismo `MP_TICKET`. Cada lote las preselecciona con el mismo motor que las licitaciones y guarda el resultado en LicitacionesFiltradas. Datos, límites y orden de despliegue en [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil). Las pantallas todavía muestran solo licitaciones.
+- Los filtros comerciales o semánticos todavía no forman parte del Core actual.
 - El lote de Core busca códigos nuevos. Actualizar periódicamente detalles de licitaciones ya guardadas queda pendiente.
 
 Los datos anteriores de Supabase Datos no se migran automáticamente: el esquema de Core es distinto. El destino actual es el proyecto único Usuarios/Licitaciones; las tablas creadas manualmente deben verificarse antes de registrarlas en Alembic.

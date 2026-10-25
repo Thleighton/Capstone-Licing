@@ -95,5 +95,21 @@ try {
  assert.deepEqual((await rpc('detalle',{codigo:datos.codigo_externo})).documentos,[],'Core aporta los documentos originales');
  await assert.rejects(()=>rpc('guardar_documento',document),/Operación no admitida/);
  await assert.rejects(()=>rpc('documentos',fuente),/Operación no admitida/);
- console.log('OK: persistencia, revisión, caducidad y documentos solo en origen con referencias en filtradas.');
+ const agil=(await readdir(migrations)).find(x=>x.endsWith('_compra_agil.sql'));
+ await db.exec(await readFile(new URL(agil,migrations),'utf8'));
+ const compra={id:1,modalidad:'compra_agil',codigo_externo:'1195-539-COT26',raw_id:12,nombre:'Coffee break en Santiago',estado:'publicada',fecha_cierre:'2099-01-01T12:00:00-03:00',items:[{posicion_fuente:1,correlativo:1,codigo_producto:'90101603',nombre_producto:'Coffee break'}]};
+ const loteCompra={datos:compra,resultado:{...resultado,huella_entrada:'9'.repeat(64)},hash_fuente:'8'.repeat(64),documentos_version:[]};
+ const guardada=await rpc('guardar',{...payload,lote:[loteCompra]});
+ assert.ok(guardada.evaluadas[0].evaluacion_id,'guarda Compra Ágil');
+ assert.equal((await db.query("SELECT modalidad FROM public.oportunidad WHERE codigo_externo=$1",[compra.codigo_externo])).rows[0].modalidad,'compra_agil');
+ assert.equal((await rpc('listar',{codigos:[compra.codigo_externo]})).filas[0].estado_seleccion,'preseleccionada');
+ await assert.rejects(()=>rpc('guardar',{...payload,lote:[{...loteCompra,datos:{...compra,modalidad:'licitacion'}}]}),/modalidad no coincide/);
+ await assert.rejects(()=>rpc('guardar',{...payload,lote:[{...lote,datos:{...lote.datos,modalidad:'compra_agil'}}]}),/modalidad no coincide/);
+ const futuro=new Date(Date.now()+60000).toISOString();
+ await rpc('sincronizar_fuente',{codigos:[],observado_en:futuro});
+ assert.equal((await rpc('listar',{codigos:[compra.codigo_externo]})).total,1,'licitaciones no retiran Compras Ágiles');
+ assert.equal((await rpc('listar',{codigos:[datos.codigo_externo]})).total,0,'sin modalidad sincroniza licitaciones');
+ await rpc('sincronizar_fuente',{codigos:[],observado_en:futuro,modalidad:'compra_agil'});
+ assert.equal((await rpc('listar',{codigos:[compra.codigo_externo]})).total,0,'Compra Ágil sincroniza solo su modalidad');
+ console.log('OK: persistencia, revisión, caducidad, documentos solo en origen y Compra Ágil por modalidad.');
 } catch (e) { console.error(e.message, e.where, e.internalQuery); process.exitCode=1; } finally { await db.close(); }

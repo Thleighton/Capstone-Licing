@@ -150,3 +150,107 @@ la devuelve como pendiente. El filtro `region` existente sigue refiriéndose al
 comprador. Los filtros de lugar del servicio deben usar evidencia validada y
 conservar los casos desconocidos para revisión. No se conecta aún la segunda base
 al dashboard ni se activa un modelo semántico o LLM.
+
+## Ingesta de Compra Ágil
+
+La revisión `e3a17c52d9b4` incorpora las Compras Ágiles desde la API oficial v2
+(`https://api2.mercadopublico.cl/v2/compra-agil`, guía de ChileCompra, mayo de 2026).
+Usa el mismo `MP_TICKET`, enviado en la cabecera `ticket` y nunca en la URL.
+
+| Tabla | Uso |
+|---|---|
+| `compra_agil` | Compra normalizada desde el detalle, con su RAW (`fuente='compra_agil'`, `tipo_consulta='detalle_compra_agil'`) y su última preselección (`preseleccion`) |
+| `compra_agil_item` | `productos_solicitados`, identificados por su posición en el RAW |
+| `compra_agil_pendiente` | Cola de detalles por descargar, alimentada por el listado |
+| `compra_agil_sincronizacion` | Fila única con el cursor y la ventana del listado en curso |
+
+`ejecucion_ingesta.fuente` distingue los lotes (`licitaciones` o `compra_agil`). El
+planificador de licitaciones solo considera sus propios lotes para alternar turnos y
+posponer errores. Las cuatro tablas tienen RLS y sin permisos para `anon` ni
+`authenticated`, igual que el resto de Core.
+
+**Fechas.** La API publica hora de Chile en todos sus campos, aunque algunos terminen
+en `Z`: el listado entrega `2026-10-26T08:00:00Z` como cierre del primer llamado y el
+detalle `2026-10-26 08:00` para el mismo instante, y los cierres se concentran en horas
+hábiles locales. Por eso la `Z` se descarta y las fechas se guardan como hora de Chile
+sin zona, como en `licitacion`. Por la misma razón `ttl_cambio_ms` no es fiable (compara
+contra UTC) y el lote usa `cambio_desde` y `cambio_hasta` en hora local.
+
+**Sincronización.** Cada lote:
+
+1. Elimina las compras vencidas o no publicadas (`purgar_compras_agiles_no_disponibles`).
+2. Lee el listado por ventanas de `fecha_ultimo_cambio` con fin fijo, desde la última
+   página hacia la primera. Si un registro vuelve a cambiar y sale de la ventana, los
+   demás solo pueden repetirse, nunca saltarse. La ventana siguiente se solapa 5 minutos.
+   La carga inicial busca las publicadas de los últimos 60 días; después se siguen
+   `publicada`, `cancelada` y `desierta`. Una ventana de más de 10.000 resultados (tope
+   de paginación de la API) se acorta por la mitad.
+3. Encola las publicadas con un cambio que aún no se incorporó y elimina las que el
+   listado informa como no disponibles.
+4. Descarga hasta `limite` detalles, primero los que aún no están guardados y desde la
+   publicación más reciente. Hasta 3 descargas avanzan a la vez, separadas por
+   `MP_COMPRA_AGIL_PAUSA_SEGUNDOS`; el guardado sigue el orden de prioridad. Un detalle
+   idéntico solo actualiza `verificado_en`.
+
+Un 404 `NO_ENCONTRADO`, un estado distinto de `publicada` o un cierre cumplido eliminan
+la compra, sus productos, su RAW y su pendiente. Otros errores posponen ese código
+`MP_REINTENTO_ERROR_MINUTOS`. Un 401, 403 o 429 detiene el lote sin posponer el código.
+Un listado fallido no impide descargar los detalles ya encolados. El lote se detiene
+antes de `MP_COMPRA_AGIL_LOTE_TIMEOUT_SEGUNDOS` (20 s) y deja el resto para el siguiente.
+El estado se consulta en `GET /api/ingesta/compras-agiles/estado`.
+
+**Capacidad.** Un día hábil se publican unas 4.000 Compras Ágiles y suele haber más
+de 7.000 abiertas en el país. `/api/cron/ingesta` corre en paralelo un lote de 20
+detalles (`COMPRAS_AGILES_AUTOMATICAS=true`) con su propio bloqueo y su propia sesión.
+Cada 5 minutos son hasta 5.760 detalles y unas 600 páginas de listado diarias. La
+carga inicial lee unas 145 páginas y tarda unas 2 a 3 horas; mientras dura, avanza desde
+los cambios más antiguos. Para más cobertura se puede programar también
+`/api/cron/compras-agiles` en cron-job.org. Para reducir el volumen,
+`MP_COMPRA_AGIL_REGIONES=13` limita el listado a compradores de la Región Metropolitana;
+la región del comprador no prueba el lugar del servicio. La guía indica una cuota diaria
+por ticket (10.000 solicitudes en la práctica). Considera también las solicitudes de la
+ingesta de licitaciones si ambas APIs comparten la cuota.
+
+**Preselección.** Las Compras Ágiles pasan por el mismo motor (`reglas-hotel-7`) y los
+mismos tres pilares que las licitaciones: vigencia, lugar de prestación en la RM y
+alojamiento, salones o alimentación. No tienen bases, así que la cobertura es
+`sin_bases`. La dirección de entrega y la región del comprador siguen siendo solo pistas:
+si el lugar del servicio no está en el texto, la compra queda en `revision_manual`, no se
+descarta. Las evaluaciones se guardan en LicitacionesFiltradas con
+`oportunidad.modalidad='compra_agil'` y los productos como ítems (`correlativo` = posición).
+
+Después de cada lote, Core evalúa hasta 40 compras abiertas sin evaluación vigente, en
+llamadas de 20, durante 8 s como máximo. `compra_agil.preseleccion` guarda la firma, la
+versión del motor y del catálogo, y la propuesta automática. Un RAW nuevo la borra; una
+versión nueva del motor o del catálogo la deja pendiente. Si filtradas no responde, o si
+el perfil del hotel aún no se inicializó desde una sesión, las compras siguen pendientes
+y el lote siguiente reintenta. La sincronización con filtradas retira solo Compras Ágiles
+que Core ya no conserva, y se ejecuta únicamente después de que filtradas aceptó una: una
+filtradas sin la migración `20261025090000_compra_agil.sql` rechaza los códigos COT al
+guardar e ignoraría la modalidad, retirando también las licitaciones y sus revisiones.
+Las licitaciones sincronizan solo las suyas.
+
+| Ruta | Uso |
+|---|---|
+| `GET /api/compras-agiles/preseleccion` | Clasificación vigente (`clasificacion`, `q`, `limite`, `offset`); marca `pendiente_evaluacion` si la fuente o las reglas cambiaron |
+| `POST /api/compras-agiles/preseleccion/evaluar` | Evalúa las pendientes (o los `ids` indicados) con la sesión como autor |
+| `GET /api/compras-agiles/{id}/preseleccion` | Criterios y evidencias guardados en filtradas |
+
+**Despliegue**, en este orden; cada paso es compatible con el código anterior:
+
+1. En LicitacionesFiltradas, aplicar `filtradas/supabase/migrations/20261025090000_compra_agil.sql`.
+2. En Usuarios/Licitaciones, `alembic upgrade head`. Sin conexión directa, `alembic upgrade
+   b5df9fcc5f0d:head --sql` genera el SQL equivalente para el SQL Editor, incluida la
+   actualización de `alembic_version`. Debe aplicarse antes de desplegar: el planificador
+   de licitaciones consulta `ejecucion_ingesta.fuente`.
+3. En Usuarios/Licitaciones, ejecutar desde `SELECT cron.schedule` en adelante de
+   `sql/limpieza_programada_supabase.sql`, para incluir la limpieza de Compra Ágil en el
+   trabajo de cada minuto. Si pg_cron ya estaba configurado, repetir sus permisos falla con
+   `dependent privileges exist`.
+4. Publicar Core. El cron existente empieza a ingerir y preseleccionar Compras Ágiles.
+
+El downgrade solo procede sin datos ni ejecuciones de Compra Ágil.
+
+No se descargan adjuntos ni se guardan `proveedores_cotizando` fuera del RAW. Las
+pantallas todavía muestran solo licitaciones; la revisión manual de Compras Ágiles
+desde la aplicación queda pendiente.

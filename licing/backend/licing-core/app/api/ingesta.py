@@ -6,7 +6,7 @@ from ..config import settings
 from ..auth import solo_rol
 from ..database import get_db
 from ..models.raw import RawMercadoPublico
-from ..services.mercado_publico import MercadoPublicoClient
+from ..services.mercado_publico import CompraAgilClient, MercadoPublicoClient
 from ..services.normalizacion import normalizar_licitacion
 from ..services.ingesta_lote import (
     planificar_ingesta,
@@ -14,9 +14,21 @@ from ..services.ingesta_lote import (
     EjecucionEnCursoError,
 )
 from ..services.procesamiento import procesar_detalle_guardado
+from ..services.compra_agil_normalizacion import codigo_valido
+from ..services.compra_agil_persistencia import CompraAgilNoDisponible, eliminar_compras_no_disponibles
+from ..services.compra_agil_ingesta import (
+    descargar_y_procesar,
+    ejecutar_lote_compras_agiles as ejecutar_compras_agiles,
+    estado_sincronizacion,
+)
+from ..services.compra_agil_preseleccion import evaluar_compras_agiles
+from ..services import filtradas
 from ..services.limpieza import ausencia_confirmada, eliminar_no_disponibles, motivo_no_disponible
 
 router = APIRouter(prefix="/ingesta", tags=["Ingesta"], dependencies=[Depends(solo_rol("administrador"))])
+
+# El lote de Compra Ágil y su preselección deben caber en los 30 s de cron-job.org.
+TIEMPO_PRESELECCION_COMPRAS_AGILES = 8
 
 
 @router.post("/licitaciones/fecha/{fecha}")
@@ -389,5 +401,88 @@ async def correr_lote(db: Session, limite: int) -> dict:
         db.rollback()
         raise
 
+    finally:
+        await client.cerrar()
+
+
+@router.post("/compras-agiles/lote/ejecutar")
+async def ejecutar_lote_compras_agiles(
+    limite: int = Query(default=10, ge=1, le=20),
+    db: Session = Depends(get_db),
+):
+    try:
+        return await correr_lote_compras_agiles(db=db, limite=limite)
+    except EjecucionEnCursoError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/compras-agiles/estado")
+def ver_estado_compras_agiles(db: Session = Depends(get_db)):
+    return estado_sincronizacion(db)
+
+
+@router.post("/compras-agiles/codigo/{codigo}")
+async def ingestar_compra_agil_por_codigo(
+    codigo: str,
+    db: Session = Depends(get_db),
+):
+    codigo_normalizado = codigo_valido(codigo)
+    if not codigo_normalizado:
+        raise HTTPException(status_code=422, detail="El código debe tener el formato 1057539-228-COT26.")
+    client = CompraAgilClient()
+    try:
+        return await descargar_y_procesar(db, client, codigo_normalizado)
+    except CompraAgilNoDisponible as exc:
+        db.rollback()
+        eliminados = eliminar_compras_no_disponibles(db, [codigo_normalizado], confirmada=True)
+        db.commit()
+        return {"codigo_externo": codigo_normalizado, "procesado": False, "motivo": str(exc), **eliminados}
+    except httpx.HTTPStatusError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Mercado Público respondió HTTP {exc.response.status_code}.",
+        ) from exc
+    except httpx.RequestError as exc:
+        db.rollback()
+        raise HTTPException(status_code=502, detail="No se pudo conectar con Mercado Público.") from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        await client.cerrar()
+
+
+async def preseleccionar_compras_agiles(db: Session) -> dict:
+    """Las compras ya están guardadas: si filtradas no responde, quedan pendientes para el próximo lote."""
+    import asyncio
+    try:
+        async with asyncio.timeout(TIEMPO_PRESELECCION_COMPRAS_AGILES):
+            return await evaluar_compras_agiles(db)
+    except HTTPException as exc:
+        db.rollback()
+        return {"pendiente": True, "motivo": exc.detail}
+    except (filtradas.FiltradasNoDisponible, TimeoutError) as exc:
+        db.rollback()
+        return {"pendiente": True, "motivo": str(exc) or "La preselección no terminó a tiempo; sigue pendiente."}
+
+
+async def correr_lote_compras_agiles(db: Session, limite: int) -> dict:
+    """Lote compartido por la ruta de administración y el cron. Deja pasar EjecucionEnCursoError."""
+    client = CompraAgilClient()
+    try:
+        resultado = await ejecutar_compras_agiles(db=db, client=client, limite=limite)
+        if settings.cron_secret and settings.filtradas_url:
+            resultado["preseleccion"] = await preseleccionar_compras_agiles(db)
+        return resultado
+    except EjecucionEnCursoError:
+        db.rollback()
+        raise
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception:
+        db.rollback()
+        raise
     finally:
         await client.cerrar()

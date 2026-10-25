@@ -78,6 +78,7 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
     pospuestos, redescargar = set(), set()
     recientes = db.execute(select(EjecucionIngesta.inicio, EjecucionIngesta.errores).where(
         EjecucionIngesta.inicio >= ahora - timedelta(days=1),
+        EjecucionIngesta.fuente == "licitaciones",
     )).all()
     for inicio, errores in recientes:
         for error in errores or []:
@@ -115,7 +116,10 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
             if isinstance(r.get("CodigoExterno"), str) and r["CodigoExterno"].strip()
         ) if codigo not in excluidos
     ]
-    turno = db.scalar(select(func.max(EjecucionIngesta.id))) or 0
+    # Cuenta solo lotes de licitaciones: los de Compra Ágil intercalan sus id en el historial.
+    turno = db.scalar(select(func.count()).select_from(EjecucionIngesta).where(
+        EjecucionIngesta.fuente == "licitaciones",
+    )) or 0
     seleccionados = alternar_codigos(nuevos, codigos_actualizar, limite, turno % 2 == 0)
     return {
         "total_informado_api": respuesta.get("Cantidad"),

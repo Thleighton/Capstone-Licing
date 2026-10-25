@@ -12,6 +12,9 @@ from app.models import (  # noqa: F401
     licitacion_item,
     licitacion_documento,
     ejecucion_ingesta,
+    compra_agil,
+    compra_agil_item,
+    compra_agil_sincronizacion,
 )
 
 config = context.config

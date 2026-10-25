@@ -28,11 +28,21 @@ class EjecucionIngesta(Base):
             "limite_detalles BETWEEN 1 AND 20",
             name="ck_ejecucion_ingesta_limite",
         ),
+        CheckConstraint(
+            "fuente IN ('licitaciones', 'compra_agil')",
+            name="ck_ejecucion_ingesta_fuente",
+        ),
     )
 
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
+    )
+
+    fuente: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        server_default=text("'licitaciones'"),
     )
 
     inicio: Mapped[datetime] = mapped_column(

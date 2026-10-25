@@ -171,16 +171,28 @@ El planificador llama a `/api/cron/ingesta`, que ejecuta el mismo lote que el bo
 
 | Respuesta | Significado |
 |---|---|
-| 200 | Lote ejecutado. Con `omitida: true`, otra ingesta seguía en curso y este turno no descargó nada |
+| 200 | Lote ejecutado. Con `omitida: true`, otra ingesta seguía en curso y este turno no descargó nada. Con `pendiente: true` y `tiempo_turno_agotado`, se acabó el plazo del turno y el siguiente continúa |
 | 401 | Falta la cabecera o el secreto no coincide |
 | 503 | Falta `CRON_SECRET` en el despliegue, o la base no está disponible |
 | 502 | Mercado Público falló o devolvió una respuesta inválida |
 
-cron-job.org corta la conexión a los 30 segundos y desactiva el cronjob después de más de 25 fallos seguidos. Un lote de `limite=1` consulta el listado de activas, espera `MP_PAUSA_DETALLES_SEGUNDOS` y descarga un detalle. Normalmente cabe en ese tiempo, por eso no conviene subir `limite`. Si Mercado Público responde lento, cron-job.org registra un timeout. Según la documentación de Vercel, la cancelación por desconexión del cliente solo existe en el runtime de Node.js, así que la función Python debería terminar el lote dentro de sus 60 segundos. Compruébalo en **Actividad reciente** o en la tabla `ejecucion_ingesta`.
+cron-job.org corta la conexión a los 30 segundos, contando el arranque de la función, y desactiva el cronjob después de más de 25 fallos seguidos. Por eso `/api/cron/ingesta` tiene un solo plazo para sus tareas en paralelo: `CRON_PLAZO_RESPUESTA_SEGUNDOS`, de 22 s por defecto. Lo que no termina a tiempo se cancela: lo ya confirmado se conserva, el lote queda `interrumpida` en el historial y el siguiente turno lo continúa. No conviene subir `limite`.
+
+`vercel.json` ejecuta las funciones en `gru1` (São Paulo), la región de Supabase (`sa-east-1`) y la más cercana a Mercado Público. En la región predeterminada `iad1` (Washington), cada consulta a la base cruzaba el continente y el lote de licitaciones tardaba de 21 a 27 s. El plan Hobby admite una sola región. [Regiones de funciones](https://vercel.com/docs/functions/configuring-functions/region).
 
 Cada 5 minutos son 288 ejecuciones diarias. Cada una consulta el listado de activas y, como máximo, `limite` detalles. Revisa que la cuota diaria de tu ticket de Mercado Público y los límites de funciones de tu plan Vercel lo permitan.
 
-La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y su preselección (8 s) terminan antes del plazo de 30 segundos de cron-job.org. Se desactiva con `COMPRAS_AGILES_AUTOMATICAS=false`. Para programarlo aparte, crea otro cronjob con la URL `https://TU-DOMINIO/api/cron/compras-agiles` y la misma cabecera; si ambos coinciden, uno responde `omitida: true`. Aplica la migración de Compra Ágil antes de desplegar esta versión. Detalles en [DATOS_NORMALIZADOS.md](DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
+La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y su preselección (8 s) también quedan sujetos al plazo del turno.
+
+Se recomienda separar las tres tareas en cronjobs propios. Así cada una tiene sus 30 segundos y su propia función, y no compiten entre sí. Configura `COMPRAS_AGILES_AUTOMATICAS=false` y `DOCUMENTOS_AUTOMATICOS=false` en Vercel, y crea en cron-job.org tres cronjobs con POST, la misma cabecera y minutos escalonados en **Personalizado**:
+
+| Cronjob | URL | Minutos |
+|---|---|---|
+| Licitaciones | `https://TU-DOMINIO/api/cron/ingesta?limite=1` | 0, 5, 10, … |
+| Compra Ágil | `https://TU-DOMINIO/api/cron/compras-agiles?limite=20` | 2, 7, 12, … |
+| Documentos | `https://TU-DOMINIO/api/cron/documentos` | 4, 9, 14, … |
+
+El de documentos solo trabaja con `MP_DESCARGA_PORTAL_HABILITADA=true`. Se desactiva con `COMPRAS_AGILES_AUTOMATICAS=false`. Para programarlo aparte, crea otro cronjob con la URL `https://TU-DOMINIO/api/cron/compras-agiles` y la misma cabecera; si ambos coinciden, uno responde `omitida: true`. Aplica la migración de Compra Ágil antes de desplegar esta versión. Detalles en [DATOS_NORMALIZADOS.md](DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
 
 ## Papel de Docker
 

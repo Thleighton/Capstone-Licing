@@ -1,6 +1,9 @@
+import asyncio
+import time
+
 import pytest
 
-from app.api import ingesta
+from app.api import cron, ingesta
 from app.config import settings
 from app.database import get_db
 from app.main import app
@@ -11,6 +14,12 @@ RUTA = "/api/cron/ingesta"
 
 
 class DbFalsa:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
     def rollback(self):
         pass
 
@@ -70,3 +79,41 @@ def test_omite_turno_si_hay_ingesta_en_curso(client, lotes, monkeypatch):
     r = client.post(RUTA, headers=autorizado())
     assert r.status_code == 200
     assert r.json() == {"omitida": True, "motivo": "Ya existe una ejecución de ingesta en curso."}
+
+
+def lento(cancelado):
+    """Tarea que no termina a tiempo y registra si fue cancelada."""
+    async def ejecutar(*_, **__):
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            cancelado.append(True)
+            raise
+    return ejecutar
+
+
+def test_responde_dentro_del_plazo_y_cancela_el_lote(client, lotes, monkeypatch):
+    monkeypatch.setattr(settings, "cron_plazo_respuesta_segundos", 0.2)
+    cancelado = []
+    monkeypatch.setattr(ingesta, "ejecutar_ingesta_lote", lento(cancelado))
+    inicio = time.monotonic()
+    r = client.post(RUTA, headers=autorizado())
+    assert time.monotonic() - inicio < 2
+    assert r.status_code == 200
+    assert r.json() == {"pendiente": True, "motivo": "tiempo_turno_agotado"}
+    assert cancelado == [True]
+
+
+def test_cancela_compras_agiles_que_exceden_el_plazo(client, lotes, monkeypatch):
+    monkeypatch.setattr(settings, "cron_plazo_respuesta_segundos", 0.2)
+    monkeypatch.setattr(settings, "compras_agiles_automaticas", True)
+    monkeypatch.setattr(cron, "SessionLocal", DbFalsa)
+    cancelado = []
+    monkeypatch.setattr(cron, "correr_lote_compras_agiles", lento(cancelado))
+    r = client.post(RUTA, headers=autorizado())
+    assert r.status_code == 200
+    assert r.json() == {
+        "procesados": 1, "errores": [],
+        "compras_agiles": {"pendiente": True, "motivo": "tiempo_turno_agotado"},
+    }
+    assert cancelado == [True]

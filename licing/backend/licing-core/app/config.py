@@ -31,6 +31,9 @@ class Settings(BaseSettings):
 
     # Secreto del planificador externo. Vacío desactiva /api/cron/ingesta.
     cron_secret: str = ""
+    # cron-job.org corta a los 30 s, contando el arranque de la función: /api/cron/ingesta
+    # responde antes y cancela lo que no alcanzó a terminar; el siguiente turno lo continúa.
+    cron_plazo_respuesta_segundos: float = Field(default=22, gt=0, le=28)
 
     filtradas_url: str = "https://gzhofrcnefoxqvywzgei.supabase.co/functions/v1/licing-filtradas"
     documentos_automaticos: bool = True

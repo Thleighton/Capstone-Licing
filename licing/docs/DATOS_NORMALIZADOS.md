@@ -214,14 +214,24 @@ ingesta de licitaciones si ambas APIs comparten la cuota.
 **Preselección.** Las Compras Ágiles pasan por el mismo motor (`reglas-hotel-7`) y los
 mismos tres pilares que las licitaciones: vigencia, lugar de prestación en la RM y
 alojamiento, salones o alimentación. No tienen bases, así que la cobertura es
-`sin_bases`. La dirección de entrega y la región del comprador siguen siendo solo pistas:
-si el lugar del servicio no está en el texto, la compra queda en `revision_manual`, no se
-descarta. Las evaluaciones se guardan en LicitacionesFiltradas con
-`oportunidad.modalidad='compra_agil'` y los productos como ítems (`correlativo` = posición).
+`sin_bases`. Como su ficha es toda la información y se entrega, por lo general, donde está
+el comprador, las reglas `ca-1` agregan la región del comprador al pilar de ubicación
+cuando el texto no ubica el servicio:
 
-Después de cada lote, Core evalúa hasta 40 compras abiertas sin evaluación vigente, en
+- Comprador fuera de la RM y sin mención de la RM en el texto: no cumple, y la compra se
+  descarta con ese motivo.
+- Comprador en la RM y sin otro lugar en el texto: cumple, y decide el servicio solicitado.
+- Si el texto ubica el servicio o lo menciona de forma ambigua, decide el motor común.
+
+En las licitaciones la región del comprador sigue sin probar el lugar del servicio. Las
+evaluaciones se guardan en LicitacionesFiltradas con `oportunidad.modalidad='compra_agil'`,
+`version_motor` `reglas-hotel-7+ca-1` y los productos como ítems (`correlativo` = posición).
+
+Después de cada lote, Core evalúa hasta 60 compras abiertas sin evaluación vigente, en
 llamadas de 20, durante 8 s como máximo. `compra_agil.preseleccion` guarda la firma, la
-versión del motor y del catálogo, y la propuesta automática. Un RAW nuevo la borra; una
+versión del motor, de las reglas de Compra Ágil y del catálogo, y la propuesta automática.
+Cambiar `VERSION_REGLAS` reevalúa solo las Compras Ágiles; las licitaciones y sus
+revisiones manuales no cambian. Un RAW nuevo la borra; una
 versión nueva del motor o del catálogo la deja pendiente. Si filtradas no responde, o si
 el perfil del hotel aún no se inicializó desde una sesión, las compras siguen pendientes
 y el lote siguiente reintenta. La sincronización con filtradas retira solo Compras Ágiles

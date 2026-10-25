@@ -4,6 +4,7 @@ Las evaluaciones viven en LicitacionesFiltradas con modalidad 'compra_agil'. com
 recuerda qué firma y versión del motor se guardaron, para reintentar lo pendiente en cada lote.
 """
 import asyncio
+import hashlib
 import json
 from datetime import datetime, timezone
 
@@ -16,21 +17,54 @@ from ..models.compra_agil_item import CompraAgilItem
 from ..models.raw import RawMercadoPublico
 from . import filtradas
 from .enlaces import ficha_compra_agil
-from .preseleccion import CHILE, VERSION_MOTOR, cargar_catalogo, evaluar_preseleccion
+from .preseleccion import CHILE, VERSION_MOTOR, cargar_catalogo, clasificar_pilares, evaluar_preseleccion
 
 MODALIDAD = "compra_agil"
+# Reglas propias sobre el motor común: cambiarlas reevalúa solo las Compras Ágiles,
+# sin tocar las evaluaciones ni las revisiones manuales de las licitaciones.
+VERSION_REGLAS = "ca-1"
+REGION_METROPOLITANA = 13
 # guardar admite 20 entradas por llamada.
 TAMANO_GUARDADO = 20
-LIMITE_POR_LOTE = 40
+LIMITE_POR_LOTE = 60
 COLUMNAS = (
     "id", "codigo_externo", "raw_id", "nombre", "descripcion", "estado", "fecha_publicacion", "fecha_cierre",
-    "moneda", "nombre_organismo", "nombre_unidad", "region_comprador", "direccion_entrega",
+    "moneda", "nombre_organismo", "nombre_unidad", "codigo_region", "region_comprador", "direccion_entrega",
     "fechas_fuente", "condiciones_fuente", "normalizacion_version",
 )
 
 
 def version_preseleccion() -> str:
-    return f"{VERSION_MOTOR}|{cargar_catalogo()['version']}"
+    return f"{VERSION_MOTOR}|{VERSION_REGLAS}|{cargar_catalogo()['version']}"
+
+
+def evaluar(datos: dict) -> dict:
+    """Motor común más la región del comprador.
+
+    Una Compra Ágil no tiene bases: su ficha es toda la información y se entrega, por lo
+    general, donde está el comprador. Si el texto no ubica el servicio, la región del
+    comprador decide el pilar de ubicación; si el texto lo ubica, manda el texto.
+    """
+    resultado = evaluar_preseleccion({**datos, "documentos": []})
+    ubicacion = resultado["criterios"]["ubicacion"]
+    region = datos.get("codigo_region")
+    menciones = ubicacion.get("evidencias", []) + ubicacion.get("menciones_ambiguas", [])
+    if region not in (None, REGION_METROPOLITANA) and not any(m.get("cobertura") == "rm" for m in menciones):
+        ubicacion.update(resultado="no_cumple", regla_compra_agil="region_comprador", motivo=(
+            f"El comprador está en {datos.get('region_comprador') or 'otra región'} y la Compra Ágil "
+            "no indica que el servicio se preste en la Región Metropolitana."))
+    elif (region == REGION_METROPOLITANA and ubicacion.get("estado") == "sin_determinar"
+          and ubicacion["resultado"] == "sin_informacion"):
+        ubicacion.update(resultado="cumple", regla_compra_agil="region_comprador", motivo=(
+            "El comprador está en la Región Metropolitana y la Compra Ágil no indica otro lugar de entrega."))
+    clasificacion, motivo, pilar = clasificar_pilares(resultado["criterios"])
+    resultado.update(
+        clasificacion=clasificacion, motivo=motivo, pilar_decisivo=pilar,
+        version_motor=f"{VERSION_MOTOR}+{VERSION_REGLAS}",
+        huella_entrada=hashlib.sha256(json.dumps(
+            [resultado["huella_entrada"], VERSION_REGLAS, region], ensure_ascii=False).encode()).hexdigest(),
+    )
+    return resultado
 
 
 def _serializable(valor):
@@ -97,7 +131,7 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
     version = version_preseleccion()
     lote = []
     for datos in entradas.values():
-        lote.append({"datos": datos, "resultado": evaluar_preseleccion({**datos, "documentos": []}),
+        lote.append({"datos": datos, "resultado": evaluar(datos),
                      "hash_fuente": firma(datos), "documentos_version": []})
     semaforo = asyncio.Semaphore(2)
 

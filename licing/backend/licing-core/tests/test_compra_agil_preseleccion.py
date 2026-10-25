@@ -242,6 +242,58 @@ def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):
     assert usuario.get("/api/compras-agiles/preseleccion").status_code == 503
 
 
+def compra(**cambios):
+    datos = {"codigo_externo": "1-1-COT26", "raw_id": 1, "estado": "publicada", "codigo_estado": None,
+             "fecha_cierre": (datetime.now(CHILE) + timedelta(days=2)).isoformat(),
+             "nombre": "Servicio de coffee break", "descripcion": "Coffee break para 40 personas.",
+             "codigo_region": 13, "region_comprador": "Región Metropolitana de Santiago",
+             "items": [{"posicion_fuente": 1, "codigo_producto": "90101603", "nombre_producto": "Servicios de catering",
+                        "descripcion": "Coffee break para 40 personas"}]}
+    datos.update(cambios)
+    return datos
+
+
+def test_comprador_fuera_de_la_rm_sin_lugar_en_el_texto_se_descarta():
+    r = preseleccion.evaluar(compra(codigo_region=2, region_comprador="Región de Antofagasta"))
+    assert r["clasificacion"] == "descartada" and r["pilar_decisivo"] == "ubicacion"
+    ubicacion = r["criterios"]["ubicacion"]
+    assert ubicacion["resultado"] == "no_cumple" and ubicacion["regla_compra_agil"] == "region_comprador"
+    assert "Región de Antofagasta" in r["motivo"]
+
+
+def test_comprador_en_la_rm_sin_otro_lugar_cumple_ubicacion():
+    r = preseleccion.evaluar(compra())
+    assert r["criterios"]["ubicacion"]["resultado"] == "cumple"
+    assert r["criterios"]["ubicacion"]["regla_compra_agil"] == "region_comprador"
+    assert r["clasificacion"] == "preseleccionada"
+
+
+def test_el_lugar_del_texto_prevalece_sobre_la_region_del_comprador():
+    en_santiago = preseleccion.evaluar(compra(codigo_region=5, region_comprador="Región de Valparaíso",
+                                              descripcion="Coffee break para jornada en Santiago, 40 personas."))
+    # Mencionar la RM impide el descarte por región; el motor común decide si la mención basta.
+    assert en_santiago["clasificacion"] != "descartada"
+    assert "regla_compra_agil" not in en_santiago["criterios"]["ubicacion"]
+    # Un comprador de la RM no hace cumplir la ubicación si el texto menciona otra región.
+    fuera = preseleccion.evaluar(compra(descripcion="Coffee break para jornada en Valparaíso, 40 personas."))
+    assert fuera["clasificacion"] != "preseleccionada" and "regla_compra_agil" not in fuera["criterios"]["ubicacion"]
+
+
+def test_sin_region_conocida_se_mantiene_el_motor_comun():
+    r = preseleccion.evaluar(compra(codigo_region=None, region_comprador=None))
+    assert r["clasificacion"] == "revision_manual" and r["pilar_decisivo"] == "ubicacion"
+
+
+def test_reglas_propias_solo_reevaluan_compras_agiles():
+    from app.services.preseleccion import VERSION_MOTOR, evaluar_preseleccion
+    r = preseleccion.evaluar(compra())
+    assert r["version_motor"] == f"{VERSION_MOTOR}+{preseleccion.VERSION_REGLAS}"
+    assert preseleccion.VERSION_REGLAS in preseleccion.version_preseleccion()
+    assert r["huella_entrada"] != evaluar_preseleccion({**compra(), "documentos": []})["huella_entrada"]
+    # El motor común y su versión siguen iguales para las licitaciones.
+    assert evaluar_preseleccion({**compra(), "documentos": []})["version_motor"] == VERSION_MOTOR
+
+
 def test_rutas_de_preseleccion_requieren_sesion(client):
     assert client.get("/api/compras-agiles/preseleccion").status_code == 401
     assert client.post("/api/compras-agiles/preseleccion/evaluar").status_code == 401

@@ -12,6 +12,8 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL or "postgresql+psycopg://test:tes
 os.environ["MP_TICKET"] = "test-sin-acceso-real"
 os.environ["USUARIOS_URL"] = "https://usuarios.example.test"
 os.environ["USUARIOS_ANON_KEY"] = "anon-test"
+# El lote paralelo abre su propia sesión, fuera de la transacción de cada prueba.
+os.environ["COMPRAS_AGILES_AUTOMATICAS"] = "false"
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

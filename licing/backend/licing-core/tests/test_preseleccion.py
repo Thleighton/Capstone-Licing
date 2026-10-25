@@ -195,9 +195,22 @@ def test_no_muta_el_original_y_la_huella_cambia_con_los_datos():
     assert a["huella_entrada"] != b["huella_entrada"]
 
 
-def test_compra_agil_no_forma_parte_del_piloto():
-    with pytest.raises(ValueError, match="licitaciones normales"):
-        evaluar(codigo_externo="100-1-COT26")
+def test_compra_agil_usa_los_mismos_pilares():
+    compra = {"codigo_externo": "100-1-COT26", "raw_id": 3, "estado": "publicada", "codigo_estado": None,
+              "fecha_cierre": "2026-10-28T12:00:00-03:00", "nombre": "Servicio de coffee break",
+              "descripcion": "Coffee break para jornada en Santiago, 40 personas.",
+              "direccion_entrega": "Moneda 1234, Santiago",
+              "items": [{"posicion_fuente": 1, "codigo_producto": "90101603", "nombre_producto": "Coffee break",
+                         "descripcion": "Para 40 personas"}]}
+    r = evaluar_preseleccion(compra, ahora=AHORA)
+    assert r["clasificacion"] == "preseleccionada" and r["cobertura"] == "sin_bases"
+    assert r["criterios"]["vigencia"]["resultado"] == "cumple"
+    otra = evaluar_preseleccion({**compra, "nombre": "Compra de resmas de papel", "descripcion": "Papel tamaño carta",
+        "items": [{"posicion_fuente": 1, "codigo_producto": "14111507", "nombre_producto": "Papel para impresora"}]},
+        ahora=AHORA)
+    assert otra["clasificacion"] != "preseleccionada"
+    vencida = evaluar_preseleccion({**compra, "fecha_cierre": "2026-10-23T11:00:00-03:00"}, ahora=AHORA)
+    assert vencida["clasificacion"] == "descartada" and vencida["pilar_decisivo"] == "vigencia"
 
 
 def test_bases_aportan_lugar_y_servicio_con_pagina():

@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from .api.compras_agiles import router as compras_agiles_router
 from .api.config_publica import router as config_router
 from .api.consultas import router as consultas_router
 from .api.cron import router as cron_router
@@ -20,6 +21,7 @@ app = FastAPI(
 
 app.include_router(config_router)
 app.include_router(consultas_router)
+app.include_router(compras_agiles_router)
 app.include_router(ingesta_router, prefix="/api")
 app.include_router(cron_router)
 app.include_router(preseleccion_router)

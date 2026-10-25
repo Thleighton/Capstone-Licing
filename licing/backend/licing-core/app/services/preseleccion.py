@@ -471,9 +471,8 @@ def clasificar_pilares(criterios):
 
 
 def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
+    # Licitaciones y Compras Ágiles comparten los tres pilares; la Compra Ágil no trae bases.
     datos, problemas = _entrada_segura(datos)
-    if re.search(r"-COT\d*$", str(datos.get("codigo_externo") or ""), re.I):
-        raise ValueError("Esta etapa admite solamente licitaciones normales, no Compra Ágil.")
     ahora = ahora or datetime.now(CHILE)
     if ahora.tzinfo is None:
         raise ValueError("La hora de evaluación debe indicar su zona horaria.")

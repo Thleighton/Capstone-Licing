@@ -17,7 +17,8 @@ Cambiar la versión del motor o del catálogo invalida la firma de evaluación. 
 3. Desplegar `../backend/licing-core/supabase/functions/documentos-origen/index.ts` en **Usuarios/Licitaciones**. Tiene autenticación propia: valida el secreto existente mediante el callback fijo de Core, antes de leer el cuerpo. Usa las credenciales privilegiadas internas de ese proyecto. `DOCUMENTOS_STORAGE_URL` apunta a esta función; no hay claves en el navegador.
 4. Aplicar en **LicitacionesFiltradas** las migraciones de `supabase/migrations` en orden. `001_base.sql` es un snapshot histórico para instalaciones nuevas; no repetirlo en la base existente. Desplegar allí la versión actual de `licing-filtradas`, que ya no permite operaciones documentales.
 5. Para anexos Word y Excel: aplicar `../docs/sql/documentos_storage_anexos.sql` en **Usuarios/Licitaciones** (amplía los tipos admitidos del bucket) y volver a desplegar `documentos-origen`.
-6. Publicar Core y frontend. El callback autenticador debe estar disponible en producción. Inicializar el perfil desde **Actualizar preselección**; la descarga documental es independiente y no necesita que exista ese perfil.
+6. Para Compra Ágil: aplicar `supabase/migrations/20261025090000_compra_agil.sql` antes de publicar la versión de Core que las preselecciona. Acepta `modalidad='compra_agil'` en `guardar` y hace que `sincronizar_fuente` retire solo oportunidades de la modalidad indicada (sin modalidad, `licitacion`). No cambia la función `licing-filtradas`.
+7. Publicar Core y frontend. El callback autenticador debe estar disponible en producción. Inicializar el perfil desde **Actualizar preselección**; la descarga documental es independiente y no necesita que exista ese perfil.
 
 Ambas funciones verifican su autorización de integración antes de operar. Se despliegan con `verify_jwt=false` únicamente porque realizan esa verificación propia; no son accesos anónimos. Auth y roles siguen en el proyecto original.
 

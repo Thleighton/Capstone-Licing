@@ -180,6 +180,8 @@ cron-job.org corta la conexión a los 30 segundos y desactiva el cronjob despué
 
 Cada 5 minutos son 288 ejecuciones diarias. Cada una consulta el listado de activas y, como máximo, `limite` detalles. Revisa que la cuota diaria de tu ticket de Mercado Público y los límites de funciones de tu plan Vercel lo permitan.
 
+La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y su preselección (8 s) terminan antes del plazo de 30 segundos de cron-job.org. Se desactiva con `COMPRAS_AGILES_AUTOMATICAS=false`. Para programarlo aparte, crea otro cronjob con la URL `https://TU-DOMINIO/api/cron/compras-agiles` y la misma cabecera; si ambos coinciden, uno responde `omitida: true`. Aplica la migración de Compra Ágil antes de desplegar esta versión. Detalles en [DATOS_NORMALIZADOS.md](DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
+
 ## Papel de Docker
 
 Los archivos Compose son herramientas locales opcionales. No forman parte del alojamiento en Vercel y no proporcionan una segunda base al despliegue. La aplicación publicada usa solamente el `DATABASE_URL` configurado en Vercel.

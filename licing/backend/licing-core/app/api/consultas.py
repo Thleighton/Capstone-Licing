@@ -242,7 +242,7 @@ def listar_ingestas(response: Response, limite: int = Query(default=5, ge=1, le=
     filas = db.scalars(select(EjecucionIngesta).order_by(EjecucionIngesta.id.desc()).limit(limite)).all()
     response.headers["Cache-Control"] = "no-store"
     return [{
-        "id": f.id, "inicio": f.inicio, "fin": f.fin, "estado": f.estado,
+        "id": f.id, "fuente": f.fuente, "inicio": f.inicio, "fin": f.fin, "estado": f.estado,
         "seleccionados": f.seleccionados, "descargados": f.descargados, "reutilizados": f.reutilizados,
         "procesados": f.procesados, "n_errores": len(f.errores or []),
         "detenido_por_error_api": f.detenido_por_error_api,

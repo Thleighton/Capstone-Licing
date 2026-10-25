@@ -53,5 +53,17 @@ class Settings(BaseSettings):
         le=300,
     )
 
+    # API Compra Ágil v2: mismo ticket, enviado como cabecera.
+    mp_compra_agil_url: str = "https://api2.mercadopublico.cl"
+    # Ejecuta también un lote de Compra Ágil, en paralelo, en /api/cron/ingesta.
+    compras_agiles_automaticas: bool = True
+    # Códigos de región 1-16 separados por coma; vacío consulta todo el país.
+    mp_compra_agil_regiones: str = Field(default="", pattern=r"^\s*(\d{1,2}\s*(,\s*\d{1,2}\s*)*)?$")
+    # Separación entre solicitudes; la API responde 429 sobre 4 por segundo.
+    mp_compra_agil_pausa_segundos: float = Field(default=0.35, ge=0.25, le=60)
+    mp_compra_agil_paginas_por_lote: int = Field(default=5, ge=1, le=50)
+    # /api/cron/ingesta espera este lote y su preselección (8 s); cron-job.org corta a los 30 s.
+    mp_compra_agil_lote_timeout_segundos: float = Field(default=16, gt=0, le=50)
+
 
 settings = Settings()

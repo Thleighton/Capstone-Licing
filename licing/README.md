@@ -114,7 +114,7 @@ Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem
 - Se pueden registrar versiones de documentos, texto y hechos extraídos mediante la API. No se almacenan PDF ni se ejecuta extracción o IA automáticamente.
 - La ingesta de Compra Ágil usa la API v2 (`api2.mercadopublico.cl`) con el mismo `MP_TICKET`. Cada lote las preselecciona con el mismo motor que las licitaciones y guarda el resultado en LicitacionesFiltradas. Datos, límites y orden de despliegue en [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
 - La página **Compras Ágiles** muestra la preselección para el hotel y todas las guardadas, con búsqueda, filtros y una ficha con los tres pilares. El dashboard incluye un apartado con sus indicadores y las próximas en cerrar. La corrección manual de su clasificación desde la aplicación todavía no está disponible.
-- La preselección aplica los tres pilares de vigencia, ubicación del servicio y servicio solicitado. Puede habilitarse el [clasificador semántico de hotelería](docs/FILTRO_SEMANTICO.md), con inferencia local o mediante un worker CPU privado.
+- Los filtros comerciales o semánticos todavía no forman parte del Core actual.
 - El lote de Core busca códigos nuevos. Actualizar periódicamente detalles de licitaciones ya guardadas queda pendiente.
 
 Los datos anteriores de Supabase Datos no se migran automáticamente: el esquema de Core es distinto. El destino actual es el proyecto único Usuarios/Licitaciones; las tablas creadas manualmente deben verificarse antes de registrarlas en Alembic.

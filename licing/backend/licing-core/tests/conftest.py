@@ -16,10 +16,6 @@ os.environ["USUARIOS_ANON_KEY"] = "anon-test"
 os.environ["COMPRAS_AGILES_AUTOMATICAS"] = "false"
 # Nunca la función de producción, aunque un .env local traiga CRON_SECRET: .invalid no resuelve.
 os.environ["FILTRADAS_URL"] = "https://filtradas.invalid/functions/v1/licing-filtradas"
-os.environ["SEMANTICA_MODO"] = "desactivada"
-os.environ["SEMANTICA_URL"] = ""
-os.environ["SEMANTICA_TOKEN"] = ""
-os.environ["SEMANTICA_MODELO_DIR"] = ""
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

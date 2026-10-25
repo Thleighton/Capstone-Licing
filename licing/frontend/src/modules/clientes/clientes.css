@@ -1,0 +1,32 @@
+.clientes-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.important-clients-intro > div:first-child { flex: 1 1 480px; min-width: 0; }
+.clientes-toolbar-actions .primary { display: inline-flex; align-items: center; gap: 8px; }
+.clientes-toolbar-actions .primary svg { width: 18px; height: 18px; }
+.cliente-demo-dialog { width: min(620px, 94vw); max-height: 92dvh; overflow-y: auto; }
+.cliente-demo-dialog .dlg-head { align-items: flex-start; }
+.cliente-demo-dialog .dlg-head h2 { margin: 8px 0 0; font-size: 21px; }
+.cliente-demo-dialog .dlg-head button { flex: none; }
+.cliente-demo-form .dlg-body { max-height: none; }
+.cliente-demo-help { margin: 0 0 20px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.cliente-demo-services { margin-top: 20px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+.cliente-demo-services legend { color: var(--heading); font-size: 13px; }
+.cliente-demo-checks { display: flex; flex-wrap: wrap; gap: 14px 20px; }
+.cliente-demo-checks label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.cliente-demo-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin: 0; padding: 16px 20px; border-top: 1px solid var(--line); }
+.clientes-demo-status { padding: 12px 16px; background: var(--ok-bg); color: var(--ok); border-radius: 10px; font-size: 13px; }
+.clientes-demo-section { margin-top: 26px; }
+.clientes-demo-section > .section-title { margin-bottom: 6px; }
+.clientes-demo-section > .sub { margin: 0 0 16px; }
+.cliente-demo-card { border-top: 3px solid var(--accent); }
+.cliente-demo-card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.cliente-demo-card-top button { font-size: 12px; }
+.cliente-demo-card h3 { margin: 16px 0 12px; color: var(--heading); font-size: 18px; overflow-wrap: anywhere; }
+.cliente-demo-contacto { margin: 0; }
+.cliente-demo-contacto > div { margin-top: 10px; }
+.cliente-demo-contacto dt { color: var(--muted); font-size: 12px; }
+.cliente-demo-contacto dd { margin: 3px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.cliente-demo-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+@media (max-width: 520px) {
+  .cliente-demo-actions > button { flex: 1 1 130px; }
+  .clientes-toolbar-actions { width: 100%; justify-content: space-between; }
+}

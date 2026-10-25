@@ -41,7 +41,7 @@ export default function AsistenteIA() {
         )) : <p className="empty">Sin ejemplos para esta prioridad.</p>}
       </div>
       <p className="sub">Datos ficticios · sin IA real. Confirmar disponibilidad con el equipo.</p>
-      <a href="#analisis">Revisar bases y documentos →</a>
+      {moduloHabilitado("analisis") && <a href="#analisis">Revisar bases y documentos →</a>}
     </section>
   );
 }

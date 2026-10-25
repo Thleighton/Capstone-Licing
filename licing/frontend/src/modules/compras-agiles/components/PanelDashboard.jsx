@@ -14,8 +14,8 @@ const PESTAÑAS = [
 ];
 const VISIBLES = 6;
 
-// Apartado de Compras Ágiles del dashboard: indicadores y las próximas en cerrar por clasificación.
-export default function PanelComprasAgiles({ version }) {
+// Apartado de Compras Ágiles: oportunidades y revisiones ordenadas por cierre.
+export default function PanelComprasAgiles({ version, integrado = false }) {
   const { resumen, error } = useResumenComprasAgiles(version);
   const [pestaña, setPestaña] = useState("preseleccionada");
   const [lista, setLista] = useState({ filas: [], total: 0, cargando: true, error: "" });
@@ -37,19 +37,15 @@ export default function PanelComprasAgiles({ version }) {
     setPestaña(destino);
     document.getElementById(`${id}-${destino}`)?.focus();
   }
-  return <section className="card panel dashboard-panel panel-violet ca-panel" aria-labelledby={`${id}-titulo`}>
-    <div className="section-title dashboard-panel-heading">
+  const Contenedor = integrado ? "div" : "section";
+  return <Contenedor className={integrado ? "ca-panel-content" : "card panel dashboard-panel panel-violet ca-panel"}
+    aria-labelledby={integrado ? undefined : `${id}-titulo`}>
+    {!integrado && <div className="section-title dashboard-panel-heading">
       <div className="panel-title"><span className="panel-icon tone-violet"><Icon name="bolt" /></span>
         <div><h2 id={`${id}-titulo`}>Compras Ágiles</h2><p className="sub">Cotizaciones rápidas: suelen cerrar en pocos días.</p></div></div>
       <a href="#compras-agiles">Ver todas →</a>
-    </div>
+    </div>}
     {error && <p className="msg err" role="alert">No se pudo cargar el resumen de Compras Ágiles. {error}</p>}
-    <dl className="ca-mini">
-      <div><dt>Abiertas</dt><dd>{resumen?.abiertas ?? "–"}</dd></div>
-      <div><dt>Incorporadas hoy</dt><dd>{resumen?.nuevas ?? "–"}</dd></div>
-      <div data-tono="amber"><dt>Cierran en 24 h</dt><dd>{resumen?.cierran_pronto ?? "–"}</dd></div>
-      <div data-tono="green"><dt>Posibles oportunidades</dt><dd>{pre?.preseleccionada ?? "–"}</dd></div>
-    </dl>
     {resumen && !resumen.carga_inicial_completa && <p className="ca-aviso" role="status"><Icon name="clock" />Carga inicial en curso: las Compras Ágiles se incorporan de a poco en cada turno.</p>}
     <div className="ca-tabs ca-tabs-panel" role="tablist" aria-label="Clasificación de Compras Ágiles">{PESTAÑAS.map((p, i) => <button
       key={p.estado} id={`${id}-${p.estado}`} type="button" role="tab" aria-selected={pestaña === p.estado}
@@ -77,5 +73,5 @@ export default function PanelComprasAgiles({ version }) {
         })}</div>}
       {lista.total > VISIBLES && <p className="sub ca-mas">Se muestran las {VISIBLES} que cierran antes de {lista.total}. <a href="#compras-agiles">Ver todas</a></p>}
     </div>
-  </section>;
+  </Contenedor>;
 }

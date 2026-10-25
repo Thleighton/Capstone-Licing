@@ -1,5 +1,4 @@
-// Sugerencias SIMULADAS de palabras de interés (reglas fijas).
-// En el producto final esto lo haría el motor IA/NLP del backend (POST /api/analisis/...).
+// Sugerencias de palabras de interés con reglas fijas.
 import { normalizar } from "../../core/ui/format";
 
 export const splitInterests = s => String(s || "").split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);

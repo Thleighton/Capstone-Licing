@@ -17,16 +17,15 @@ const PASOS = [
     <h3>La encargada define qué puede ofrecer el hotel</h3><p>Registra los salones del único edificio, capacidad por montaje, equipos, servicios y condiciones obligatorias o negociables.</p>
     <div className="help-example"><strong>Ejemplo ficticio · Salón A</strong><ul><li>Hasta 100 personas en montaje auditorio.</li><li>Proyector, audio y servicio de coffee break.</li><li>Disponibilidad: consultar la agenda del hotel por día y horario.</li></ul></div>
     <p>También puede escribir palabras y frases de interés o pedir sugerencias según la ficha: por ejemplo, “alojamiento” puede dar lugar a “hospedaje” y “pernoctación”. La encargada revisa, añade y edita los términos antes de utilizarlos.</p>
-    <p className="sub">En el producto final se guardaría esta ficha en Licing y el LLM ayudaría a proponer términos. La disponibilidad requeriría una agenda actualizada por el equipo o una integración con el sistema de reservas.</p>
   </> },
   { tab: "2 · Solicitud", body: <>
-    <h3>Mercado Público aporta lo que pide el cliente</h3><p>La licitación y sus bases aportarían los requisitos. El futuro LLM ayudaría a identificar y resumir los datos, dejando por confirmar lo que no esté claro.</p>
+    <h3>Mercado Público aporta lo que pide el cliente</h3><p>La licitación o Compra Ágil y sus bases aportan los requisitos.</p>
     <div className="help-example"><strong>Solicitud ficticia · Seminario</strong><ul><li>80 asistentes en montaje auditorio.</li><li>5 de octubre, de 14:00 a 18:00.</li><li>Proyector y coffee break; tiempo de montaje por confirmar.</li></ul></div>
     <p className="sub">Son datos de la solicitud, distintos del catálogo del hotel. El equipo podría revisar la ficha oficial y las bases para validarlos.</p>
   </> },
   { tab: "3 · Recomendación", body: <>
-    <h3>El LLM recomendaría qué oportunidades revisar</h3><p>Licing contrastaría requisitos, capacidad, equipamiento, historial de clientes y disponibilidad. El LLM explicaría el interés de la oportunidad en el dashboard.</p>
-    <div className="help-example"><span className="priority medium">● Prioridad media · ejemplo</span><p>“El Salón A tiene capacidad para 80 personas y ofrece los servicios solicitados. Falta confirmar la agenda y el tiempo de montaje.”</p></div>
+    <h3>Licing preselecciona qué oportunidades revisar</h3><p>La preselección revisa tres pilares: que siga abierta, que el servicio se preste en la Región Metropolitana y que pida alojamiento, salones o alimentación. El dashboard muestra el motivo y la evidencia de cada pilar.</p>
+    <div className="help-example"><span className="priority medium">● Posible oportunidad · ejemplo</span><p>“Cumple los tres pilares: abierta y con plazo, servicio en la RM y salón con coffee break.”</p></div>
     <p>La encargada verifica las bases y la agenda antes de decidir. Una recomendación no confirma una reserva ni garantiza una adjudicación.</p>
   </> },
 ];
@@ -51,7 +50,7 @@ export function GuiaFormulario() {
       <div className="help-header"><div><span className="hero-kicker">GUÍA DEL FORMULARIO</span><h2 id="intakeHelpTitle">De los datos del hotel a una recomendación</h2></div>
         <button type="button" autoFocus onClick={cerrar}>Cerrar</button></div>
       <div className="help-content">
-        <p id="intakeHelpIntro">Este formulario recoge lo que la encargada de eventos sabe del hotel. Así funcionaría en el producto final:</p>
+        <p id="intakeHelpIntro">Este formulario recoge lo que la encargada de eventos sabe del hotel. Así se usa:</p>
         <div className="help-tabs" role="tablist" aria-label="Pasos del funcionamiento">
           {PASOS.map((p, i) => (
             <button key={i} type="button" id={"helpTab" + i} role="tab" aria-controls={"helpStep" + i} aria-selected={i === paso}
@@ -61,7 +60,7 @@ export function GuiaFormulario() {
         {PASOS.map((p, i) => (
           <section key={i} id={"helpStep" + i} className="help-step" role="tabpanel" aria-labelledby={"helpTab" + i} tabIndex={0} hidden={i !== paso}>{p.body}</section>
         ))}
-        <div className="notice"><strong>Estado actual:</strong> el formulario genera un resumen sin guardar datos. El LLM y la conexión con la agenda aún no están implementados. Todos los ejemplos de esta guía son ficticios.</div>
+        <div className="notice"><strong>Estado actual:</strong> el formulario genera un resumen sin guardar datos. Todos los ejemplos de esta guía son ficticios.</div>
         <div className="help-controls">
           <button type="button" disabled={paso === 0} onClick={() => ir(paso - 1, true)}>Anterior</button>
           <span className="sub" role="status">Paso {paso + 1} de 3</span>

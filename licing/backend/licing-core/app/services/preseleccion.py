@@ -526,6 +526,5 @@ def evaluar_preseleccion(datos: dict, *, ahora: datetime | None = None) -> dict:
         "huella_entrada": hashlib.sha256(json.dumps(entrada, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
         "orden_pilares": list(PILARES), "pilar_decisivo": pilar_decisivo,
         "criterios": criterios, "documentacion": documentacion,
-        "semantica": {"estado": "pendiente", "motivo": "Esta etapa aplica reglas; no ejecuta embeddings ni LLM."},
-        "modo": "preseleccion", "decision_postular": False,
+        "modo": "preseleccion",
     }

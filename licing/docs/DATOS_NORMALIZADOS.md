@@ -227,8 +227,10 @@ En las licitaciones la región del comprador sigue sin probar el lugar del servi
 evaluaciones se guardan en LicitacionesFiltradas con `oportunidad.modalidad='compra_agil'`,
 `version_motor` `reglas-hotel-7+ca-1` y los productos como ítems (`correlativo` = posición).
 
-Después de cada lote, Core evalúa hasta 60 compras abiertas sin evaluación vigente, en
-llamadas de 20, durante 8 s como máximo. `compra_agil.preseleccion` guarda la firma, la
+A la vez que cada lote de ingesta, con su propia sesión, Core evalúa hasta 100 compras
+abiertas sin evaluación vigente, en llamadas de 20, durante 15 s como máximo, y confirma el
+avance de cada grupo: si el plazo del cron corta el turno, lo ya guardado no se repite. Lo
+que guarde el lote del mismo turno se evalúa en el siguiente. `compra_agil.preseleccion` guarda la firma, la
 versión del motor, de las reglas de Compra Ágil y del catálogo, y la propuesta automática.
 Cambiar `VERSION_REGLAS` reevalúa solo las Compras Ágiles; las licitaciones y sus
 revisiones manuales no cambian. Un RAW nuevo la borra; una

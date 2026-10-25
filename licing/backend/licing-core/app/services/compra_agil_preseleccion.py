@@ -7,6 +7,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
@@ -98,10 +99,6 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
     for datos in entradas.values():
         lote.append({"datos": datos, "resultado": evaluar_preseleccion({**datos, "documentos": []}),
                      "hash_fuente": firma(datos), "documentos_version": []})
-    # Solo retira de filtradas las Compras Ágiles que Core ya no conserva.
-    codigos = list(db.scalars(select(CompraAgil.codigo_externo)))
-    await filtradas.operar("sincronizar_fuente", {"codigos": codigos, "modalidad": MODALIDAD,
-                                                  "observado_en": datetime.now(timezone.utc).isoformat()})
     semaforo = asyncio.Semaphore(2)
 
     async def guardar(parte):
@@ -131,4 +128,21 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
     db.commit()
     if errores and not evaluadas:
         raise errores[0]
-    return {"evaluadas": evaluadas, "pendientes": contar_pendientes(db), "sin_guardar": len(lote) - len(evaluadas)}
+    return {"evaluadas": evaluadas, "pendientes": contar_pendientes(db), "sin_guardar": len(lote) - len(evaluadas),
+            "sincronizada": bool(evaluadas) and await _sincronizar(db)}
+
+
+async def _sincronizar(db: Session) -> bool:
+    """Retira de filtradas las Compras Ágiles que Core ya no conserva.
+
+    Solo se llama después de que filtradas aceptó una Compra Ágil. Una filtradas sin la migración
+    de Compra Ágil rechaza los códigos COT al guardar e ignoraría la modalidad al sincronizar,
+    retirando también todas las licitaciones y sus revisiones manuales.
+    """
+    codigos = list(db.scalars(select(CompraAgil.codigo_externo)))
+    try:
+        await filtradas.operar("sincronizar_fuente", {"codigos": codigos, "modalidad": MODALIDAD,
+                                                      "observado_en": datetime.now(timezone.utc).isoformat()})
+    except (filtradas.FiltradasNoDisponible, HTTPException):
+        return False  # Las evaluaciones ya quedaron guardadas; el próximo lote vuelve a sincronizar.
+    return True

@@ -225,7 +225,10 @@ versión del motor y del catálogo, y la propuesta automática. Un RAW nuevo la 
 versión nueva del motor o del catálogo la deja pendiente. Si filtradas no responde, o si
 el perfil del hotel aún no se inicializó desde una sesión, las compras siguen pendientes
 y el lote siguiente reintenta. La sincronización con filtradas retira solo Compras Ágiles
-que Core ya no conserva. Las licitaciones sincronizan solo las suyas.
+que Core ya no conserva, y se ejecuta únicamente después de que filtradas aceptó una: una
+filtradas sin la migración `20261025090000_compra_agil.sql` rechaza los códigos COT al
+guardar e ignoraría la modalidad, retirando también las licitaciones y sus revisiones.
+Las licitaciones sincronizan solo las suyas.
 
 | Ruta | Uso |
 |---|---|

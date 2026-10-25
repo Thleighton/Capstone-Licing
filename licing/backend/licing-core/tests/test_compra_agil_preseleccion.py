@@ -86,8 +86,9 @@ def test_evalua_sincroniza_su_modalidad_y_registra_la_version(db, monkeypatch):
     monkeypatch.setattr(filtradas, "operar", operar)
     r = asyncio.run(preseleccion.evaluar_compras_agiles(db, actor=USUARIO_ID))
     llamadas = [c.args for c in operar.call_args_list]
-    assert llamadas[0][0] == "sincronizar_fuente" and llamadas[0][1]["modalidad"] == "compra_agil"
-    assert set(llamadas[0][1]["codigos"]) >= {c.codigo_externo for c in compras}
+    # Sincroniza al final, una vez que filtradas aceptó Compras Ágiles.
+    assert llamadas[-1][0] == "sincronizar_fuente" and llamadas[-1][1]["modalidad"] == "compra_agil"
+    assert set(llamadas[-1][1]["codigos"]) >= {c.codigo_externo for c in compras} and r["sincronizada"] is True
     guardados = [datos for operacion, datos in llamadas if operacion == "guardar"]
     assert [len(g["lote"]) for g in guardados] == [20, 5] and guardados[0]["actor"] == USUARIO_ID
     primera = guardados[0]["lote"][0]
@@ -110,14 +111,50 @@ def test_ajena_queda_evaluada_pero_no_preseleccionada(db, monkeypatch):
 
 def test_omitida_por_filtradas_o_sin_conexion_sigue_pendiente(db, monkeypatch):
     compra = guardar(db, "9004-1-COT26")
-    monkeypatch.setattr(filtradas, "operar", filtradas_falsa(evaluadas=[]))
+    operar = filtradas_falsa(evaluadas=[])
+    monkeypatch.setattr(filtradas, "operar", operar)
     r = asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
     assert r["evaluadas"] == [] and r["sin_guardar"] == 1 and compra.id in preseleccion.pendientes(db)
+    assert [c.args[0] for c in operar.call_args_list] == ["guardar"] and r["sincronizada"] is False
     monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=filtradas.FiltradasNoDisponible("sin conexión")))
     with pytest.raises(filtradas.FiltradasNoDisponible):
         asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
     db.expire_all()
     assert db.get(CompraAgil, compra.id).preseleccion is None
+
+
+def test_filtradas_sin_migrar_nunca_recibe_la_sincronizacion(db, monkeypatch):
+    # La lf_operar anterior rechaza los COT al guardar e ignora la modalidad al sincronizar:
+    # sincronizar con ella retiraría todas las licitaciones y sus revisiones.
+    compra = guardar(db, "9009-1-COT26")
+    llamadas = []
+
+    async def operar(operacion, datos=None):
+        llamadas.append(operacion)
+        if operacion == "guardar":
+            raise HTTPException(409, "Los datos cambiaron o la operación requiere revisión.")
+        return {}
+    monkeypatch.setattr(filtradas, "operar", operar)
+    with pytest.raises(HTTPException):
+        asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    assert llamadas == ["guardar"]
+    db.expire_all()
+    assert db.get(CompraAgil, compra.id).preseleccion is None
+
+
+def test_falla_al_sincronizar_conserva_lo_guardado(db, monkeypatch):
+    compra = guardar(db, "9010-1-COT26")
+    base = filtradas_falsa()
+
+    async def operar(operacion, datos=None):
+        if operacion == "sincronizar_fuente":
+            raise filtradas.FiltradasNoDisponible("sin conexión")
+        return await base(operacion, datos)
+    monkeypatch.setattr(filtradas, "operar", operar)
+    r = asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    assert len(r["evaluadas"]) == 1 and r["sincronizada"] is False
+    db.expire_all()
+    assert db.get(CompraAgil, compra.id).preseleccion is not None
 
 
 def test_raw_nuevo_o_reglas_nuevas_vuelven_a_pendiente(db, monkeypatch):
@@ -192,7 +229,8 @@ def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):
     monkeypatch.setattr(filtradas, "operar", operar)
     r = usuario.post("/api/compras-agiles/preseleccion/evaluar", json={"ids": [compra.id]})
     assert r.status_code == 200, r.text
-    assert operar.call_args.args[1]["actor"] == USUARIO_ID
+    guardado = next(c.args[1] for c in operar.call_args_list if c.args[0] == "guardar")
+    assert guardado["actor"] == USUARIO_ID
     assert usuario.post("/api/compras-agiles/preseleccion/evaluar", json={"ids": [999999999]}).status_code == 404
     db.expire_all()
     firma = db.get(CompraAgil, compra.id).preseleccion["firma"]

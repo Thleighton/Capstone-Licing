@@ -22,7 +22,7 @@ def evaluar(**cambios):
 def test_candidata_no_equivale_a_decision_de_postular():
     r = evaluar()
     assert r["clasificacion"] == "preseleccionada"
-    assert r["decision_postular"] is False and r["modo"] == "preseleccion"
+    assert r["modo"] == "preseleccion"
     assert r["criterios"]["ubicacion"]["evidencias"][0]["fuente"] == "nombre"
 
 
@@ -153,10 +153,9 @@ def test_alimentacion_y_variantes_pueden_ser_oportunidad_independiente(texto):
     assert r["clasificacion"] == "preseleccionada"
 
 
-def test_sin_palabras_clave_se_conserva_para_semantica_o_revision():
+def test_sin_palabras_clave_se_conserva_para_revision():
     r = evaluar(nombre="Contratación 2026", descripcion="Antecedentes disponibles en las bases.")
     assert r["clasificacion"] == "revision_manual"
-    assert r["semantica"]["estado"] == "pendiente"
 
 
 @pytest.mark.parametrize("cambios", [{"fecha_cierre": "2026-10-23T11:59:00"},

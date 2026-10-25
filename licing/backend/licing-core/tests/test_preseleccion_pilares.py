@@ -41,7 +41,6 @@ def test_servicios_simples_o_combinados_cumplen_los_tres_pilares(servicio):
     assert tuple(r["criterios"]) == PILARES
     assert r["orden_pilares"] == list(PILARES)
     assert all(c["resultado"] == "cumple" and c["motivo"] for c in r["criterios"].values())
-    assert r["semantica"]["estado"] == "pendiente"
 
 
 def test_lugar_pendiente_es_el_primer_motivo_antes_del_servicio_pendiente():

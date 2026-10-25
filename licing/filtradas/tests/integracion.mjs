@@ -111,5 +111,19 @@ try {
  assert.equal((await rpc('listar',{codigos:[datos.codigo_externo]})).total,0,'sin modalidad sincroniza licitaciones');
  await rpc('sincronizar_fuente',{codigos:[],observado_en:futuro,modalidad:'compra_agil'});
  assert.equal((await rpc('listar',{codigos:[compra.codigo_externo]})).total,0,'Compra Ágil sincroniza solo su modalidad');
- console.log('OK: persistencia, revisión, caducidad, documentos solo en origen y Compra Ágil por modalidad.');
+ const quitar=(await readdir(migrations)).find(x=>x.endsWith('_quitar_llm.sql'));
+ await db.exec(await readFile(new URL(quitar,migrations),'utf8'));
+ for(const objeto of ['analisis_llm','vw_licitaciones_filtradas','vw_revision_manual','vw_descartadas'])
+  assert.equal((await db.query('SELECT to_regclass($1) AS r',['public.'+objeto])).rows[0].r,null,objeto+' retirado');
+ assert.equal((await db.query("SELECT count(*)::int AS n FROM information_schema.columns WHERE table_name='evaluacion_filtro' AND column_name IN ('modelo_semantico','puntuacion_semantica','puntuacion_exclusion')")).rows[0].n,0);
+ const despues={...compra,codigo_externo:'1196-540-COT26'};
+ const nueva=(await rpc('guardar',{...payload,lote:[{...loteCompra,datos:despues}]})).evaluadas[0].evaluacion_id;
+ await rpc('revision',{codigo:despues.codigo_externo,raw_id:12,hash_fuente:'8'.repeat(64),evaluacion_id:nueva,usuario:user,accion:'confirmar_relevante',categoria_motivo:'otro',motivo:'Revisada por el hotel'});
+ const vista=(await rpc('listar',{codigos:[despues.codigo_externo]})).filas[0];
+ assert.equal(vista.estado_seleccion,'preseleccionada','la vista funciona sin el LLM');
+ assert.ok(!('estado_analisis_llm' in vista));
+ await assert.rejects(()=>db.query("INSERT INTO public.revision_manual(evaluacion_id,accion,categoria_motivo,motivo,revisado_por) VALUES($1,'enviar_a_llm','otro','prueba',$2)",[nueva,user]),/check/);
+ await rpc('sincronizar_fuente',{codigos:[],observado_en:new Date(Date.now()+60000).toISOString(),modalidad:'compra_agil'});
+ assert.equal((await rpc('listar',{codigos:[despues.codigo_externo]})).total,0,'lf_eliminar funciona sin analisis_llm');
+ console.log('OK: persistencia, revisión, caducidad, documentos solo en origen, Compra Ágil por modalidad y retiro del LLM.');
 } catch (e) { console.error(e.message, e.where, e.internalQuery); process.exitCode=1; } finally { await db.close(); }

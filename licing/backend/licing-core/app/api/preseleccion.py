@@ -1,4 +1,4 @@
-"""Preselección explicable y documentos del hotel; LLM fuera de esta etapa."""
+"""Preselección explicable y documentos del hotel."""
 import base64
 import binascii
 import asyncio

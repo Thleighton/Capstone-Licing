@@ -26,7 +26,7 @@ VERSION_REGLAS = "ca-1"
 REGION_METROPOLITANA = 13
 # guardar admite 20 entradas por llamada.
 TAMANO_GUARDADO = 20
-LIMITE_POR_LOTE = 60
+LIMITE_POR_LOTE = 100
 COLUMNAS = (
     "id", "codigo_externo", "raw_id", "nombre", "descripcion", "estado", "fecha_publicacion", "fecha_cierre",
     "moneda", "nombre_organismo", "nombre_unidad", "codigo_region", "region_comprador", "direccion_entrega",
@@ -137,33 +137,48 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
 
     async def guardar(parte):
         async with semaforo:
-            return await filtradas.operar("guardar", {"lote": parte, "perfil": cargar_catalogo(), "actor": actor})
+            return parte, await filtradas.operar("guardar", {"lote": parte, "perfil": cargar_catalogo(), "actor": actor})
     partes = [lote[i:i + TAMANO_GUARDADO] for i in range(0, len(lote), TAMANO_GUARDADO)]
-    respuestas = await asyncio.gather(*(guardar(parte) for parte in partes), return_exceptions=True)
+    tareas = [asyncio.create_task(guardar(parte)) for parte in partes]
     evaluadas, errores = [], []
-    for parte, respuesta in zip(partes, respuestas):
-        if isinstance(respuesta, BaseException):
-            errores.append(respuesta)
-            continue
-        guardadas = {e["codigo"]: e["evaluacion_id"] for e in respuesta.get("evaluadas", [])}
-        for entrada in parte:
-            datos, resultado = entrada["datos"], entrada["resultado"]
-            if datos["codigo_externo"] not in guardadas:
-                continue  # Filtradas omite las que ya cerraron.
-            # Si el RAW cambió mientras tanto, la compra sigue pendiente con sus datos nuevos.
-            db.execute(update(CompraAgil).where(
-                CompraAgil.id == datos["id"], CompraAgil.raw_id == datos["raw_id"],
-            ).values(preseleccion={
-                "firma": entrada["hash_fuente"], "version": version, "clasificacion": resultado["clasificacion"],
-                "evaluacion_id": guardadas[datos["codigo_externo"]], "evaluado_en": resultado["evaluado_en"],
-            }))
-            evaluadas.append({"compra_agil_id": datos["id"], "codigo_externo": datos["codigo_externo"],
-                              "clasificacion": resultado["clasificacion"]})
-    db.commit()
+    try:
+        for siguiente in asyncio.as_completed(tareas):
+            try:
+                parte, respuesta = await siguiente
+            except (filtradas.FiltradasNoDisponible, HTTPException) as exc:
+                errores.append(exc)
+                continue
+            evaluadas += _registrar(db, parte, respuesta, version)
+            # Se confirma cada grupo: si el turno se corta, lo guardado en filtradas no se repite.
+            db.commit()
+    finally:
+        for tarea in tareas:
+            tarea.cancel()
+        await asyncio.gather(*tareas, return_exceptions=True)
     if errores and not evaluadas:
         raise errores[0]
     return {"evaluadas": evaluadas, "pendientes": contar_pendientes(db), "sin_guardar": len(lote) - len(evaluadas),
             "sincronizada": bool(evaluadas) and await _sincronizar(db)}
+
+
+def _registrar(db: Session, parte: list[dict], respuesta: dict, version: str) -> list[dict]:
+    """Anota en Core las compras que filtradas aceptó; sin commit."""
+    guardadas = {e["codigo"]: e["evaluacion_id"] for e in respuesta.get("evaluadas", [])}
+    evaluadas = []
+    for entrada in parte:
+        datos, resultado = entrada["datos"], entrada["resultado"]
+        if datos["codigo_externo"] not in guardadas:
+            continue  # Filtradas omite las que ya cerraron.
+        # Si el RAW cambió mientras tanto, la compra sigue pendiente con sus datos nuevos.
+        db.execute(update(CompraAgil).where(
+            CompraAgil.id == datos["id"], CompraAgil.raw_id == datos["raw_id"],
+        ).values(preseleccion={
+            "firma": entrada["hash_fuente"], "version": version, "clasificacion": resultado["clasificacion"],
+            "evaluacion_id": guardadas[datos["codigo_externo"]], "evaluado_en": resultado["evaluado_en"],
+        }))
+        evaluadas.append({"compra_agil_id": datos["id"], "codigo_externo": datos["codigo_externo"],
+                          "clasificacion": resultado["clasificacion"]})
+    return evaluadas
 
 
 async def _sincronizar(db: Session) -> bool:

@@ -181,7 +181,7 @@ def test_falla_de_compras_agiles_no_interrumpe_licitaciones(monkeypatch):
         monkeypatch.setattr(settings, "compras_agiles_automaticas", True)
         monkeypatch.setattr(cron, "SessionLocal", lambda: Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock()))
         monkeypatch.setattr(cron, "correr_lote", AsyncMock(return_value={"procesados": 1}))
-        monkeypatch.setattr(cron, "correr_lote_compras_agiles", AsyncMock(side_effect=RuntimeError("sin tablas")))
+        monkeypatch.setattr(cron, "correr_compras_agiles", AsyncMock(side_effect=RuntimeError("sin tablas")))
         return await cron.ingesta_programada(limite=1, db=Mock())
     r = asyncio.run(escenario())
     assert r == {"procesados": 1, "compras_agiles": {"pendiente": True, "motivo": "error_temporal"}}

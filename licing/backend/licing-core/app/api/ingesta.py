@@ -1,10 +1,11 @@
+import asyncio
 import httpx
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..config import settings
 from ..auth import solo_rol
-from ..database import get_db
+from ..database import SessionLocal, get_db
 from ..models.raw import RawMercadoPublico
 from ..services.mercado_publico import CompraAgilClient, MercadoPublicoClient
 from ..services.normalizacion import normalizar_licitacion
@@ -27,8 +28,8 @@ from ..services.limpieza import ausencia_confirmada, eliminar_no_disponibles, mo
 
 router = APIRouter(prefix="/ingesta", tags=["Ingesta"], dependencies=[Depends(solo_rol("administrador"))])
 
-# El lote de Compra Ágil y su preselección deben caber en los 30 s de cron-job.org.
-TIEMPO_PRESELECCION_COMPRAS_AGILES = 8
+# La preselección corre a la vez que el lote de Compra Ágil y guarda su avance cada 20.
+TIEMPO_PRESELECCION_COMPRAS_AGILES = 15
 
 
 @router.post("/licitaciones/fecha/{fecha}")
@@ -411,7 +412,7 @@ async def ejecutar_lote_compras_agiles(
     db: Session = Depends(get_db),
 ):
     try:
-        return await correr_lote_compras_agiles(db=db, limite=limite)
+        return await correr_compras_agiles(db=db, limite=limite)
     except EjecucionEnCursoError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -455,7 +456,6 @@ async def ingestar_compra_agil_por_codigo(
 
 async def preseleccionar_compras_agiles(db: Session) -> dict:
     """Las compras ya están guardadas: si filtradas no responde, quedan pendientes para el próximo lote."""
-    import asyncio
     try:
         async with asyncio.timeout(TIEMPO_PRESELECCION_COMPRAS_AGILES):
             return await evaluar_compras_agiles(db)
@@ -467,14 +467,37 @@ async def preseleccionar_compras_agiles(db: Session) -> dict:
         return {"pendiente": True, "motivo": str(exc) or "La preselección no terminó a tiempo; sigue pendiente."}
 
 
+async def _preseleccionar_con_sesion_propia() -> dict | None:
+    if not (settings.cron_secret and settings.filtradas_url):
+        return None
+    with SessionLocal() as sesion:
+        return await preseleccionar_compras_agiles(sesion)
+
+
+async def correr_compras_agiles(db: Session, limite: int) -> dict:
+    """Lote y preselección a la vez, compartido por la ruta de administración y los crons.
+
+    La preselección evalúa lo ya guardado con su propia sesión, sin esperar al lote: así un
+    plazo corto del cron no la deja sin tiempo. Lo que el lote guarde se evalúa en el turno
+    siguiente. Deja pasar EjecucionEnCursoError del lote.
+    """
+    lote, preseleccion = await asyncio.gather(
+        correr_lote_compras_agiles(db=db, limite=limite), _preseleccionar_con_sesion_propia(),
+        return_exceptions=True,
+    )
+    if isinstance(lote, BaseException):
+        raise lote
+    if preseleccion is not None:
+        lote["preseleccion"] = ({"pendiente": True, "motivo": "error_temporal"}
+                                if isinstance(preseleccion, BaseException) else preseleccion)
+    return lote
+
+
 async def correr_lote_compras_agiles(db: Session, limite: int) -> dict:
-    """Lote compartido por la ruta de administración y el cron. Deja pasar EjecucionEnCursoError."""
+    """Solo la ingesta de Compra Ágil. Deja pasar EjecucionEnCursoError."""
     client = CompraAgilClient()
     try:
-        resultado = await ejecutar_compras_agiles(db=db, client=client, limite=limite)
-        if settings.cron_secret and settings.filtradas_url:
-            resultado["preseleccion"] = await preseleccionar_compras_agiles(db)
-        return resultado
+        return await ejecutar_compras_agiles(db=db, client=client, limite=limite)
     except EjecucionEnCursoError:
         db.rollback()
         raise

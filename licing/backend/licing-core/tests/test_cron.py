@@ -109,7 +109,7 @@ def test_cancela_compras_agiles_que_exceden_el_plazo(client, lotes, monkeypatch)
     monkeypatch.setattr(settings, "compras_agiles_automaticas", True)
     monkeypatch.setattr(cron, "SessionLocal", DbFalsa)
     cancelado = []
-    monkeypatch.setattr(cron, "correr_lote_compras_agiles", lento(cancelado))
+    monkeypatch.setattr(cron, "correr_compras_agiles", lento(cancelado))
     r = client.post(RUTA, headers=autorizado())
     assert r.status_code == 200
     assert r.json() == {

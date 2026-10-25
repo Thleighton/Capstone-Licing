@@ -182,7 +182,7 @@ cron-job.org corta la conexión a los 30 segundos, contando el arranque de la fu
 
 Cada 5 minutos son 288 ejecuciones diarias. Cada una consulta el listado de activas y, como máximo, `limite` detalles. Revisa que la cuota diaria de tu ticket de Mercado Público y los límites de funciones de tu plan Vercel lo permitan.
 
-La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y su preselección (8 s) también quedan sujetos al plazo del turno.
+La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y la preselección (hasta 15 s) corren a la vez y también quedan sujetos al plazo del turno; la preselección confirma su avance cada 20 compras.
 
 Se recomienda separar las tres tareas en cronjobs propios. Así cada una tiene sus 30 segundos y su propia función, y no compiten entre sí. Configura `COMPRAS_AGILES_AUTOMATICAS=false` y `DOCUMENTOS_AUTOMATICOS=false` en Vercel, y crea en cron-job.org tres cronjobs con POST, la misma cabecera y minutos escalonados en **Personalizado**:
 

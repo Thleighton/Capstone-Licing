@@ -8,7 +8,7 @@ from ..database import SessionLocal, get_db
 from ..config import settings
 from ..services.ingesta_documental import correr_documentos
 from ..services.ingesta_lote import EjecucionEnCursoError
-from .ingesta import correr_lote, correr_lote_compras_agiles
+from .ingesta import correr_compras_agiles, correr_lote
 
 router = APIRouter(prefix="/api/cron", tags=["Cron"], dependencies=[Depends(solo_cron)])
 
@@ -20,7 +20,7 @@ async def compras_agiles_en_paralelo():
     """Sesión propia: corre a la vez que el lote de licitaciones sin compartir transacción."""
     with SessionLocal() as db:
         try:
-            return await correr_lote_compras_agiles(db=db, limite=LIMITE_COMPRAS_AGILES_AUTOMATICAS)
+            return await correr_compras_agiles(db=db, limite=LIMITE_COMPRAS_AGILES_AUTOMATICAS)
         except EjecucionEnCursoError as exc:
             return {"omitida": True, "motivo": str(exc)}
         except HTTPException as exc:
@@ -90,6 +90,6 @@ async def compras_agiles_programadas(
 ):
     """Planificador independiente de Compra Ágil, con el mismo secreto y bloqueo propio."""
     try:
-        return await correr_lote_compras_agiles(db=db, limite=limite)
+        return await correr_compras_agiles(db=db, limite=limite)
     except EjecucionEnCursoError as exc:
         return {"omitida": True, "motivo": str(exc)}

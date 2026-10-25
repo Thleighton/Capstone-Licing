@@ -14,6 +14,8 @@ os.environ["USUARIOS_URL"] = "https://usuarios.example.test"
 os.environ["USUARIOS_ANON_KEY"] = "anon-test"
 # El lote paralelo abre su propia sesión, fuera de la transacción de cada prueba.
 os.environ["COMPRAS_AGILES_AUTOMATICAS"] = "false"
+# Nunca la función de producción, aunque un .env local traiga CRON_SECRET: .invalid no resuelve.
+os.environ["FILTRADAS_URL"] = "https://filtradas.invalid/functions/v1/licing-filtradas"
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

@@ -185,14 +185,14 @@ def test_lote_incluye_preseleccion_y_no_falla_si_filtradas_no_responde(db, monke
     monkeypatch.setattr(settings, "filtradas_url", "https://filtradas.example.test")
     monkeypatch.setattr(ingesta, "ejecutar_compras_agiles", AsyncMock(return_value={"procesados": 1}))
     monkeypatch.setattr(ingesta, "evaluar_compras_agiles", AsyncMock(return_value={"evaluadas": [1], "pendientes": 0}))
-    r = asyncio.run(ingesta.correr_lote_compras_agiles(db, 5))
+    r = asyncio.run(ingesta.correr_compras_agiles(db, 5))
     assert r == {"procesados": 1, "preseleccion": {"evaluadas": [1], "pendientes": 0}}
     perfil = HTTPException(409, "Los datos cambiaron o la operación requiere revisión. Actualiza y vuelve a intentarlo.")
     monkeypatch.setattr(ingesta, "evaluar_compras_agiles", AsyncMock(side_effect=perfil))
-    assert asyncio.run(ingesta.correr_lote_compras_agiles(db, 5))["preseleccion"]["pendiente"] is True
+    assert asyncio.run(ingesta.correr_compras_agiles(db, 5))["preseleccion"]["pendiente"] is True
     monkeypatch.setattr(ingesta, "evaluar_compras_agiles",
                         AsyncMock(side_effect=filtradas.FiltradasNoDisponible("No se pudo acceder")))
-    assert asyncio.run(ingesta.correr_lote_compras_agiles(db, 5))["preseleccion"] == {
+    assert asyncio.run(ingesta.correr_compras_agiles(db, 5))["preseleccion"] == {
         "pendiente": True, "motivo": "No se pudo acceder"}
 
 
@@ -240,6 +240,47 @@ def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):
     monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=filtradas.FiltradasNoDisponible("x")))
     assert usuario.get(f"/api/compras-agiles/{compra.id}/preseleccion").json()["fuente_actualizada"] is False
     assert usuario.get("/api/compras-agiles/preseleccion").status_code == 503
+
+
+def test_un_corte_conserva_los_grupos_ya_guardados(db, monkeypatch):
+    compras = [guardar(db, f"9011-{n}-COT26") for n in range(25)]
+    base = filtradas_falsa()
+
+    async def operar(operacion, datos=None):
+        if operacion == "guardar" and len(datos["lote"]) < preseleccion.TAMANO_GUARDADO:
+            await asyncio.sleep(5)  # El segundo grupo no alcanza a responder.
+        return await base(operacion, datos)
+    monkeypatch.setattr(filtradas, "operar", operar)
+
+    async def con_plazo():
+        async with asyncio.timeout(0.5):
+            await preseleccion.evaluar_compras_agiles(db, [c.id for c in compras])
+    with pytest.raises(TimeoutError):
+        asyncio.run(con_plazo())
+    db.expire_all()
+    marcadas = [c.id for c in compras if db.get(CompraAgil, c.id).preseleccion is not None]
+    assert len(marcadas) == preseleccion.TAMANO_GUARDADO
+
+
+def test_lote_y_preseleccion_corren_a_la_vez(db, monkeypatch):
+    monkeypatch.setattr(settings, "cron_secret", "secreto")
+    monkeypatch.setattr(settings, "filtradas_url", "https://filtradas.example.test")
+
+    async def escenario():
+        iniciada = asyncio.Event()
+
+        async def lote(**_):
+            # Si corrieran en secuencia, el lote esperaría para siempre a la preselección.
+            await asyncio.wait_for(iniciada.wait(), 1)
+            return {"procesados": 1}
+
+        async def preseleccionar(sesion):
+            iniciada.set()
+            return {"evaluadas": [], "pendientes": 0}
+        monkeypatch.setattr(ingesta, "ejecutar_compras_agiles", lote)
+        monkeypatch.setattr(ingesta, "preseleccionar_compras_agiles", preseleccionar)
+        return await ingesta.correr_compras_agiles(db, 5)
+    assert asyncio.run(escenario()) == {"procesados": 1, "preseleccion": {"evaluadas": [], "pendientes": 0}}
 
 
 def compra(**cambios):

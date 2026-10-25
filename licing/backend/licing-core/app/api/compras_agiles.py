@@ -1,5 +1,5 @@
 """Consultas del frontend sobre las Compras Ágiles guardadas por Core."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -14,6 +14,7 @@ from ..auth import usuario_actual
 from ..database import get_db
 from ..models.compra_agil import CompraAgil
 from ..models.compra_agil_item import CompraAgilItem
+from ..models.compra_agil_sincronizacion import CompraAgilSincronizacion
 from ..models.raw import RawMercadoPublico
 from ..services import filtradas
 from ..services.clientes_importantes import identificar_clientes_importantes
@@ -45,6 +46,14 @@ class CompraAgilResumen(BaseModel):
     codigo_region: int | None
     region_comprador: str | None
     total_ofertas_recibidas: int | None
+    preseleccion: dict | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def clasificacion(self) -> str | None:
+        """Propuesta automática con las reglas vigentes; None mientras falte evaluarla."""
+        guardada = self.preseleccion or {}
+        return guardada.get("clasificacion") if guardada.get("version") == version_preseleccion() else None
 
     @computed_field
     @property
@@ -142,7 +151,36 @@ class LoteCompras(BaseModel):
     ids: list[Annotated[int, Field(strict=True, gt=0)]] | None = Field(default=None, min_length=1, max_length=100)
 
 
-# Antes de /compras-agiles/{compra_agil_id}: el segmento «preseleccion» no es un id.
+# Antes de /compras-agiles/{compra_agil_id}: «resumen» y «preseleccion» no son ids.
+@router.get("/compras-agiles/resumen")
+def resumen_compras_agiles(response: Response, db: Session = Depends(get_db)):
+    """Indicadores del dashboard en una sola consulta; la clasificación es la propuesta automática vigente."""
+    ahora = datetime.now(CHILE).replace(tzinfo=None)
+    abiertas = (CompraAgil.estado == "publicada", or_(CompraAgil.fecha_cierre.is_(None), CompraAgil.fecha_cierre >= ahora))
+
+    def contar(*filtros):
+        return db.scalar(select(func.count()).select_from(CompraAgil).where(*filtros))
+    primeras = select(RawMercadoPublico.codigo_externo.label("codigo"),
+                      func.min(RawMercadoPublico.consultado_en).label("primera")).where(
+        RawMercadoPublico.fuente == "compra_agil").group_by(RawMercadoPublico.codigo_externo).subquery()
+    nuevas = db.scalar(select(func.count()).select_from(CompraAgil).join(
+        primeras, primeras.c.codigo == CompraAgil.codigo_externo,
+    ).where(primeras.c.primera >= datetime.now(CHILE) - timedelta(days=1)))
+    clasificacion = CompraAgil.preseleccion["clasificacion"].astext
+    propuestas = dict(db.execute(select(clasificacion, func.count()).where(
+        *abiertas, CompraAgil.preseleccion["version"].astext == version_preseleccion(),
+    ).group_by(clasificacion)).all())
+    sincronizacion = db.get(CompraAgilSincronizacion, 1)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "total": contar(), "abiertas": contar(*abiertas), "nuevas": nuevas,
+        "cierran_pronto": contar(*abiertas, CompraAgil.fecha_cierre <= ahora + timedelta(days=1)),
+        "preseleccion": {**{c: propuestas.get(c, 0) for c in ("preseleccionada", "revision_manual", "descartada")},
+                         "pendientes": contar_pendientes(db)},
+        "carga_inicial_completa": sincronizacion is not None and sincronizacion.cursor is not None,
+    }
+
+
 @router.get("/compras-agiles/preseleccion")
 async def preseleccion_compras_agiles(
     response: Response,

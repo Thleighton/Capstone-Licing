@@ -232,6 +232,7 @@ Las licitaciones sincronizan solo las suyas.
 
 | Ruta | Uso |
 |---|---|
+| `GET /api/compras-agiles/resumen` | Totales, abiertas, incorporadas en 24 h, cierres en 24 h y propuestas automáticas vigentes de las abiertas |
 | `GET /api/compras-agiles/preseleccion` | Clasificación vigente (`clasificacion`, `q`, `limite`, `offset`); marca `pendiente_evaluacion` si la fuente o las reglas cambiaron |
 | `POST /api/compras-agiles/preseleccion/evaluar` | Evalúa las pendientes (o los `ids` indicados) con la sesión como autor |
 | `GET /api/compras-agiles/{id}/preseleccion` | Criterios y evidencias guardados en filtradas |
@@ -252,5 +253,5 @@ Las licitaciones sincronizan solo las suyas.
 El downgrade solo procede sin datos ni ejecuciones de Compra Ágil.
 
 No se descargan adjuntos ni se guardan `proveedores_cotizando` fuera del RAW. Las
-pantallas todavía muestran solo licitaciones; la revisión manual de Compras Ágiles
+pantallas Compras Ágiles y dashboard las muestran; la revisión manual de Compras Ágiles
 desde la aplicación queda pendiente.

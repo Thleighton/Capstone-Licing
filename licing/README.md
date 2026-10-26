@@ -26,7 +26,7 @@ licing/
 
 ## Configuración
 
-1. Copia `.env.example` a `.env` dentro de `licing/`, si todavía no existe.
+1. Crea `.env` dentro de `licing/`, si todavía no existe. Las variables se describen en el [README principal](../README.md#2-variables-de-entorno).
 2. Completa `USUARIOS_URL` y `USUARIOS_ANON_KEY` del mismo proyecto Supabase Usuarios/Licitaciones.
 3. Completa `MP_TICKET` y `DATABASE_URL`. Puedes conservar estos valores en `backend/licing-core/.env`: ese archivo tiene prioridad sobre `licing/.env` y no se modifica al actualizar el código. Las variables del proceso tienen prioridad sobre ambos archivos.
 4. La tabla `public.usuario`, sus políticas RLS y Supabase Auth se conservan. Sus migraciones están en `supabase/migrations/`.

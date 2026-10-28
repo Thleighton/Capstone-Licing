@@ -230,6 +230,21 @@ def _ambiguedad_administrativa(regla, m, normal):
                 and bool(re.match(r"\s+de\s+(?:cof+e+e?\s*[- ]?breaks?|coctel(?:es)?|banqueteria|catering|alimentacion|desayunos?|almuerzos?|cenas?)\b", normal[m.end():]))))
 
 
+def descripcion_producto_ajeno(item, adicionales=None):
+    """Objeto ajeno según el código publicado; no decide sobre paquetes mixtos."""
+    codigo = item.get("codigo_producto") if isinstance(item, dict) else None
+    if not isinstance(codigo, str):
+        return None
+    catalogo = cargar_catalogo()
+    especiales = {**catalogo.get("codigos_producto_ajenos", {}), **(adicionales or {})}
+    if codigo in especiales:
+        return especiales[codigo]
+    if re.fullmatch(r"\d{8}", codigo):
+        return (catalogo.get("familias_producto_ajenas", {}).get(codigo[:4]) or
+                catalogo.get("segmentos_producto_ajenos", {}).get(codigo[:2]))
+    return None
+
+
 def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
     grupos, ambiguedades, _, _ = _patrones()
     coincidencias, dudas = [], []
@@ -289,27 +304,15 @@ def detectar_pertinencia(datos: dict, *, campos=None) -> dict:
                     exclusiones.append({"codigo": regla["id"], "motivo": regla["motivo"],
                         "fuente": fuente, "evidencia": _fragmento(texto, m.start(), m.end(), mapa)})
         items = datos.get("items") or []
-        segmentos = cargar_catalogo().get("segmentos_producto_ajenos", {})
-        familias = cargar_catalogo().get("familias_producto_ajenas", {})
-        especiales = cargar_catalogo().get("codigos_producto_ajenos", {})
-        def objeto_ajeno(item):
-            codigo = item.get("codigo_producto")
-            if not isinstance(codigo, str):
-                return None
-            if codigo in especiales:
-                return especiales[codigo]
-            if re.fullmatch(r"\d{8}", codigo):
-                return familias.get(codigo[:4]) or segmentos.get(codigo[:2])
-            return None
         # Todas las líneas deben tener un código conocido ajeno; una línea desconocida
         # o una señal de servicios hoteleros conserva la oportunidad completa.
-        if items and all(objeto_ajeno(i) for i in items):
+        if items and all(descripcion_producto_ajeno(i) for i in items):
             for n, item in enumerate(items[:10]):
                 codigo = item["codigo_producto"]
                 exclusiones.append({"codigo": "producto_ajeno", "fuente": f"items[{n}].codigo_producto",
-                    "motivo": "Las líneas publicadas corresponden a " + objeto_ajeno(item)
+                    "motivo": "Las líneas publicadas corresponden a " + descripcion_producto_ajeno(item)
                         + "; no se identifica contratación de servicios del hotel.",
-                    "evidencia": f"{codigo}: {item.get('nombre_producto') or item.get('descripcion') or objeto_ajeno(item)}"})
+                    "evidencia": f"{codigo}: {item.get('nombre_producto') or item.get('descripcion') or descripcion_producto_ajeno(item)}"})
     # El título de una línea genérica puede ser la única información disponible: conserva para revisar.
     return {"grupos": sorted({x["grupo"] for x in coincidencias}), "directa": bool(directas),
         "coincidencias": coincidencias[:100], "ambiguedades": dudas[:30],

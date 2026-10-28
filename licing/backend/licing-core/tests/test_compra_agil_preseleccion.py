@@ -347,19 +347,19 @@ def compra(**cambios):
     return datos
 
 
-def test_comprador_fuera_de_la_rm_sin_lugar_en_el_texto_se_descarta():
+def test_comprador_fuera_de_la_rm_sin_lugar_en_el_texto_requiere_revision():
     r = preseleccion.evaluar(compra(codigo_region=2, region_comprador="Región de Antofagasta"))
-    assert r["clasificacion"] == "descartada" and r["pilar_decisivo"] == "ubicacion"
+    assert r["clasificacion"] == "revision_manual" and r["pilar_decisivo"] == "ubicacion"
     ubicacion = r["criterios"]["ubicacion"]
-    assert ubicacion["resultado"] == "no_cumple" and ubicacion["regla_compra_agil"] == "region_comprador"
-    assert "Región de Antofagasta" in r["motivo"]
+    assert ubicacion["resultado"] == "sin_informacion"
+    assert ubicacion["comprador"]["region"] == "Región de Antofagasta"
 
 
-def test_comprador_en_la_rm_sin_otro_lugar_cumple_ubicacion():
+def test_comprador_en_la_rm_sin_lugar_no_confirma_ubicacion():
     r = preseleccion.evaluar(compra())
-    assert r["criterios"]["ubicacion"]["resultado"] == "cumple"
-    assert r["criterios"]["ubicacion"]["regla_compra_agil"] == "region_comprador"
-    assert r["clasificacion"] == "preseleccionada"
+    assert r["criterios"]["ubicacion"]["resultado"] == "sin_informacion"
+    assert r["criterios"]["ubicacion"]["comprador"]["codigo_region"] == 13
+    assert r["clasificacion"] == "revision_manual"
 
 
 def test_regulador_1057490_226_no_es_alimentacion_para_personas():
@@ -371,7 +371,7 @@ def test_regulador_1057490_226_no_es_alimentacion_para_personas():
                 "descripcion": "Regulador de velocidad para extractor que se utiliza en campana de extracción"}]))
     assert r["clasificacion"] == "descartada"
     assert r["pilar_decisivo"] == "pertinencia"
-    assert r["criterios"]["ubicacion"]["resultado"] == "cumple"
+    assert r["criterios"]["ubicacion"]["resultado"] == "sin_informacion"
     assert r["criterios"]["pertinencia"]["exclusiones_evidentes"][0]["codigo"] == "producto_ajeno"
 
 

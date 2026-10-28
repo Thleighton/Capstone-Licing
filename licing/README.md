@@ -105,15 +105,16 @@ Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem
 
 ## Datos y pantallas
 
-- Oportunidades presenta la preselección con los tres pilares, clasificación y rango inclusivo de fechas de cierre (`cierre_desde`, `cierre_hasta`). No muestra filtros de región ni de solo abiertas.
+- **Licitaciones** (antes Oportunidades) reúne los indicadores, la descarga de Excel y la preselección con los tres pilares, clasificación y rango inclusivo de fechas de cierre (`cierre_desde`, `cierre_hasta`). No muestra filtros de región ni de solo abiertas. `#oportunidades` conserva compatibilidad y redirige a `#licitaciones`.
 - Las fichas muestran código, organismo, estado, montos con su moneda, fechas e ítems de Core.
 - Las fechas originales sin zona se interpretan como hora de Chile al responder; no se modifica el almacenamiento de Core.
-- Dashboard calcula totales, incorporaciones de las últimas 24 horas, abiertas, próximos cierres y publicaciones sobre toda la base. Estar abierta no representa compatibilidad comercial.
+- El dashboard conserva las alertas de próximos cierres y el asistente de demostración. Los indicadores y el Excel están en Licitaciones; los controles de preselección están en las páginas de Licitaciones y Compras Ágiles. Estar abierta no representa compatibilidad comercial.
 - Las pantallas de perfil, disponibilidad, clientes, seguimiento y reportes conservan su demostración. El análisis de bases utiliza ejemplos locales, sin depender del backend retirado.
 - El contexto de la API y las categorías de los ítems se conservan para futuras búsquedas. Véase [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md).
 - Se pueden registrar versiones de documentos, texto y hechos extraídos mediante la API. No se almacenan PDF ni se ejecuta extracción o IA automáticamente.
 - La ingesta de Compra Ágil usa la API v2 (`api2.mercadopublico.cl`) con el mismo `MP_TICKET`. Cada lote las preselecciona con el mismo motor que las licitaciones y guarda el resultado en LicitacionesFiltradas. Datos, límites y orden de despliegue en [DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
-- La página **Compras Ágiles** comparte los tres pilares y controles de clasificación y fechas con las licitaciones. **Todas** consulta las compras guardadas en Core, incluso si aún no tienen una evaluación vigente. Al abrir la pantalla se comprueban las pendientes sin escribir; **Actualizar preselección** las reevalúa, también si el perfil activo de filtradas invalidó la marca local. Los administradores pueden adelantar un lote desde **Obtener Compras Ágiles**. El dashboard usa los mismos controles. La corrección manual de su clasificación todavía no está disponible.
+- La página **Compras Ágiles** comparte los tres pilares y controles de clasificación y fechas con las licitaciones. **Todas** consulta las compras guardadas en Core, incluso si aún no tienen una evaluación vigente. Al abrir la pantalla se comprueban las pendientes sin escribir; **Actualizar preselección** las reevalúa, también si el perfil activo de filtradas invalidó la marca local. Los administradores pueden adelantar un lote desde **Obtener Compras Ágiles**. La corrección manual de su clasificación todavía no está disponible.
+- Las reglas `ca-2` conservan la región del comprador como referencia administrativa: no confirman ni rechazan el lugar del servicio por ella. Excluyen bienes y gráfica identificados en todas las líneas si no hay contratación hotelera concreta, conservando paquetes mixtos y líneas desconocidas. Revisión y límites de la comprobación: [auditoría de Compra Ágil](docs/AUDITORIA_COMPRA_AGIL_2026-10-28.md).
 - **Reportes** está desactivado temporalmente en el menú y las rutas.
 - Los filtros comerciales o semánticos todavía no forman parte del Core actual.
 - El lote de Core busca códigos nuevos. Actualizar periódicamente detalles de licitaciones ya guardadas queda pendiente.

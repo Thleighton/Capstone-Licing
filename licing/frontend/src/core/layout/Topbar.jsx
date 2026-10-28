@@ -15,7 +15,7 @@ export default function Topbar({ soloDashboard = false }) {
     <div className="topbar">
       {!soloDashboard && <label className="search"><Icon name="search" />
         <input type="search" placeholder="Buscar licitación, ID o institución..." value={q}
-          onChange={e => { setQ(e.target.value); irA("oportunidades"); }} />
+          onChange={e => { setQ(e.target.value); irA("licitaciones"); }} />
       </label>}
       <div className="spacer" />
       <div className={"status " + status.kind}><span className="dot" /><span>{status.text}</span></div>

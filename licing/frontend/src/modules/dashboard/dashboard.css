@@ -43,7 +43,7 @@
 .dashboard-page .badge.violet { background: var(--violet-bg); color: var(--violet); }
 
 .dashboard-page .stats { gap: 16px; margin-bottom: 26px; }
-.dashboard-page .dashboard-priorities { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); align-items: start; gap: 20px; margin-bottom: 28px; }
+.dashboard-page .dashboard-priorities { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 20px; margin-bottom: 28px; }
 .dashboard-page .dashboard-priorities > * { min-width: 0; }
 .dashboard-page .dashboard-deadlines .dashboard-panel-heading { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .dashboard-page .dashboard-deadlines .preview-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }

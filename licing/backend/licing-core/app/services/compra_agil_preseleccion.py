@@ -17,13 +17,22 @@ from ..models.compra_agil_item import CompraAgilItem
 from ..models.raw import RawMercadoPublico
 from . import filtradas
 from .enlaces import ficha_compra_agil
-from .preseleccion import CHILE, VERSION_MOTOR, cargar_catalogo, clasificar_pilares, evaluar_preseleccion
+from .preseleccion import (
+    CHILE, VERSION_MOTOR, cargar_catalogo, clasificar_pilares,
+    descripcion_producto_ajeno, evaluar_preseleccion,
+)
 
 MODALIDAD = "compra_agil"
 # Reglas propias sobre el motor común: cambiarlas reevalúa solo las Compras Ágiles,
 # sin tocar las evaluaciones ni las revisiones manuales de las licitaciones.
-VERSION_REGLAS = "ca-1"
-REGION_METROPOLITANA = 13
+VERSION_REGLAS = "ca-2"
+PRODUCTOS_AJENOS_COMPRA_AGIL = {
+    "80141605": "regalos publicitarios",
+    "80141611": "personalización de productos promocionales",
+    "82121505": "impresión promocional o publicitaria",
+    "82121511": "impresión de manuales y catálogos",
+    "82121903": "encuadernación",
+}
 # guardar admite 20 entradas por llamada.
 TAMANO_GUARDADO = 20
 LIMITE_POR_LOTE = 100
@@ -38,25 +47,27 @@ def version_preseleccion() -> str:
     return f"{VERSION_MOTOR}|{VERSION_REGLAS}|{cargar_catalogo()['version']}"
 
 
-def evaluar(datos: dict) -> dict:
-    """Motor común más la región del comprador.
-
-    Una Compra Ágil no tiene bases: su ficha es toda la información y se entrega, por lo
-    general, donde está el comprador. Si el texto no ubica el servicio, la región del
-    comprador decide el pilar de ubicación; si el texto lo ubica, manda el texto.
-    """
-    resultado = evaluar_preseleccion({**datos, "documentos": []})
+def evaluar(datos: dict, *, ahora: datetime | None = None) -> dict:
+    """Evalúa ficha e ítems; la región del comprador no confirma el lugar del servicio."""
+    resultado = evaluar_preseleccion({**datos, "documentos": []}, ahora=ahora)
     ubicacion = resultado["criterios"]["ubicacion"]
     region = datos.get("codigo_region")
-    menciones = ubicacion.get("evidencias", []) + ubicacion.get("menciones_ambiguas", [])
-    if region not in (None, REGION_METROPOLITANA) and not any(m.get("cobertura") == "rm" for m in menciones):
-        ubicacion.update(resultado="no_cumple", regla_compra_agil="region_comprador", motivo=(
-            f"El comprador está en {datos.get('region_comprador') or 'otra región'} y la Compra Ágil "
-            "no indica que el servicio se preste en la Región Metropolitana."))
-    elif (region == REGION_METROPOLITANA and ubicacion.get("estado") == "sin_determinar"
-          and ubicacion["resultado"] == "sin_informacion"):
-        ubicacion.update(resultado="cumple", regla_compra_agil="region_comprador", motivo=(
-            "El comprador está en la Región Metropolitana y la Compra Ágil no indica otro lugar de entrega."))
+    ubicacion["comprador"] = {"codigo_region": region, "region": datos.get("region_comprador"),
+        "uso": "Referencia administrativa; no confirma dónde se prestará el servicio."}
+    pertinencia = resultado["criterios"]["pertinencia"]
+    items = datos.get("items") or []
+    # Una capacitación para usar un equipo o la palabra taller en una compra de
+    # materiales no contratan un salón. Una línea hotelera concreta o desconocida
+    # siempre impide excluir el paquete completo por sus otros productos.
+    if (not resultado["entrada_parcial"] and not pertinencia["directa"] and isinstance(items, list) and items
+            and all(descripcion_producto_ajeno(i, PRODUCTOS_AJENOS_COMPRA_AGIL) for i in items)):
+        evidencias = [{"codigo": "producto_ajeno", "fuente": f"items[{n}].codigo_producto",
+            "motivo": "Las líneas publicadas corresponden a " + descripcion_producto_ajeno(i, PRODUCTOS_AJENOS_COMPRA_AGIL)
+                + "; no se identifica contratación de servicios del hotel.",
+            "evidencia": f"{i['codigo_producto']}: {i.get('nombre_producto') or i.get('descripcion') or ''}"}
+            for n, i in enumerate(items[:10])]
+        pertinencia.update(resultado="no_cumple", motivo=evidencias[0]["motivo"],
+                           exclusiones_evidentes=evidencias)
     clasificacion, motivo, pilar = clasificar_pilares(resultado["criterios"])
     resultado.update(
         clasificacion=clasificacion, motivo=motivo, pilar_decisivo=pilar,

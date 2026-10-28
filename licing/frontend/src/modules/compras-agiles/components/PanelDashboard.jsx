@@ -1,42 +1,33 @@
-import { useEffect, useId, useState } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useState } from "react";
 import { apiJson } from "../../../core/api/client";
 import Icon from "../../../core/ui/Icon";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { plazo, useResumenComprasAgiles } from "../comun";
+import { plazo, useActualizarComprasAgiles, useResumenComprasAgiles } from "../comun";
+import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import "../compras-agiles.css";
 
-const PESTAÑAS = [
-  { estado: "preseleccionada", nombre: "Posibles oportunidades" },
-  { estado: "revision_manual", nombre: "Revisión necesaria" },
-];
 const VISIBLES = 6;
 
 // Apartado de Compras Ágiles: oportunidades y revisiones ordenadas por cierre.
-export default function PanelComprasAgiles({ version, integrado = false }) {
-  const { resumen, error } = useResumenComprasAgiles(version);
+export default forwardRef(function PanelComprasAgiles({ version, integrado = false }, ref) {
+  const { versionDatos, actualizando, errorActualizacion, pendientes, actualizar } = useActualizarComprasAgiles(version);
+  useImperativeHandle(ref, () => ({ actualizar }), [actualizar]);
+  const { resumen, error } = useResumenComprasAgiles(versionDatos);
   const [pestaña, setPestaña] = useState("preseleccionada");
   const [lista, setLista] = useState({ filas: [], total: 0, cargando: true, error: "" });
   const id = useId();
   useEffect(() => {
     const control = new AbortController();
     setLista(l => ({ ...l, cargando: true }));
-    apiJson(`/api/compras-agiles/preseleccion?clasificacion=${pestaña}&limite=${VISIBLES}`, { signal: control.signal })
+    const parametros = new URLSearchParams({ clasificacion: pestaña, limite: String(VISIBLES) });
+    apiJson(`/api/compras-agiles/preseleccion?${parametros}`, { signal: control.signal })
       .then(r => setLista({ filas: r.filas, total: r.total, cargando: false, error: "" }))
       .catch(e => { if (!control.signal.aborted) setLista({ filas: [], total: 0, cargando: false, error: e.message }); });
     return () => control.abort();
-  }, [pestaña, version]);
-  const pre = resumen?.preseleccion;
-  const conteo = { preseleccionada: pre?.preseleccionada, revision_manual: pre?.revision_manual };
-  function mover(e, indice) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-    e.preventDefault();
-    const destino = PESTAÑAS[(indice + 1) % PESTAÑAS.length].estado;
-    setPestaña(destino);
-    document.getElementById(`${id}-${destino}`)?.focus();
-  }
+  }, [pestaña, versionDatos]);
   const Contenedor = integrado ? "div" : "section";
   return <Contenedor className={integrado ? "ca-panel-content" : "card panel dashboard-panel panel-violet ca-panel"}
     aria-labelledby={integrado ? undefined : `${id}-titulo`}>
@@ -47,15 +38,14 @@ export default function PanelComprasAgiles({ version, integrado = false }) {
     </div>}
     {error && <p className="msg err" role="alert">No se pudo cargar el resumen de Compras Ágiles. {error}</p>}
     {resumen && !resumen.carga_inicial_completa && <p className="ca-aviso" role="status"><Icon name="clock" />Carga inicial en curso: las Compras Ágiles se incorporan de a poco en cada turno.</p>}
-    <div className="ca-tabs ca-tabs-panel" role="tablist" aria-label="Clasificación de Compras Ágiles">{PESTAÑAS.map((p, i) => <button
-      key={p.estado} id={`${id}-${p.estado}`} type="button" role="tab" aria-selected={pestaña === p.estado}
-      aria-controls={`${id}-lista`} tabIndex={pestaña === p.estado ? 0 : -1}
-      onClick={() => setPestaña(p.estado)} onKeyDown={e => mover(e, i)}>
-      {p.nombre}<span className="ca-count">{conteo[p.estado] ?? "–"}</span></button>)}</div>
-    <div id={`${id}-lista`} role="tabpanel" aria-labelledby={`${id}-${pestaña}`} aria-busy={lista.cargando}>
+    <PreseleccionControles clasificacion={pestaña} total={lista.total} onClasificacion={setPestaña} mostrarFechas={false} />
+    {!integrado && <button type="button" onClick={actualizar} disabled={actualizando}>{actualizando ? "Actualizando…" : "Actualizar preselección"}</button>}
+    {pendientes > 0 && !actualizando && <p className="sub" role="status">{pendientes} Compras Ágiles necesitan actualizar su evaluación.</p>}
+    {errorActualizacion && <p className="msg err" role="alert">No se pudo actualizar la preselección. {errorActualizacion}</p>}
+    <div id={`${id}-lista`} role="region" aria-label="Resultados de Compras Ágiles" aria-busy={lista.cargando || actualizando}>
       {lista.error ? <p className="empty" role="alert">No se pudo consultar la preselección. {lista.error}</p>
-        : lista.cargando && !lista.filas.length ? <p className="empty">Cargando Compras Ágiles…</p>
-        : !lista.filas.length ? <p className="empty">{pestaña === "preseleccionada" ? "No hay Compras Ágiles abiertas que cumplan los tres pilares." : "No hay Compras Ágiles pendientes de revisión."}</p>
+        : (lista.cargando || actualizando) && !lista.filas.length ? <p className="empty" role="status">{actualizando ? "Actualizando la preselección de Compras Ágiles…" : "Cargando Compras Ágiles…"}</p>
+        : !lista.filas.length ? <p className="empty">{pestaña === "preseleccionada" ? "No hay posibles oportunidades en esta carga. Puedes consultar Revisión necesaria o Todas." : "No hay Compras Ágiles en esta vista."}</p>
         : <div className="ca-lista">{lista.filas.map(f => {
           const aviso = plazo(f.fecha_cierre);
           return <article className="ca-item" data-estado={f.estado_seleccion} key={f.id}>
@@ -74,4 +64,4 @@ export default function PanelComprasAgiles({ version, integrado = false }) {
       {lista.total > VISIBLES && <p className="sub ca-mas">Se muestran las {VISIBLES} que cierran antes de {lista.total}. <a href="#compras-agiles">Ver todas</a></p>}
     </div>
   </Contenedor>;
-}
+});

@@ -5,37 +5,41 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
 import { ETIQUETAS, TONOS, plazo } from "../comun";
+import PreseleccionControles from "../../../core/ui/PreseleccionControles";
+import VistaTodas from "./VistaTodas";
 
 const LIMITE = 25;
 
 // Clasificación guardada en LicitacionesFiltradas, ordenada por cierre más próximo.
-export default function VistaPreseleccion({ q, version }) {
+export default function VistaPreseleccion({ q = "", version, actualizando = false }) {
   const [clasificacion, setClasificacion] = useState("preseleccionada");
   const [offset, setOffset] = useState(0);
+  const [desde, setDesde] = useState(""), [hasta, setHasta] = useState("");
   const [datos, setDatos] = useState({ filas: [], total: 0, pendientes: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, clasificacion]);
+  useEffect(() => { setOffset(0); }, [q, clasificacion, desde, hasta]);
   useEffect(() => {
     const control = new AbortController();
+    if (!clasificacion) return () => control.abort();
     setCargando(true);
     const parametros = new URLSearchParams({ clasificacion, q, limite: String(LIMITE), offset: String(offset) });
+    if (desde) parametros.set("cierre_desde", desde);
+    if (hasta) parametros.set("cierre_hasta", hasta);
     apiJson("/api/compras-agiles/preseleccion?" + parametros, { signal: control.signal })
       .then(r => { setDatos(r); setError(""); })
       .catch(e => { if (!control.signal.aborted) setError(e.message); })
       .finally(() => { if (!control.signal.aborted) setCargando(false); });
     return () => control.abort();
-  }, [clasificacion, q, offset, version]);
+  }, [clasificacion, q, offset, version, desde, hasta]);
   const vacio = clasificacion === "preseleccionada"
-    ? "No hay posibles oportunidades entre las Compras Ágiles evaluadas. Revisa «Revisión necesaria» o la vista Todas."
+    ? "No hay posibles oportunidades para estas fechas. Puedes consultar Revisión necesaria o Todas."
     : "No hay Compras Ágiles en esta clasificación.";
   return <>
-    <div className="filtros ca-filtros">
-      <label>Clasificación <select value={clasificacion} onChange={e => setClasificacion(e.target.value)}>
-        <option value="">Todas</option>{Object.entries(ETIQUETAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-      </select></label>
-      <span aria-live="polite">{datos.total} {datos.total === 1 ? "resultado" : "resultados"}</span>
-      {datos.pendientes > 0 && <span className="badge violet">{datos.pendientes} por evaluar en los próximos turnos</span>}
-    </div>
+    {clasificacion ? <PreseleccionControles clasificacion={clasificacion} desde={desde} hasta={hasta} total={datos.total}
+      onClasificacion={setClasificacion} onDesde={setDesde} onHasta={setHasta} /> : null}
+    {!clasificacion ? <VistaTodas q={q} version={version} desde={desde} hasta={hasta}
+      onDesde={setDesde} onHasta={setHasta} onClasificacion={setClasificacion} /> : <>
+    {datos.pendientes > 0 && <p className="sub" role="status">{actualizando ? "Actualizando evaluaciones…" : `${datos.pendientes} Compras Ágiles pendientes de evaluar.`}</p>}
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: 130 }} /><col style={{ width: 135 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Cierre</th><th>Presupuesto</th><th>Preselección</th></tr></thead>
@@ -55,11 +59,12 @@ export default function VistaPreseleccion({ q, version }) {
       })}</tbody>
     </table>
     {error ? <div className="msg err" role="alert">No se pudo consultar la preselección. {error}</div>
-      : cargando ? <p className="msg">Cargando preselección…</p> : !datos.filas.length ? <p className="msg">{vacio}</p> : null}</div>
+      : cargando || actualizando ? <p className="msg" role="status">{actualizando ? "Actualizando la preselección de Compras Ágiles…" : "Cargando preselección…"}</p> : !datos.filas.length ? <p className="msg">{vacio}</p> : null}</div>
     {datos.total > LIMITE && <div className="card-head ca-paginas">
       <span>{offset + 1}–{Math.min(offset + LIMITE, datos.total)} de {datos.total}</span>
       <div><button disabled={cargando || offset === 0} onClick={() => setOffset(o => o - LIMITE)}>Anterior</button>{" "}
         <button disabled={cargando || offset + LIMITE >= datos.total} onClick={() => setOffset(o => o + LIMITE)}>Siguiente</button></div>
     </div>}
+    </>}
   </>;
 }

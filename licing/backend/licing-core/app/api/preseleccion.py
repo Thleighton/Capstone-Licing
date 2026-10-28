@@ -4,14 +4,14 @@ import binascii
 import asyncio
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..auth import solo_cron, usuario_actual
@@ -25,6 +25,7 @@ from ..services.enlaces import ficha_oficial
 from ..services.pdf_bases import extraer_pdf, MAX_BYTES
 from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE, VERSION_MOTOR
 from ..services.clientes_importantes import identificar_clientes_importantes
+from ..services.fechas_consulta import filtrar_cierre
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -126,17 +127,28 @@ def verificar_integracion():
 @router.get("", dependencies=[Depends(usuario_actual)])
 async def listar(response: Response, clasificacion: str = Query(default="", max_length=30),
                  q: str = Query(default="", max_length=150), limite: int = Query(default=25, ge=1, le=100),
-                 offset: int = Query(default=0, ge=0), db: Session = Depends(get_db)):
-    fuentes = dict(db.execute(select(Licitacion.codigo_externo, Licitacion.raw_id)).all())
+                 offset: int = Query(default=0, ge=0), db: Session = Depends(get_db),
+                 cierre_desde: date | None = None, cierre_hasta: date | None = None):
+    consulta = filtrar_cierre(select(Licitacion.codigo_externo, Licitacion.raw_id),
+                             Licitacion.fecha_cierre, cierre_desde, cierre_hasta)
+    if q.strip():
+        consulta = consulta.where(or_(*[
+            func.lower(campo).contains(q.strip().lower(), autoescape=True)
+            for campo in (Licitacion.codigo_externo, Licitacion.nombre,
+                          Licitacion.nombre_organismo, Licitacion.nombre_unidad)
+        ]))
+    fuentes = dict(db.execute(consulta).all())
     codigos = list(fuentes)
     respuesta = await filtradas.operar("listar", {"codigos": codigos, "fuentes": fuentes, "clasificacion": clasificacion,
-                                                   "q": q, "limite": limite, "offset": offset})
+                                                   "q": "", "limite": limite, "offset": offset})
     actuales = dict(db.execute(select(Licitacion.id, Licitacion.raw_id)).all())
     entradas_actuales = cargar_entradas(db, [f["id"] for f in respuesta.get("filas", [])])
     for fila in respuesta.get("filas", []):
         entrada = entradas_actuales.get(str(fila["id"]), {})
-        fila["nombre_organismo"] = entrada.get("nombre_organismo")
-        fila["nombre_unidad"] = entrada.get("nombre_unidad")
+        fila.update({campo: entrada.get(campo) for campo in (
+            "nombre_organismo", "nombre_unidad", "descripcion", "monto_estimado", "moneda",
+            "estimacion", "visibilidad_monto", "fecha_publicacion", "fecha_cierre", "tipo", "estado",
+        )})
         fila["clientes_importantes"] = identificar_clientes_importantes(entrada)
         if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or
                 fila.get("hash_fuente") != firma_fuente(entradas_actuales.get(str(fila["id"]), {}))):

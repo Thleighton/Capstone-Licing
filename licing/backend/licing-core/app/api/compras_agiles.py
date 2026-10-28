@@ -1,5 +1,5 @@
 """Consultas del frontend sobre las Compras Ágiles guardadas por Core."""
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -18,8 +18,9 @@ from ..models.compra_agil_sincronizacion import CompraAgilSincronizacion
 from ..models.raw import RawMercadoPublico
 from ..services import filtradas
 from ..services.clientes_importantes import identificar_clientes_importantes
-from ..services.compra_agil_preseleccion import contar_pendientes, evaluar_compras_agiles, version_preseleccion
+from ..services.compra_agil_preseleccion import contar_pendientes, evaluar_compras_agiles, plan_pendientes, version_preseleccion
 from ..services.enlaces import ficha_compra_agil
+from ..services.fechas_consulta import filtrar_cierre
 
 CHILE = ZoneInfo("America/Santiago")
 router = APIRouter(prefix="/api", tags=["Compras Ágiles"], dependencies=[Depends(usuario_actual)])
@@ -116,6 +117,8 @@ def listar_compras_agiles(
     limite: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    cierre_desde: date | None = None,
+    cierre_hasta: date | None = None,
 ):
     filtros = []
     if q.strip():
@@ -132,8 +135,9 @@ def listar_compras_agiles(
             CompraAgil.estado == "publicada",
             or_(CompraAgil.fecha_cierre.is_(None), CompraAgil.fecha_cierre >= ahora),
         ))
-    total = db.scalar(select(func.count()).select_from(CompraAgil).where(*filtros))
-    filas = db.scalars(select(CompraAgil).where(*filtros).order_by(
+    consulta = filtrar_cierre(select(CompraAgil).where(*filtros), CompraAgil.fecha_cierre, cierre_desde, cierre_hasta)
+    total = db.scalar(select(func.count()).select_from(consulta.subquery()))
+    filas = db.scalars(consulta.order_by(
         CompraAgil.fecha_publicacion.desc().nullslast(), CompraAgil.id.desc(),
     ).offset(offset).limit(limite)).all()
     response.headers["Cache-Control"] = "no-store"
@@ -189,9 +193,13 @@ async def preseleccion_compras_agiles(
     limite: int = Query(default=25, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    cierre_desde: date | None = None,
+    cierre_hasta: date | None = None,
 ):
     """Evaluaciones de LicitacionesFiltradas, solo para las Compras Ágiles que Core conserva."""
-    fuentes = dict(db.execute(select(CompraAgil.codigo_externo, CompraAgil.raw_id)).all())
+    consulta = filtrar_cierre(select(CompraAgil.codigo_externo, CompraAgil.raw_id),
+                             CompraAgil.fecha_cierre, cierre_desde, cierre_hasta)
+    fuentes = dict(db.execute(consulta).all())
     respuesta = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
         "clasificacion": clasificacion, "q": q, "limite": limite, "offset": offset})
     filas = respuesta.get("filas", [])
@@ -208,6 +216,14 @@ async def preseleccion_compras_agiles(
     respuesta["pendientes"] = contar_pendientes(db)
     response.headers["Cache-Control"] = "no-store"
     return respuesta
+
+
+@router.get("/compras-agiles/preseleccion/plan")
+async def plan_preseleccion_compras_agiles(response: Response, db: Session = Depends(get_db)):
+    """Comprueba las evaluaciones pendientes sin guardar cambios."""
+    ids = await plan_pendientes(db)
+    response.headers["Cache-Control"] = "no-store"
+    return {"ids": ids, "pendientes": max(len(ids), contar_pendientes(db))}
 
 
 @router.post("/compras-agiles/preseleccion/evaluar")

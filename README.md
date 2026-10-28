@@ -179,9 +179,9 @@ El modelo de datos completo (lógico, relacional y diccionario de datos) está e
 - Sincronización por páginas y regiones configurables, con avance parcial entre lotes.
 - Cada lote preselecciona las Compras Ágiles con el mismo motor que las licitaciones.
 
-### 🔎 Oportunidades
-- Panel con pestañas para **Licitaciones** y **Compras Ágiles**.
-- Búsqueda por texto, filtro por región, opción "solo abiertas" y paginación resueltos en el servidor.
+### 🔎 Licitaciones y Compras Ágiles
+- Páginas independientes para **Licitaciones** y **Compras Ágiles**. El enlace anterior `#oportunidades` redirige a `#licitaciones`.
+- Tres pilares compartidos con Compras Ágiles y controles de clasificación (posible oportunidad, revisión necesaria o todas) y fechas de cierre. La búsqueda y la paginación se resuelven en el servidor.
 - Fichas con código, organismo, estado, montos, fechas, ítems o productos solicitados y el resultado de los tres pilares.
 
 ### 👥 Clientes *(demostración)*
@@ -201,20 +201,20 @@ Estas pantallas existen en el código, pero están ocultas en el menú hasta con
 - **Salones del hotel**: disponibilidad y capacidad.
 - **Bases y documentos**: análisis documental con ejemplos locales.
 - **Seguimiento**: estados comerciales de cada oportunidad.
+- **Reportes**: pausado temporalmente; se conservan su pantalla y código.
 
 ---
 
 <a id="dashboard-visualizacion" name="dashboard-visualizacion"></a>
 ## 📊 Dashboard & Visualización
 
-El dashboard es la pantalla de inicio y reúne en una sola vista el estado de toda la base:
+El dashboard es la pantalla de inicio y conserva la preselección de oportunidades, las alertas de cierre y el apoyo de trabajo:
 
-- **Indicadores**: total de procesos, incorporaciones de las últimas 24 horas, abiertos y cerrados.
-- **Gráficos**: publicaciones por día y proporción de procesos vigentes frente al resto.
-- **Preselección**: panel con pestañas para licitaciones y Compras Ágiles, con las oportunidades posibles, las descartadas y las pendientes de revisión, junto al botón **Actualizar preselección**.
+- **Oportunidades para el hotel**: panel con pestañas de Licitaciones y Compras Ágiles y los tres pilares de preselección.
 - **Próximas a cerrar**: alertas desde 4 días antes del cierre, con acceso directo a la ficha.
 - **Asistente IA** *(demostración)*: recomendaciones de ejemplo, priorizadas en alta, media o baja, que muestran cómo se verá el motor de IA cuando esté disponible.
-- **Reportes** *(demostración)*: vista previa de informes de gestión con datos de ejemplo.
+
+El bloque **Indicadores de licitaciones**, sus tarjetas de datos y la descarga de Excel están en **Licitaciones**. La preselección sigue disponible en el dashboard y en las páginas de **Licitaciones** y **Compras Ágiles**. Reportes sigue desactivado.
 
 Estar abierta no significa que una oportunidad sea compatible con el hotel: esa clasificación la entrega la preselección.
 
@@ -234,7 +234,7 @@ El motor de preselección clasifica cada licitación y Compra Ágil con **tres p
 - **Resultado**: si cumple los tres pilares, el proceso es una **posible oportunidad**. Un incumplimiento explícito lo **descarta**, y se muestra el primero según la jerarquía. Si falta un dato esencial, queda **pendiente de revisión manual**.
 - **Trazabilidad**: cada pilar guarda su motivo y la evidencia que lo respalda (texto de la descripción, ítems o documentos).
 - **Reglas explícitas**: no confunde el domicilio del comprador con el lugar del servicio ni una categoría genérica de producto con una contratación concreta. El catálogo de reglas está versionado en `app/data/preseleccion_hotel_v1.json`.
-- **Recálculo**: cambiar la versión del motor o del catálogo invalida las evaluaciones anteriores. Al entrar al dashboard, o con **Actualizar preselección**, se recalculan las pendientes.
+- **Recálculo**: cambiar la versión del motor o del catálogo invalida las evaluaciones anteriores. Las licitaciones se actualizan al abrir su página; en Compras Ágiles se comprueban las pendientes y se guardan con **Actualizar preselección**.
 - **IA**: el filtrado semántico y el análisis con modelos de lenguaje se retiraron de esta versión y quedan como trabajo futuro. La preselección actual es determinista y explicable.
 
 ---

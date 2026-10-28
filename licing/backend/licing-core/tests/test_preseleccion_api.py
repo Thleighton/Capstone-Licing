@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -30,6 +31,76 @@ def test_rutas_privadas_sin_token(client):
     assert client.get('/api/preseleccion/plan').status_code==401
     assert client.post('/api/preseleccion/evaluar',json={'ids':[1]}).status_code==401
     assert client.get('/api/preseleccion/pendientes-documentales').status_code==401
+
+
+def test_listado_por_dia_de_cierre(client, fila, integration_db, monkeypatch):
+    fila.fecha_cierre = datetime(2099, 5, 10, 23, 59, 59, 999999)
+    integration_db.commit()
+    operar = AsyncMock(return_value={"filas": [], "total": 0})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    respuesta = client.get('/api/preseleccion', params={'cierre_desde': '2099-05-10', 'cierre_hasta': '2099-05-10'})
+    assert respuesta.status_code == 200, respuesta.text
+    assert operar.call_args.args[1]['codigos'] == [fila.codigo_externo]
+    respuesta = client.get('/api/preseleccion', params={'cierre_desde': '2099-05-11'})
+    assert respuesta.status_code == 200, respuesta.text
+    assert operar.call_args.args[1]['codigos'] == []
+    assert client.get('/api/preseleccion', params={'cierre_desde': '2099-05-11', 'cierre_hasta': '2099-05-10'}).status_code == 422
+
+
+def test_busqueda_conserva_institucion_en_oportunidades(client, fila, integration_db, monkeypatch):
+    fila.nombre_organismo = 'Ministerio de Salud'
+    integration_db.commit()
+    operar = AsyncMock(return_value={'filas': [], 'total': 0})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    assert client.get('/api/preseleccion', params={'q': 'SALUD'}).status_code == 200
+    assert operar.call_args.args[1]['codigos'] == [fila.codigo_externo]
+    assert operar.call_args.args[1]['q'] == ''
+    assert client.get('/api/preseleccion', params={'q': 'otra institucion'}).status_code == 200
+    assert operar.call_args.args[1]['codigos'] == []
+
+
+def test_listado_muestra_presupuesto_y_datos_actuales_de_core(client, fila, integration_db, monkeypatch):
+    from app.api.preseleccion import cargar_entradas
+    fila.monto_estimado = Decimal('1285000.75')
+    fila.moneda = 'USD'
+    fila.estimacion = 2
+    fila.visibilidad_monto = 1
+    fila.fecha_publicacion = datetime(2026, 10, 28, 12)
+    fila.descripcion = 'Arriendo de salón para seminario de 40 asistentes.'
+    fila.tipo = 'LE'
+    integration_db.commit()
+    entrada = cargar_entradas(integration_db, [fila.id])[str(fila.id)]
+    monkeypatch.setattr(filtradas, 'operar', AsyncMock(return_value={'filas': [{
+        'id': fila.id, 'codigo_externo': fila.codigo_externo, 'fuente_raw_id': fila.raw_id,
+        'hash_fuente': firma_fuente(entrada), 'estado_seleccion': 'preseleccionada',
+        'monto_estimado': '1', 'moneda': 'CLP', 'tipo': 'desactualizado',
+    }], 'total': 1}))
+    respuesta = client.get('/api/preseleccion')
+    assert respuesta.status_code == 200, respuesta.text
+    datos = respuesta.json()['filas'][0]
+    assert datos['monto_estimado'] == '1285000.75' and datos['moneda'] == 'USD'
+    assert datos['estimacion'] == 2 and datos['visibilidad_monto'] == 1
+    assert datos['fecha_publicacion'] == '2026-10-28T12:00:00-03:00'
+    assert datos['fecha_cierre'].startswith('2099-01-01T00:00:00')
+    assert datos['tipo'] == 'LE' and datos['estado'] == 'Publicada'
+    assert datos['descripcion'] == fila.descripcion
+
+
+@pytest.mark.parametrize('monto,esperado', [(None, None), (Decimal('0'), '0')])
+def test_listado_distingue_monto_ausente_de_cero(client, fila, integration_db, monkeypatch, monto, esperado):
+    fila.monto_estimado = monto
+    fila.moneda = None
+    fila.estimacion = 1
+    fila.visibilidad_monto = 0
+    integration_db.commit()
+    monkeypatch.setattr(filtradas, 'operar', AsyncMock(return_value={'filas': [{
+        'id': fila.id, 'codigo_externo': fila.codigo_externo, 'fuente_raw_id': fila.raw_id,
+    }], 'total': 1}))
+    respuesta = client.get('/api/preseleccion')
+    assert respuesta.status_code == 200, respuesta.text
+    datos = respuesta.json()['filas'][0]
+    assert datos['monto_estimado'] == esperado and datos['moneda'] is None
+    assert datos['estimacion'] == 1 and datos['visibilidad_monto'] == 0
 
 
 def test_reevaluacion_guarda_evidencia_y_actor(client, fila, monkeypatch):

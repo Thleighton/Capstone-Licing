@@ -208,11 +208,13 @@ Estas pantallas existen en el código, pero están ocultas en el menú hasta con
 <a id="dashboard-visualizacion" name="dashboard-visualizacion"></a>
 ## 📊 Dashboard & Visualización
 
-El dashboard es la pantalla de inicio y concentra las alertas de cierre y el apoyo de trabajo:
+El dashboard es la pantalla de inicio y conserva la preselección de oportunidades, las alertas de cierre y el apoyo de trabajo:
+
+- **Oportunidades para el hotel**: panel con pestañas de Licitaciones y Compras Ágiles y los tres pilares de preselección.
 - **Próximas a cerrar**: alertas desde 4 días antes del cierre, con acceso directo a la ficha.
 - **Asistente IA** *(demostración)*: recomendaciones de ejemplo, priorizadas en alta, media o baja, que muestran cómo se verá el motor de IA cuando esté disponible.
 
-Los indicadores de licitaciones y su descarga de Excel están en **Licitaciones**. La preselección y sus controles se muestran únicamente en **Licitaciones** y **Compras Ágiles**. Reportes sigue desactivado.
+El bloque **Indicadores de licitaciones**, sus tarjetas de datos y la descarga de Excel están en **Licitaciones**. La preselección sigue disponible en el dashboard y en las páginas de **Licitaciones** y **Compras Ágiles**. Reportes sigue desactivado.
 
 Estar abierta no significa que una oportunidad sea compatible con el hotel: esa clasificación la entrega la preselección.
 

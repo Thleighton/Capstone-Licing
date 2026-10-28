@@ -6,7 +6,7 @@ export default {
   nav: "Dashboard",
   icono: "dashboard",
   titulo: "Dashboard · Inicio",
-  descripcion: "Consulta las alertas de cierre y organiza tu trabajo.",
+  descripcion: "Busca, prioriza y coordina las oportunidades desde un solo lugar.",
   responsable: "Thomas Leighton",
   epicas: ["E7"],
   Page: DashboardPage,

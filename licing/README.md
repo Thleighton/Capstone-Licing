@@ -107,6 +107,7 @@ Cada detalle del lote se procesa dentro de una transacción anidada. Si un ítem
 
 - **Licitaciones** (antes Oportunidades) reúne los indicadores, la descarga de Excel y la preselección con los tres pilares, clasificación y rango inclusivo de fechas de cierre (`cierre_desde`, `cierre_hasta`). No muestra filtros de región ni de solo abiertas. `#oportunidades` conserva compatibilidad y redirige a `#licitaciones`.
 - Las fichas muestran código, organismo, estado, montos con su moneda, fechas e ítems de Core.
+- En la página Licitaciones, las tarjetas muestran descripción, presupuesto disponible o precio referencial, publicación, cierre, tipo y estado con los datos actuales de Core. Los montos ausentes, no publicados o no estimables se indican como tales.
 - Las fechas originales sin zona se interpretan como hora de Chile al responder; no se modifica el almacenamiento de Core.
 - El dashboard conserva el panel de preselección con pestañas de Licitaciones y Compras Ágiles, las alertas de próximos cierres y el asistente de demostración. El título Indicadores de licitaciones, las tarjetas de datos y el Excel están en Licitaciones. La preselección también está disponible en las páginas de Licitaciones y Compras Ágiles. Estar abierta no representa compatibilidad comercial.
 - Las pantallas de perfil, disponibilidad, clientes, seguimiento y reportes conservan su demostración. El análisis de bases utiliza ejemplos locales, sin depender del backend retirado.

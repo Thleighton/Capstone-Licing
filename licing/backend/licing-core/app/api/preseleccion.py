@@ -145,8 +145,10 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
     entradas_actuales = cargar_entradas(db, [f["id"] for f in respuesta.get("filas", [])])
     for fila in respuesta.get("filas", []):
         entrada = entradas_actuales.get(str(fila["id"]), {})
-        fila["nombre_organismo"] = entrada.get("nombre_organismo")
-        fila["nombre_unidad"] = entrada.get("nombre_unidad")
+        fila.update({campo: entrada.get(campo) for campo in (
+            "nombre_organismo", "nombre_unidad", "descripcion", "monto_estimado", "moneda",
+            "estimacion", "visibilidad_monto", "fecha_publicacion", "fecha_cierre", "tipo", "estado",
+        )})
         fila["clientes_importantes"] = identificar_clientes_importantes(entrada)
         if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or
                 fila.get("hash_fuente") != firma_fuente(entradas_actuales.get(str(fila["id"]), {}))):

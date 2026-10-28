@@ -5,6 +5,7 @@ import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import ResultadoPreseleccion from "./ResultadoPreseleccion";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import PanelComprasAgiles from "../../compras-agiles/components/PanelDashboard";
+import ResumenLicitacion from "../../oportunidades/components/ResumenLicitacion";
 import PreseleccionControles, { PilaresPreseleccion } from "../../../core/ui/PreseleccionControles";
 import "./preseleccion.css";
 
@@ -22,7 +23,7 @@ const pilares = [
 ];
 const fecha = valor => valor ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(valor)) : "Sin fecha";
 
-export default function Preseleccion({ onActualizada, versionComprasAgiles, mostrarModalidades = false, q = "" }) {
+export default function Preseleccion({ onActualizada, versionComprasAgiles, mostrarModalidades = false, mostrarInformacion = false, q = "" }) {
   const id = useId();
   const [modalidad, setModalidad] = useState("licitaciones");
   const [comprasVisitadas, setComprasVisitadas] = useState(false);
@@ -134,9 +135,11 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     {cargando ? <p role="status">Cargando preselección…</p> : <>
       {!datos.filas.length && !error && !errorCarga && !ocupado && <p className="pre-vacio">{datos.ids_fuente.length ? filtro === "preseleccionada" ? "No hay posibles oportunidades para estas fechas. Puedes consultar Revisión necesaria o Todas." : "No hay resultados en esta vista y rango de fechas." : "Todavía no hay licitaciones vigentes para evaluar."}</p>}
       <div className="pre-lista" role="region" aria-label="Resultados de licitaciones para el hotel" tabIndex={datos.filas.length ? 0 : undefined}>{datos.filas.map(fila => <article key={fila.id} className="pre-fila" data-estado={fila.estado_seleccion} data-cliente-importante={!!fila.clientes_importantes?.length && ["preseleccionada", "revision_manual"].includes(fila.estado_seleccion)}>
-        <div><span className="sub">{fila.codigo_externo} · Cierra {fecha(fila.fecha_cierre)}</span>
+        <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><span className="sub">{fila.codigo_externo}{!mostrarInformacion && <> · Cierra {fecha(fila.fecha_cierre)}</>}</span>
           {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
-          <TituloLicitacion licitacion={fila} /><p>{fila.motivo_seleccion}</p>
+          <TituloLicitacion licitacion={fila} />
+          {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
+          <p>{fila.motivo_seleccion}</p>
           <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{etiquetas[fila.estado_seleccion]}</span></div>
         <div className="pre-fila-acciones"><button disabled={!!ocupado} onClick={() => abrir(fila)}>Ver resultado</button>{fila.url_oficial && <a href={fila.url_oficial} target="_blank" rel="noreferrer">Mercado Público ↗</a>}</div>
       </article>)}</div>

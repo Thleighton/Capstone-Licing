@@ -23,10 +23,18 @@ const pilares = [
 ];
 const fecha = valor => valor ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(valor)) : "Sin fecha";
 
-export default function Preseleccion({ onActualizada, versionComprasAgiles, mostrarModalidades = false, mostrarInformacion = false, q = "" }) {
+export default function Preseleccion({ onActualizada, versionComprasAgiles, mostrarModalidades = false, mostrarInformacion = false, mostrarFechas = true, q = "" }) {
   const id = useId();
   const [modalidad, setModalidad] = useState("licitaciones");
   const [comprasVisitadas, setComprasVisitadas] = useState(false);
+  const comprasRef = useRef(null);
+  const [actualizandoCompras, setActualizandoCompras] = useState(false);
+  async function actualizarCompras() {
+    if (!comprasRef.current) return;
+    setActualizandoCompras(true);
+    try { await comprasRef.current.actualizar(); }
+    finally { setActualizandoCompras(false); }
+  }
   function elegirModalidad(valor) {
     setModalidad(valor);
     if (valor === "compras-agiles") setComprasVisitadas(true);
@@ -55,14 +63,14 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     let vigente = true; setCargando(true);
     const control = new AbortController();
     const parametros = new URLSearchParams({ clasificacion: filtro, offset: String(offset), q });
-    if (desde) parametros.set("cierre_desde", desde);
-    if (hasta) parametros.set("cierre_hasta", hasta);
+    if (mostrarFechas && desde) parametros.set("cierre_desde", desde);
+    if (mostrarFechas && hasta) parametros.set("cierre_hasta", hasta);
     const consulta = `${URL}?${parametros}`;
     apiJson(consulta, { signal: control.signal }).then(r => {
       if (vigente) { setDatos(r); setErrorCarga(""); }
     }).catch(e => { if (vigente) setErrorCarga(e.message); }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; control.abort(); };
-  }, [filtro, offset, version, q, desde, hasta]);
+  }, [filtro, offset, version, q, desde, hasta, mostrarFechas]);
   useEffect(() => { setOffset(0); }, [q]);
   useEffect(() => {
     let vigente = true;
@@ -113,11 +121,15 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     } catch (e) { setErrorRevision(e.message); }
     finally { setOcupado(""); }
   }
+  const mensajeVacio = !datos.ids_fuente.length ? "Todavía no hay licitaciones vigentes para evaluar."
+    : filtro === "preseleccionada"
+      ? `No hay posibles oportunidades ${mostrarFechas ? "para estas fechas" : "en esta carga"}. Puedes consultar Revisión necesaria o Todas.`
+      : `No hay resultados en esta vista${mostrarFechas ? " y rango de fechas" : ""}.`;
   return <section className="card panel preseleccion" aria-labelledby={`${id}-titulo`}>
     <div className="section-title pre-heading"><div className="pre-heading-title"><span className="pre-heading-icon"><Icon name="briefcase" /></span><div><h2 id={`${id}-titulo`}>{mostrarModalidades ? "Oportunidades para el hotel" : "Licitaciones para el hotel"}</h2><p className="sub">Tres pilares: vigencia, ubicación en la RM y servicio solicitado.</p></div></div>
       {modalidad === "licitaciones"
         ? <button className="primary" disabled={!!ocupado || cargando} onClick={evaluar}>Actualizar preselección</button>
-        : <a className="pre-mode-link" href="#compras-agiles">Ver todas las Compras Ágiles →</a>}</div>
+        : <button className="primary" type="button" disabled={actualizandoCompras} onClick={actualizarCompras}>{actualizandoCompras ? "Actualizando…" : "Actualizar preselección"}</button>}</div>
     {mostrarModalidades && <div className="pre-modalidades" role="tablist" aria-label="Tipo de oportunidades">{modalidades.map((m, i) => <button
       key={m.id} id={`${id}-tab-${m.id}`} type="button" role="tab" aria-selected={modalidad === m.id}
       aria-controls={`${id}-panel-${m.id}`} tabIndex={modalidad === m.id ? 0 : -1}
@@ -126,14 +138,14 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     <PilaresPreseleccion />
     <div className="pre-modalidad-panel" id={`${id}-panel-licitaciones`} role={mostrarModalidades ? "tabpanel" : undefined}
       aria-labelledby={mostrarModalidades ? `${id}-tab-licitaciones` : undefined} hidden={modalidad !== "licitaciones"} tabIndex={mostrarModalidades ? 0 : undefined}>
-    <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado}
+    <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado} mostrarFechas={mostrarFechas}
       onClasificacion={valor => { setFiltro(valor); setOffset(0); }}
       onDesde={valor => { setDesde(valor); setOffset(0); }} onHasta={valor => { setHasta(valor); setOffset(0); }} />
     {ocupado && <p role="status">{ocupado}</p>}
     {!ocupado && resumen && <p className="sub" role="status">{resumen}</p>}
     {(error || errorCarga) && <p className="msg err" role="alert">{error || errorCarga}</p>}
     {cargando ? <p role="status">Cargando preselección…</p> : <>
-      {!datos.filas.length && !error && !errorCarga && !ocupado && <p className="pre-vacio">{datos.ids_fuente.length ? filtro === "preseleccionada" ? "No hay posibles oportunidades para estas fechas. Puedes consultar Revisión necesaria o Todas." : "No hay resultados en esta vista y rango de fechas." : "Todavía no hay licitaciones vigentes para evaluar."}</p>}
+      {!datos.filas.length && !error && !errorCarga && !ocupado && <p className="pre-vacio">{mensajeVacio}</p>}
       <div className="pre-lista" role="region" aria-label="Resultados de licitaciones para el hotel" tabIndex={datos.filas.length ? 0 : undefined}>{datos.filas.map(fila => <article key={fila.id} className="pre-fila" data-estado={fila.estado_seleccion} data-cliente-importante={!!fila.clientes_importantes?.length && ["preseleccionada", "revision_manual"].includes(fila.estado_seleccion)}>
         <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><span className="sub">{fila.codigo_externo}{!mostrarInformacion && <> · Cierra {fecha(fila.fecha_cierre)}</>}</span>
           {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
@@ -152,7 +164,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     </div>
     {mostrarModalidades && <div className="pre-modalidad-panel" id={`${id}-panel-compras-agiles`} role="tabpanel"
       aria-labelledby={`${id}-tab-compras-agiles`} hidden={modalidad !== "compras-agiles"} tabIndex={0}>
-      {comprasVisitadas && <PanelComprasAgiles version={versionComprasAgiles} integrado />}
+      {comprasVisitadas && <PanelComprasAgiles ref={comprasRef} version={versionComprasAgiles} integrado />}
     </div>}
   </section>;
 }

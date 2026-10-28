@@ -9,15 +9,17 @@ export function PilaresPreseleccion() {
   </>;
 }
 
-export default function PreseleccionControles({ clasificacion, desde, hasta, onClasificacion, onDesde, onHasta, total, disabled = false }) {
+export default function PreseleccionControles({ clasificacion, desde, hasta, onClasificacion, onDesde, onHasta, total, disabled = false, mostrarFechas = true }) {
   return <div className="oportunidad-controles">
     <label>Mostrar <select value={clasificacion} onChange={e => onClasificacion(e.target.value)} disabled={disabled}>
       <option value="preseleccionada">Posible oportunidad</option>
       <option value="revision_manual">Revisión necesaria</option>
       <option value="">Todas</option>
     </select></label>
-    <label>Cierre desde <input type="date" value={desde} max={hasta || undefined} onChange={e => onDesde(e.target.value)} disabled={disabled} /></label>
-    <label>Hasta <input type="date" value={hasta} min={desde || undefined} onChange={e => onHasta(e.target.value)} disabled={disabled} /></label>
+    {mostrarFechas && <>
+      <label>Cierre desde <input type="date" value={desde} max={hasta || undefined} onChange={e => onDesde(e.target.value)} disabled={disabled} /></label>
+      <label>Hasta <input type="date" value={hasta} min={desde || undefined} onChange={e => onHasta(e.target.value)} disabled={disabled} /></label>
+    </>}
     <span className="sub" aria-live="polite">{total} {total === 1 ? "resultado" : "resultados"}</span>
   </div>;
 }

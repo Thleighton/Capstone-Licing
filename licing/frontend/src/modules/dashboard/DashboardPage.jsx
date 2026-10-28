@@ -22,7 +22,7 @@ export default function DashboardPage({ soloDashboard = false }) {
       {dashboardError && <div className="msg err" role="alert">{dashboardError}{dashboard && " Se muestra el último resumen disponible."}</div>}
 
       <div className="dashboard-priorities">
-        <Preseleccion mostrarModalidades onActualizada={cargarResumen} versionComprasAgiles={actualizado} />
+        <Preseleccion mostrarModalidades mostrarFechas={false} onActualizada={cargarResumen} versionComprasAgiles={actualizado} />
         <section className="card panel dashboard-panel panel-amber dashboard-deadlines"><PanelHeading icono="clock" tono="amber" titulo="Próximas a cerrar" nota="Alertas desde 4 días antes del cierre" />
           <ProximasACerrar rows={dashboard?.proximas || []} disponibles={dashboard?.proximas_disponibles !== false} estado={estado} abrirFicha={abrirFicha} mostrarFicha={!soloDashboard} /></section>
       </div>

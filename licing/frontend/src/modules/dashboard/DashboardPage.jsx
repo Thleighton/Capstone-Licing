@@ -1,6 +1,7 @@
 import { useLicitaciones } from "../../core/data/LicitacionesProvider";
 import AsistenteIA from "./components/AsistenteIA";
 import Indicadores from "./components/Indicadores";
+import DescargarOportunidades from "./components/DescargarOportunidades";
 import ProximasACerrar from "./components/ProximasACerrar";
 
 import Preseleccion from "./components/Preseleccion";
@@ -25,6 +26,7 @@ export default function DashboardPage({ soloDashboard = false }) {
       <p className="overview-note">Resumen general de las licitaciones guardadas en Mercado Público.</p>
       {dashboardError && <div className="msg err" role="alert">{dashboardError}{dashboard && " Se muestra el último resumen disponible."}</div>}
       {dashboard && <Indicadores resumen={dashboard} />}
+      <DescargarOportunidades />
 
       <div className="dashboard-priorities">
         <Preseleccion onActualizada={cargarResumen} versionComprasAgiles={actualizado} />

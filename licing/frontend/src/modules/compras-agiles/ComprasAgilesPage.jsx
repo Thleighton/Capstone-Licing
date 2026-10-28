@@ -19,7 +19,7 @@ function Stat({ n, titulo, icono, nota }) {
 }
 
 export default function ComprasAgilesPage() {
-  // «Actualizar» de la barra superior recarga también esta página.
+  // Refrescar los datos compartidos recarga también esta página.
   const { actualizado } = useLicitaciones();
   const { resumen, error } = useResumenComprasAgiles(actualizado);
   const [vista, setVista] = useState("hotel");

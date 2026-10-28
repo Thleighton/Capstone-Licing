@@ -24,6 +24,10 @@
 .app[data-module="dashboard"] .user-avatar { background: var(--violet-bg); color: var(--violet); }
 
 .dashboard-page { min-width: 0; }
+.dashboard-export { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 18px 22px; margin-bottom: 24px; }
+.dashboard-export > div { flex: 1 1 240px; }
+.dashboard-export p { margin: 6px 0 0; }
+.dashboard-export > .msg { flex-basis: 100%; }
 .dashboard-page .panel-icon {
   width: 35px; height: 35px; border-radius: 10px; display: grid; place-items: center; flex: none;
 }

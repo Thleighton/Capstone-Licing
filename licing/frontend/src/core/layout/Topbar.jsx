@@ -4,11 +4,10 @@ import { useAuth } from "../auth/AuthProvider";
 import { ROLES } from "../auth/session";
 import { useLicitaciones } from "../data/LicitacionesProvider";
 import { useTheme } from "../ui/ThemeProvider";
-import BotonIngesta from "./BotonIngesta";
 
 export default function Topbar({ soloDashboard = false }) {
   const { perfil, logout } = useAuth();
-  const { q, setQ, status, cargar } = useLicitaciones();
+  const { q, setQ, status } = useLicitaciones();
   const { dark, toggle } = useTheme();
   const iniciales = (perfil?.nombre || "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
 
@@ -23,8 +22,6 @@ export default function Topbar({ soloDashboard = false }) {
       <button type="button" id="themeToggle" onClick={toggle} aria-pressed={dark} aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}>
         <span aria-hidden="true">{dark ? "☀" : "☾"}</span><span id="themeLabel">{dark ? "Modo claro" : "Modo oscuro"}</span>
       </button>
-      <button type="button" onClick={cargar}>Actualizar</button>
-      {perfil?.rol === "administrador" && <BotonIngesta />}
       {perfil && (
         <div className="user-chip">
           <span className="user-avatar" aria-hidden="true">{iniciales || "?"}</span>

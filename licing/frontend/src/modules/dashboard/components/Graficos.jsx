@@ -1,4 +1,4 @@
-const SIN_DATOS = <p className="empty">No se pudieron cargar los datos. Pulsa Actualizar para volver a intentar.</p>;
+const SIN_DATOS = <p className="empty">No se pudieron cargar los datos. Recarga la página para volver a intentar.</p>;
 const CARGANDO = "Cargando indicadores…";
 export function PublicacionesSemana({ datos, estado }) {
   if (estado !== "ok") return <div className="chart-placeholder">{estado === "err" ? SIN_DATOS : CARGANDO}</div>;

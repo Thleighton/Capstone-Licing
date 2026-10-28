@@ -19,9 +19,9 @@ export default function ProximasACerrar({ rows, disponibles = true, estado, abri
     const reloj = setInterval(() => setAhora(Date.now()), 60000);
     return () => clearInterval(reloj);
   }, []);
-  if (estado === "err") return <p className="empty">No se pudieron cargar los datos. Pulsa Actualizar para volver a intentar.</p>;
+  if (estado === "err") return <p className="empty">No se pudieron cargar los datos. Recarga la página para volver a intentar.</p>;
   if (estado !== "ok") return <p className="empty">Cargando oportunidades…</p>;
-  if (!disponibles) return <p className="empty">No se pudo consultar la preselección. Pulsa Actualizar para volver a intentar.</p>;
+  if (!disponibles) return <p className="empty">No se pudo consultar la preselección. Recarga la página para volver a intentar.</p>;
   const next = rows.filter(r => r.estado_seleccion === pestaña)
     .sort((a, b) => new Date(a.fecha_cierre) - new Date(b.fecha_cierre) || a.id - b.id);
   function moverPestaña(e, indice) {

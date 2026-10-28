@@ -196,6 +196,36 @@ def pendientes_documentales(response: Response, limite: int = Query(default=25, 
     return {"filas": filas[offset:offset+limite], "total": len(filas), "ids_fuente": [f["id"] for f in fuentes]}
 
 
+@router.get("/exportar.xlsx", dependencies=[Depends(usuario_actual)])
+async def exportar_excel(db: Session = Depends(get_db)):
+    from starlette.concurrency import run_in_threadpool
+    from ..services.exportacion_oportunidades import crear_excel, HOJAS
+
+    ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
+    entradas = await run_in_threadpool(cargar_entradas, db, ids)
+    fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
+    guardadas = {}
+    for offset in range(0, len(ids), 100):
+        pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
+            "limite": 100, "offset": offset})
+        guardadas.update({str(f["id"]): f for f in pagina.get("filas", [])})
+    filas = []
+    for identificador, datos in entradas.items():
+        guardada = guardadas.get(identificador, {})
+        estado = guardada.get("estado_seleccion")
+        if (estado not in HOJAS or guardada.get("fuente_raw_id") != datos["raw_id"]
+                or guardada.get("codigo_externo") != datos["codigo_externo"]
+                or guardada.get("hash_fuente") != firma_fuente(datos)):
+            estado = "revision_manual"
+        filas.append({**datos, "estado_seleccion": estado})
+    contenido = await run_in_threadpool(crear_excel, filas)
+    fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
+    return Response(contenido,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="LICING-oportunidades-{fecha}.xlsx"',
+                 "Cache-Control": "no-store"})
+
+
 @router.get("/{licitacion_id}", dependencies=[Depends(usuario_actual)])
 async def detalle(licitacion_id: int, response: Response, db: Session = Depends(get_db)):
     fila = db.get(Licitacion, licitacion_id)

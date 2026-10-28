@@ -1,0 +1,42 @@
+.oportunidad-pilares {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  list-style: none; counter-reset: pilar; padding: 0; margin: 18px 0;
+}
+.oportunidad-pilares li {
+  counter-increment: pilar; display: flex; align-items: center; gap: 10px;
+  padding: 14px; background: var(--surface-soft); border: 1px solid var(--line);
+  border-radius: 10px; color: var(--heading); font-size: 14px;
+}
+.oportunidad-pilares li::before {
+  content: counter(pilar); display: grid; place-items: center; flex: none;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--raised); font-weight: 700;
+}
+.oportunidad-nota { margin: 16px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.oportunidad-controles {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px;
+  margin: 16px 0; padding: 11px 12px; border-radius: 10px; background: var(--surface-soft);
+}
+.oportunidad-controles label { display: flex; align-items: center; gap: 10px; color: var(--heading); font-size: 13px; }
+.oportunidad-controles select, .oportunidad-controles input {
+  min-height: 39px; max-width: 100%; width: auto; padding: 8px 10px;
+  border: 1px solid var(--control-line); border-radius: 7px; font: inherit;
+  background: var(--raised); color: var(--text); color-scheme: light;
+}
+[data-theme="dark"] .oportunidad-controles input { color-scheme: dark; }
+.oportunidades-page .preseleccion { margin-top: 0; padding: 24px; }
+.oportunidades-page .pre-heading-title { display: flex; align-items: center; gap: 12px; }
+.oportunidades-page .pre-heading-icon { display: none; }
+.oportunidades-page .pre-lista { display: grid; gap: 12px; }
+.oportunidades-page .pre-fila { padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--chart-muted); border-radius: 12px; }
+.oportunidades-page .pre-fila[data-estado="preseleccionada"] { border-left-color: var(--ok); }
+.oportunidades-page .pre-fila[data-estado="revision_manual"] { border-left-color: var(--warn-ring); }
+.ca-page .ca-opportunities { padding: 24px; }
+.ca-opportunities .section-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ca-opportunities .section-title h2 { margin: 0; }
+@media (max-width: 650px) {
+  .oportunidad-pilares { grid-template-columns: 1fr; gap: 8px; }
+  .oportunidad-controles { align-items: stretch; }
+  .oportunidad-controles label { flex: 1 1 100%; justify-content: space-between; }
+  .oportunidad-controles select { min-width: 0; }
+  .oportunidades-page .preseleccion, .ca-page .ca-opportunities { padding: 16px; }
+}

@@ -32,6 +32,32 @@ def test_rutas_privadas_sin_token(client):
     assert client.get('/api/preseleccion/pendientes-documentales').status_code==401
 
 
+def test_listado_por_dia_de_cierre(client, fila, integration_db, monkeypatch):
+    fila.fecha_cierre = datetime(2099, 5, 10, 23, 59, 59, 999999)
+    integration_db.commit()
+    operar = AsyncMock(return_value={"filas": [], "total": 0})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    respuesta = client.get('/api/preseleccion', params={'cierre_desde': '2099-05-10', 'cierre_hasta': '2099-05-10'})
+    assert respuesta.status_code == 200, respuesta.text
+    assert operar.call_args.args[1]['codigos'] == [fila.codigo_externo]
+    respuesta = client.get('/api/preseleccion', params={'cierre_desde': '2099-05-11'})
+    assert respuesta.status_code == 200, respuesta.text
+    assert operar.call_args.args[1]['codigos'] == []
+    assert client.get('/api/preseleccion', params={'cierre_desde': '2099-05-11', 'cierre_hasta': '2099-05-10'}).status_code == 422
+
+
+def test_busqueda_conserva_institucion_en_oportunidades(client, fila, integration_db, monkeypatch):
+    fila.nombre_organismo = 'Ministerio de Salud'
+    integration_db.commit()
+    operar = AsyncMock(return_value={'filas': [], 'total': 0})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    assert client.get('/api/preseleccion', params={'q': 'SALUD'}).status_code == 200
+    assert operar.call_args.args[1]['codigos'] == [fila.codigo_externo]
+    assert operar.call_args.args[1]['q'] == ''
+    assert client.get('/api/preseleccion', params={'q': 'otra institucion'}).status_code == 200
+    assert operar.call_args.args[1]['codigos'] == []
+
+
 def test_reevaluacion_guarda_evidencia_y_actor(client, fila, monkeypatch):
     operar=AsyncMock(side_effect=[{}, {'evaluadas':[{'evaluacion_id':3}]}]); monkeypatch.setattr(filtradas,'operar',operar)
     response=client.post('/api/preseleccion/evaluar',json={'ids':[fila.id]})

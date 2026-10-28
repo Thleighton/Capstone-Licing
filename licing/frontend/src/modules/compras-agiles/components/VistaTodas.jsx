@@ -5,34 +5,33 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
 import { ETIQUETAS, TONOS, plazo } from "../comun";
+import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 
 const LIMITE = 50;
 
 // Todas las Compras Ágiles guardadas por Core, con búsqueda y filtros en el servidor.
-export default function VistaTodas({ q, version }) {
-  const [region, setRegion] = useState(""), [soloAbiertas, setSoloAbiertas] = useState(true);
+export default function VistaTodas({ q, version, desde, hasta, onDesde, onHasta, onClasificacion }) {
   const [offset, setOffset] = useState(0);
   const [datos, setDatos] = useState({ items: [], total: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, region, soloAbiertas]);
+  useEffect(() => { setOffset(0); }, [q, desde, hasta]);
   useEffect(() => {
     const control = new AbortController();
     setCargando(true);
     const espera = setTimeout(() => {
-      const parametros = new URLSearchParams({ q, region, solo_abiertas: String(soloAbiertas), limite: String(LIMITE), offset: String(offset) });
+      const parametros = new URLSearchParams({ q, limite: String(LIMITE), offset: String(offset) });
+      if (desde) parametros.set("cierre_desde", desde);
+      if (hasta) parametros.set("cierre_hasta", hasta);
       apiJson("/api/compras-agiles?" + parametros, { signal: control.signal })
         .then(r => { setDatos(r); setError(""); })
         .catch(e => { if (!control.signal.aborted) setError(e.message); })
         .finally(() => { if (!control.signal.aborted) setCargando(false); });
     }, 250);
     return () => { clearTimeout(espera); control.abort(); };
-  }, [q, region, soloAbiertas, offset, version]);
+  }, [q, desde, hasta, offset, version]);
   return <>
-    <div className="filtros ca-filtros">
-      <label>Región del comprador<input value={region} placeholder="Ej.: Metropolitana" onChange={e => setRegion(e.target.value)} /></label>
-      <label><input type="checkbox" checked={soloAbiertas} onChange={e => setSoloAbiertas(e.target.checked)} /> Solo abiertas</label>
-      <span aria-live="polite">{datos.total} {datos.total === 1 ? "resultado" : "resultados"}</span>
-    </div>
+    <PreseleccionControles clasificacion="" desde={desde} hasta={hasta} total={datos.total}
+      onClasificacion={onClasificacion} onDesde={onDesde} onHasta={onHasta} />
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: "22%" }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Institución</th><th>Presupuesto</th><th>Preselección</th></tr></thead>

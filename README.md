@@ -181,7 +181,7 @@ El modelo de datos completo (lógico, relacional y diccionario de datos) está e
 
 ### 🔎 Oportunidades
 - Panel con pestañas para **Licitaciones** y **Compras Ágiles**.
-- Búsqueda por texto, filtro por región, opción "solo abiertas" y paginación resueltos en el servidor.
+- Tres pilares compartidos con Compras Ágiles y controles de clasificación (posible oportunidad, revisión necesaria o todas) y fechas de cierre. La búsqueda y la paginación se resuelven en el servidor.
 - Fichas con código, organismo, estado, montos, fechas, ítems o productos solicitados y el resultado de los tres pilares.
 
 ### 👥 Clientes *(demostración)*
@@ -201,6 +201,7 @@ Estas pantallas existen en el código, pero están ocultas en el menú hasta con
 - **Salones del hotel**: disponibilidad y capacidad.
 - **Bases y documentos**: análisis documental con ejemplos locales.
 - **Seguimiento**: estados comerciales de cada oportunidad.
+- **Reportes**: pausado temporalmente; se conservan su pantalla y código.
 
 ---
 

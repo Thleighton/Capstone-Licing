@@ -78,6 +78,42 @@ def test_detalle_con_items_ordenados(client_usuario, compras):
     assert client_usuario.get("/api/compras-agiles/999999999").status_code == 404
 
 
+def test_fechas_incluyen_dia_completo_y_conservan_total(client_usuario, compras, integration_db):
+    compras[0].fecha_cierre = datetime(2099, 5, 10, 0, 0)
+    compras[1].fecha_cierre = datetime(2099, 5, 10, 23, 59, 59, 999999)
+    compras[2].fecha_cierre = datetime(2099, 5, 11, 0, 0)
+    integration_db.commit()
+    respuesta = client_usuario.get("/api/compras-agiles", params={
+        "cierre_desde": "2099-05-10", "cierre_hasta": "2099-05-10", "limite": 1,
+    })
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["total"] == 2
+    assert len(respuesta.json()["items"]) == 1
+
+
+def test_preseleccion_filtra_fechas_antes_de_paginar(client_usuario, compras, integration_db, monkeypatch):
+    from app.services import filtradas
+    compras[0].fecha_cierre = datetime(2099, 5, 10, 23, 59, 59)
+    compras[1].fecha_cierre = datetime(2099, 5, 11)
+    compras[2].fecha_cierre = None
+    integration_db.commit()
+    operar = AsyncMock(return_value={"filas": [], "total": 0})
+    monkeypatch.setattr(filtradas, "operar", operar)
+    respuesta = client_usuario.get("/api/compras-agiles/preseleccion", params={
+        "cierre_desde": "2099-05-10", "cierre_hasta": "2099-05-10", "limite": 1, "offset": 1,
+    })
+    assert respuesta.status_code == 200, respuesta.text
+    datos = operar.call_args.args[1]
+    assert datos["codigos"] == [compras[0].codigo_externo]
+    assert datos["limite"] == 1 and datos["offset"] == 1
+
+
+@pytest.mark.parametrize("ruta", ["/api/compras-agiles", "/api/compras-agiles/preseleccion"])
+def test_rechaza_rango_invertido(client_usuario, compras, ruta):
+    respuesta = client_usuario.get(ruta, params={"cierre_desde": "2099-05-11", "cierre_hasta": "2099-05-10"})
+    assert respuesta.status_code == 422
+
+
 def test_resumen_para_el_dashboard(client_usuario, compras, integration_db):
     from app.services.compra_agil_preseleccion import version_preseleccion
     vigente = {"version": version_preseleccion(), "firma": "x"}

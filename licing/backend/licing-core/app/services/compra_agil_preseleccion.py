@@ -106,11 +106,16 @@ def cargar_entradas(db: Session, ids) -> dict[str, dict]:
 
 
 def _sin_evaluacion_vigente(version):
-    return or_(CompraAgil.preseleccion.is_(None), CompraAgil.preseleccion["version"].astext != version)
+    return or_(CompraAgil.preseleccion.is_(None), CompraAgil.preseleccion["version"].astext.is_(None),
+               CompraAgil.preseleccion["version"].astext != version)
 
 
 def contar_pendientes(db: Session) -> int:
-    return db.scalar(select(func.count()).select_from(CompraAgil).where(_sin_evaluacion_vigente(version_preseleccion())))
+    ahora = datetime.now(CHILE).replace(tzinfo=None)
+    return db.scalar(select(func.count()).select_from(CompraAgil).where(
+        _sin_evaluacion_vigente(version_preseleccion()),
+        or_(CompraAgil.fecha_cierre.is_(None), CompraAgil.fecha_cierre > ahora),
+    ))
 
 
 def pendientes(db: Session, limite: int = LIMITE_POR_LOTE) -> list[int]:
@@ -124,7 +129,7 @@ def pendientes(db: Session, limite: int = LIMITE_POR_LOTE) -> list[int]:
 
 async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int = LIMITE_POR_LOTE) -> dict:
     """Evalúa y guarda en filtradas. FiltradasNoDisponible deja las compras pendientes."""
-    ids = list(dict.fromkeys(ids)) if ids is not None else pendientes(db, limite)
+    ids = list(dict.fromkeys(ids)) if ids is not None else await plan_pendientes(db, limite)
     entradas = cargar_entradas(db, ids)
     if not entradas:
         return {"evaluadas": [], "pendientes": 0}
@@ -159,6 +164,35 @@ async def evaluar_compras_agiles(db: Session, ids=None, actor=None, limite: int 
         raise errores[0]
     return {"evaluadas": evaluadas, "pendientes": contar_pendientes(db), "sin_guardar": len(lote) - len(evaluadas),
             "sincronizada": bool(evaluadas) and await _sincronizar(db)}
+
+
+async def plan_pendientes(db: Session, limite: int = LIMITE_POR_LOTE) -> list[int]:
+    """Reconcilia también evaluaciones que filtradas invalidó al cambiar el perfil.
+
+    La marca local puede seguir al día aunque el perfil activo de filtradas haya
+    cambiado desde otra modalidad. Leer el estado remoto evita dejarlas ocultas.
+    """
+    locales = pendientes(db, limite)
+    if locales:
+        return locales
+    ahora = datetime.now(CHILE).replace(tzinfo=None)
+    filas = db.execute(select(CompraAgil.id, CompraAgil.codigo_externo, CompraAgil.raw_id).where(
+        or_(CompraAgil.fecha_cierre.is_(None), CompraAgil.fecha_cierre > ahora),
+    ).order_by(CompraAgil.id)).all()
+    fuentes = {f.codigo_externo: f.raw_id for f in filas}
+    por_codigo = {f.codigo_externo: f.id for f in filas}
+    sin_vigencia = []
+    for offset in range(0, len(filas), 100):
+        pagina = filas[offset:offset + 100]
+        codigos = [f.codigo_externo for f in pagina]
+        guardadas = await filtradas.operar("listar", {"codigos": codigos,
+            "fuentes": {c: fuentes[c] for c in codigos}, "limite": 100, "offset": 0})
+        vigentes = {f["codigo_externo"] for f in guardadas.get("filas", [])
+                    if f.get("estado_seleccion") != "pendiente_evaluacion"}
+        sin_vigencia.extend(por_codigo[c] for c in codigos if c not in vigentes)
+        if len(sin_vigencia) >= limite:
+            break
+    return sin_vigencia[:limite]
 
 
 def _registrar(db: Session, parte: list[dict], respuesta: dict, version: str) -> list[dict]:

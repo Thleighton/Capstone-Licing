@@ -178,6 +178,46 @@ def test_vencidas_no_se_evaluan(db):
     compra.fecha_cierre = ahora() - timedelta(minutes=1)
     db.commit()
     assert compra.id not in preseleccion.pendientes(db)
+    assert preseleccion.contar_pendientes(db) == 0
+
+
+def test_marca_sin_version_se_recupera_como_pendiente(db):
+    compra = guardar(db, "9020-1-COT26")
+    compra.preseleccion = {}
+    db.commit()
+    assert preseleccion.pendientes(db) == [compra.id]
+    assert preseleccion.contar_pendientes(db) == 1
+
+
+def test_recupera_evaluacion_invalidada_por_perfil_remoto(db, monkeypatch):
+    compra = guardar(db, "9021-1-COT26")
+    base = filtradas_falsa()
+    monkeypatch.setattr(filtradas, "operar", base)
+    asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    assert preseleccion.pendientes(db) == []
+
+    async def operar(operacion, datos):
+        if operacion == "listar":
+            return {"filas": [{"codigo_externo": compra.codigo_externo,
+                                "estado_seleccion": "pendiente_evaluacion"}], "total": 1}
+        return await base(operacion, datos)
+
+    monkeypatch.setattr(filtradas, "operar", operar)
+    resultado = asyncio.run(preseleccion.evaluar_compras_agiles(db))
+    assert resultado["evaluadas"][0]["compra_agil_id"] == compra.id
+    assert resultado["pendientes"] == 0
+
+
+def test_revision_manual_vigente_no_se_reevalua(db, monkeypatch):
+    compra = guardar(db, "9022-1-COT26")
+    monkeypatch.setattr(filtradas, "operar", filtradas_falsa())
+    asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    operar = AsyncMock(return_value={"filas": [{"codigo_externo": compra.codigo_externo,
+                                              "estado_seleccion": "revision_manual"}], "total": 1})
+    monkeypatch.setattr(filtradas, "operar", operar)
+    resultado = asyncio.run(preseleccion.evaluar_compras_agiles(db))
+    assert resultado["evaluadas"] == []
+    assert all(llamada.args[0] == "listar" for llamada in operar.call_args_list)
 
 
 def test_lote_incluye_preseleccion_y_no_falla_si_filtradas_no_responde(db, monkeypatch):
@@ -221,6 +261,19 @@ def test_listado_marca_desactualizadas_y_agrega_datos_de_core(usuario, db, monke
     assert estados == {"9007-1-COT26": "preseleccionada", "9007-2-COT26": "pendiente_evaluacion"}
     assert r.json()["filas"][0]["clientes_importantes"][0]["id"] == "minsal"
     assert r.json()["pendientes"] >= 1
+
+
+def test_plan_solo_lee_y_no_guarda_evaluaciones(usuario, db, monkeypatch):
+    compra = guardar(db, "9023-1-COT26")
+    operar = filtradas_falsa()
+    monkeypatch.setattr(filtradas, "operar", operar)
+    respuesta = usuario.get("/api/compras-agiles/preseleccion/plan")
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json() == {"ids": [compra.id], "pendientes": 1}
+    assert respuesta.headers["cache-control"] == "no-store"
+    operar.assert_not_called()
+    db.expire_all()
+    assert db.get(CompraAgil, compra.id).preseleccion is None
 
 
 def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):

@@ -9,8 +9,9 @@ export function PilaresPreseleccion() {
   </>;
 }
 
-export default function PreseleccionControles({ clasificacion, desde, hasta, onClasificacion, onDesde, onHasta, total, disabled = false, mostrarFechas = true }) {
+export default function PreseleccionControles({ clasificacion, desde, hasta, onClasificacion, onDesde, onHasta, total, disabled = false, mostrarFechas = true, mostrarBusquedaId = false, busquedaId = "", onBusquedaId }) {
   return <div className="oportunidad-controles">
+    {mostrarBusquedaId && <label>Buscar ID<input type="search" value={busquedaId} onChange={e => onBusquedaId?.(e.target.value)} placeholder="Ej. 599-40-LP26" aria-label="Buscar por ID de licitación" disabled={disabled} /></label>}
     <label>Mostrar <select value={clasificacion} onChange={e => onClasificacion(e.target.value)} disabled={disabled}>
       <option value="preseleccionada">Posible oportunidad</option>
       <option value="revision_manual">Revisión necesaria</option>

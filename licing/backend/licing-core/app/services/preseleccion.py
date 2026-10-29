@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-salones-23"
+VERSION_MOTOR = "reglas-salones-24"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -1690,7 +1690,22 @@ def evaluar_preseleccion(
         criterios, candidato_salon_rm=candidato_salon_rm
     )
 
+    # Un documento incompleto solo debe frenar el descarte cuando la pertinencia
+    # todavía sea dudosa. Una exclusión explícita del servicio prevalece para no
+    # llenar revisión con compras claramente ajenas al hotel.
+    documento_no_verificado = documentacion["requiere_revision"]
+    servicio_ajeno_confirmado = (
+        criterios["pertinencia"]["resultado"] == "no_cumple"
+        and bool(criterios["pertinencia"].get("exclusiones_evidentes"))
+    )
+    bloquear_descarte = documento_no_verificado and not servicio_ajeno_confirmado
+    if bloquear_descarte and clasificacion == "descartada":
+        clasificacion = "revision_manual"
+        motivo = "No se puede confirmar el descarte: hay documentos de la licitación sin lectura completa. Revisar las bases manualmente."
+        pilar_decisivo = "documentacion"
+
     documentacion["bloquea_preseleccion"] = False
+    documentacion["bloquea_descarte"] = bloquear_descarte
 
     entrada = {
         "campos": campos,

@@ -1,63 +1,24 @@
-# Mismo proyecto y volumen que el Compose original de Core.
-name: licing-core
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: licing_db
-    environment:
-      POSTGRES_USER: licing
-      POSTGRES_PASSWORD: licing
-      POSTGRES_DB: licing
-    ports:
-      - "5432:5432"
-    volumes:
-      - licing_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U licing -d licing"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  api:
-    build: ./backend/licing-core
-    container_name: licing_api
-    env_file:
-      - path: .env
-        required: false
-      - path: backend/licing-core/.env
-        required: false
-    environment:
-      DATABASE_URL: postgresql+psycopg://licing:licing@db:5432/licing
-      WATCHFILES_FORCE_POLLING: "true"
+  backend:
+    build: .
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/licing-core:/app
-    depends_on:
-      db:
-        condition: service_healthy
-    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - .:/app
+    env_file:
+      - .env          # <--- Esto carga automáticamente todo el .env al backend
+    environment:
+      - PYTHONUNBUFFERED=1
 
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-    environment:
-      BACKEND_URL: http://api:8000
-      VITE_USE_POLLING: "true"
+    image: node:20-alpine
+    working_dir: /app/frontend
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      api:
-        condition: service_healthy
-
-volumes:
-  licing_pgdata:
+      - .:/app
+      - /app/frontend/node_modules
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - VITE_USE_POLLING=true
+    command: sh -c "npm install && npm run dev -- --host"

@@ -22,6 +22,7 @@
   border: 1px solid var(--control-line); border-radius: 7px; font: inherit;
   background: var(--raised); color: var(--text); color-scheme: light;
 }
+.oportunidad-controles input[type="search"] { min-width: 210px; }
 [data-theme="dark"] .oportunidad-controles input { color-scheme: dark; }
 .oportunidades-page .preseleccion { margin-top: 0; padding: 24px; }
 .oportunidades-page .pre-heading-title { display: flex; align-items: center; gap: 12px; }

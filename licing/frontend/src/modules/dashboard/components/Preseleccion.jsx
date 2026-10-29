@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { apiJson } from "../../../core/api/client";
 import Icon from "../../../core/ui/Icon";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
@@ -50,6 +50,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   }
   const [datos, setDatos] = useState({ filas: [], total: 0, ids_fuente: [] });
   const [filtro, setFiltro] = useState("preseleccionada"); const [offset, setOffset] = useState(0);
+  const [busquedaId, setBusquedaId] = useState("");
   const [desde, setDesde] = useState(""), [hasta, setHasta] = useState("");
   const [version, setVersion] = useState(0); const [error, setError] = useState("");
   const [errorCarga, setErrorCarga] = useState("");
@@ -62,7 +63,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   useEffect(() => {
     let vigente = true; setCargando(true);
     const control = new AbortController();
-    const parametros = new URLSearchParams({ clasificacion: filtro, offset: String(offset), q });
+    const parametros = new URLSearchParams({ clasificacion: filtro, offset: String(offset), q, codigo: busquedaId.trim() });
     if (mostrarFechas && desde) parametros.set("cierre_desde", desde);
     if (mostrarFechas && hasta) parametros.set("cierre_hasta", hasta);
     const consulta = `${URL}?${parametros}`;
@@ -70,8 +71,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       if (vigente) { setDatos(r); setErrorCarga(""); }
     }).catch(e => { if (vigente) setErrorCarga(e.message); }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; control.abort(); };
-  }, [filtro, offset, version, q, desde, hasta, mostrarFechas]);
-  useEffect(() => { setOffset(0); }, [q]);
+  }, [filtro, offset, version, q, busquedaId, desde, hasta, mostrarFechas]);
+  useEffect(() => { setOffset(0); }, [q, busquedaId]);
   useEffect(() => {
     let vigente = true;
     Promise.resolve().then(() => { if (vigente) evaluar(); });
@@ -92,6 +93,15 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       errorFicha: ficha.status === "rejected" ? ficha.reason.message : "",
     });
   }
+  const actualizarDetalleDocumental = useCallback(async () => {
+    if (!seleccion) return;
+    try {
+      const resultado = await apiJson(`${URL}/${seleccion.id}`);
+      setDetalle(prev => prev && seleccion?.id === prev.licitacion?.id
+        ? { ...prev, ...resultado, licitacion: prev.licitacion, items: prev.items }
+        : prev);
+    } catch { /* Un fallo temporal de refresco no cambia la clasificación. */ }
+  }, [seleccion]);
   function cerrarResultado() { secuencia.current++; setSeleccion(null); setDetalle(null); setErrorRevision(""); }
   async function evaluar() {
     let huboCambios = false;
@@ -121,7 +131,9 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     } catch (e) { setErrorRevision(e.message); }
     finally { setOcupado(""); }
   }
-  const mensajeVacio = !datos.ids_fuente.length ? "Todavía no hay licitaciones vigentes para evaluar."
+  const mensajeVacio = busquedaId.trim()
+    ? `No hay licitaciones para el ID «${busquedaId.trim()}» con los filtros seleccionados.`
+    : !datos.ids_fuente.length ? "Todavía no hay licitaciones vigentes para evaluar."
     : filtro === "preseleccionada"
       ? `No hay posibles oportunidades ${mostrarFechas ? "para estas fechas" : "en esta carga"}. Puedes consultar Revisión necesaria o Todas.`
       : `No hay resultados en esta vista${mostrarFechas ? " y rango de fechas" : ""}.`;
@@ -138,7 +150,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     <PilaresPreseleccion />
     <div className="pre-modalidad-panel" id={`${id}-panel-licitaciones`} role={mostrarModalidades ? "tabpanel" : undefined}
       aria-labelledby={mostrarModalidades ? `${id}-tab-licitaciones` : undefined} hidden={modalidad !== "licitaciones"} tabIndex={mostrarModalidades ? 0 : undefined}>
-    <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado} mostrarFechas={mostrarFechas}
+    <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado} mostrarFechas={mostrarFechas} mostrarBusquedaId={mostrarInformacion}
+      busquedaId={busquedaId} onBusquedaId={setBusquedaId}
       onClasificacion={valor => { setFiltro(valor); setOffset(0); }}
       onDesde={valor => { setDesde(valor); setOffset(0); }} onHasta={valor => { setHasta(valor); setOffset(0); }} />
     {filtro === "" && <p className="pre-nota" role="note">Vista de auditoría: incluye posibles oportunidades, revisiones y descartes. Este total no representa oportunidades para el hotel.</p>}
@@ -151,6 +164,11 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
         <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><span className="sub">{fila.codigo_externo}{!mostrarInformacion && <> · Cierra {fecha(fila.fecha_cierre)}</>}</span>
           {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
           <TituloLicitacion licitacion={fila} />
+          {!!fila.hallazgos_documentales?.length && <div className="pre-hallazgos-compactos">{fila.hallazgos_documentales.slice(0, 2).map((h, i) => <div key={i}>
+            {h.ubicacion?.fuera_zona_rm && <span className="pre-hallazgo-alerta">Fuera de zona objetivo RM · {h.ubicacion.region}</span>}
+            {h.participantes?.resumen && <span className="pre-hallazgo-dato">{h.participantes.resumen}</span>}
+            {h.ubicacion?.resumen && <span className="pre-hallazgo-dato">{h.ubicacion.resumen}</span>}
+          </div>)}</div>}
           {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
           <p>{fila.motivo_seleccion}</p>
           <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{fila.estado_seleccion === "preseleccionada" && fila.motivo_seleccion?.startsWith("Candidato para el hotel:") ? "Posible oportunidad · sede por confirmar" : etiquetas[fila.estado_seleccion]}</span></div>
@@ -161,6 +179,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     </>}
     <ResultadoPreseleccion fila={seleccion} detalle={detalle} pilares={pilares} etiquetas={etiquetas} tonos={tonos}
       ocupado={ocupado} motivo={motivo} categoria={categoria} errorRevision={errorRevision}
+      onActualizarDocumentos={actualizarDetalleDocumental}
       onCerrar={cerrarResultado} onReintentar={() => abrir(seleccion)} onMotivo={setMotivo} onCategoria={setCategoria} onRevisar={revisar} />
     </div>
     {mostrarModalidades && <div className="pre-modalidad-panel" id={`${id}-panel-compras-agiles`} role="tabpanel"

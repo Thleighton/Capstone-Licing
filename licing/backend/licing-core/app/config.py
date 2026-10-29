@@ -55,6 +55,8 @@ class Settings(BaseSettings):
         gt=0,
         le=300,
     )
+    # Espacia las lecturas documentales del portal y las serializa dentro del proceso.
+    mp_pausa_documental_segundos: float = Field(default=2.0, ge=0.5, le=60)
 
     # API Compra Ágil v2: mismo ticket, enviado como cabecera.
     mp_compra_agil_url: str = "https://api2.mercadopublico.cl"

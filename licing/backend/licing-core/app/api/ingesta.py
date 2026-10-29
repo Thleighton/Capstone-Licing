@@ -363,6 +363,11 @@ async def correr_lote(db: Session, limite: int) -> dict:
             try:
                 async with asyncio.timeout(8):
                     resultado["preseleccion"] = await evaluar_lote(db, ids)
+                    candidatos = resultado["preseleccion"].pop("documentos_pendientes_auto", [])
+                    if candidatos and settings.documentos_automaticos:
+                        from ..services.ingesta_documental import encolar_analisis_documental
+                        await encolar_analisis_documental(candidatos)
+                        resultado["preseleccion"]["analisis_documental_programado"] = len(candidatos)
             except Exception:
                 resultado["preseleccion"] = {"pendiente": True, "motivo": "Ingesta guardada; reintentar la preselección desde el dashboard."}
         return resultado

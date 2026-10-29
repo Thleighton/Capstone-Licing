@@ -116,16 +116,51 @@ async def guardar(db, licitacion_id, nombre, tipo, url_origen, contenido, extrac
 async def detalle(db, licitacion_id):
     docs = list(db.scalars(select(Documento).where(Documento.licitacion_id == licitacion_id,
                                                   Documento.vigente).order_by(Documento.id)))
-    try:
-        enlaces = await storage("firmar", {"paths": [d.storage_path for d in docs]}) if docs else {}
-    except StorageNoDisponible:
-        enlaces = {}
-    return [{"id": d.id, "nombre": d.nombre, "tipo": d.tipo, "paginas": d.paginas,
+    from .ingesta_documental import _hallazgos_operativos
+    salida = [{"id": d.id, "nombre": d.nombre, "tipo": d.tipo, "paginas": d.paginas,
              "formato": d.storage_path.rpartition(".")[2],
              "version": d.version, "url_origen": d.url_origen, "estado_extraccion": d.estado_extraccion,
+             "cobertura": {k: v for k, v in d.cobertura.items() if k != "paginas_indice"},
              "incidencia": incidencia_documento({"id": d.id, "nombre": d.nombre,
                  "estado_extraccion": d.estado_extraccion, "cobertura": d.cobertura}),
-             "url_descarga": enlaces.get(d.storage_path)} for d in docs]
+             "hallazgos": _hallazgos_operativos([{"pagina": p["pagina"],
+                 "texto": (d.texto_extraido or "")[p["inicio"]:p["fin"]]}
+                 for p in d.cobertura.get("paginas_indice", [])])} for d in docs]
+    fila = db.get(Licitacion, licitacion_id)
+    existentes = {d.hash_archivo for d in docs}
+    if fila:
+        control = fila.ingesta_documental or {}
+        expira = control.get("analisis_documental_expira_en")
+        try:
+            cache_vigente = str(control.get("analisis_documental_raw_id")) == str(fila.raw_id) and bool(expira)
+            if cache_vigente:
+                vence = datetime.fromisoformat(expira)
+                if vence.tzinfo is None:
+                    vence = vence.replace(tzinfo=timezone.utc)
+                cache_vigente = vence > datetime.now(timezone.utc)
+        except ValueError:
+            cache_vigente = False
+        for d in (control.get("documentos_analizados", []) if cache_vigente else []):
+            if d.get("hash_archivo") in existentes:
+                continue
+            salida.append({k: d.get(k) for k in ("id", "nombre", "tipo", "paginas", "formato", "url_origen",
+                "estado_extraccion", "cobertura", "paginas_texto", "temporal")})
+    return salida
+
+
+def hallazgos_persistidos(db, ids):
+    """Compatibilidad visual para archivos históricos, sin firmar ni entregar el binario LICING."""
+    from .ingesta_documental import _hallazgos_operativos
+    salida = {i: [] for i in ids}
+    for lic_id, nombre, texto, cobertura in db.execute(select(Documento.licitacion_id,
+            Documento.nombre, Documento.texto_extraido, Documento.cobertura)
+            .where(Documento.licitacion_id.in_(ids), Documento.vigente).order_by(Documento.id)):
+        paginas = [{"pagina": p["pagina"], "texto": (texto or "")[p["inicio"]:p["fin"]]}
+            for p in cobertura.get("paginas_indice", [])]
+        hallazgos = _hallazgos_operativos(paginas)
+        if hallazgos:
+            salida[lic_id].append({"documento": nombre, **hallazgos})
+    return salida
 
 
 def incidencias(db, ids):
@@ -155,18 +190,19 @@ def registrar_incidencia(db, licitacion_id, codigo, nombre=None):
     return incidencia
 
 
-def reservar(db):
+def reservar(db, licitacion_id=None, manual=False):
     fila = db.execute(text("""
       SELECT id,codigo_externo,raw_id,ingesta_documental FROM public.licitacion
       WHERE coalesce(codigo_estado,5)=5 AND (fecha_cierre IS NULL OR
          fecha_cierre>clock_timestamp() AT TIME ZONE 'America/Santiago')
+       AND (:licitacion_id IS NULL OR id=:licitacion_id)
        AND coalesce((ingesta_documental->>'reservada_hasta')::timestamptz,'-infinity')<=clock_timestamp()
-       AND (coalesce((ingesta_documental->>'proximo_intento')::timestamptz,'-infinity')<=clock_timestamp()
+       AND (:manual OR coalesce((ingesta_documental->>'proximo_intento')::timestamptz,'-infinity')<=clock_timestamp()
             OR ingesta_documental->>'raw_id' IS DISTINCT FROM raw_id::text)
       ORDER BY (ingesta_documental='{}') DESC,
        coalesce((ingesta_documental->>'ultimo_intento')::timestamptz,'-infinity'),id
       LIMIT 1 FOR UPDATE SKIP LOCKED
-    """)).mappings().first()
+    """), {"licitacion_id": licitacion_id, "manual": manual}).mappings().first()
     if not fila:
         db.rollback()
         return None

@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app.services.bases_mercado_publico import (descargar_bases, BasesNoDisponibles, MAX_BYTES, abrir_ficha,
-    descargar_anexo, listar_anexos, sesion)
+    descargar_anexo, descargar_adjunto_ingresado, listar_adjuntos_ingresados, listar_anexos, sesion)
 
 CODIGO = "564162-152-L126"
 FICHA = f'''<form action="DetailsAcquisition.aspx?qs=ejemplo">
@@ -166,3 +166,35 @@ def test_anexo_fuera_de_formato_no_se_acepta(nombre, contenido, motivo):
     with pytest.raises(BasesNoDisponibles, match=motivo):
         asyncio.run(flujo())
     assert len(llamadas) == (0 if motivo == "formato_no_admitido" else 1)
+
+
+def test_lista_adjuntos_ingresados_y_enlace_directo_ver():
+    html_ficha = FICHA.replace('</form>',
+        '<input type="image" id="imgAdjuntos" '
+        'onclick="open(\'/Procurement/Modules/Attachment/ViewAttachmentLC.aspx?enc=lista\')"></form>')
+    html_lista = '''<form action="ViewAttachmentLC.aspx?enc=lista"><table>
+    <tr><th>Sel.</th><th>Anexo</th><th>Tipo</th><th>Descripción</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr>
+    <tr><td></td><td><span id="grdAttachment_ctl02_grdLblSourceFileName">Bases Hotel.pdf</span></td>
+    <td>Otros Anexos</td><td>Bases administrativas</td><td>2640 KB</td><td>21-10-2026</td>
+    <td><a href="/Procurement/Modules/Attachment/ViewAttachment.aspx?enc=archivo">Ver</a></td></tr>
+    </table></form>'''
+    llamadas = []
+    def responder(req):
+        llamadas.append(req)
+        if req.url.path.lower().endswith('detailsacquisition.aspx'):
+            return httpx.Response(200, text=html_ficha)
+        if req.url.path.lower().endswith('viewattachmentlc.aspx'):
+            return httpx.Response(200, text=html_lista)
+        assert req.url.path.lower().endswith('viewattachment.aspx')
+        return httpx.Response(200, content=b'%PDF-1.7 archivo')
+    async def flujo():
+        async with sesion(httpx.MockTransport(responder)) as cliente:
+            ficha = await abrir_ficha(cliente, CODIGO)
+            adjuntos = await listar_adjuntos_ingresados(cliente, ficha)
+            archivo = await descargar_adjunto_ingresado(cliente, adjuntos[0])
+            return ficha, adjuntos, archivo
+    ficha, adjuntos, archivo = asyncio.run(flujo())
+    assert ficha.adjuntos_url.endswith('ViewAttachmentLC.aspx?enc=lista')
+    assert [a['nombre'] for a in adjuntos] == ['Bases Hotel.pdf']
+    assert archivo['contenido'].startswith(b'%PDF-')
+    assert [r.method for r in llamadas] == ['GET', 'GET', 'GET']

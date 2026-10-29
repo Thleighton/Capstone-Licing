@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..auth import solo_cron
 from ..database import SessionLocal, get_db
 from ..config import settings
-from ..services.ingesta_documental import correr_documentos
+from ..services.ingesta_documental import correr_documentos, procesar_cola_analisis_documental
 from ..services.ingesta_lote import EjecucionEnCursoError
 from .ingesta import correr_compras_agiles, correr_lote
 
@@ -50,7 +50,7 @@ async def ingesta_programada(
 ):
     # Un solo plazo para las tres tareas: cron-job.org no espera más de 30 s.
     plazo = asyncio.get_running_loop().time() + settings.cron_plazo_respuesta_segundos
-    documental = asyncio.create_task(correr_documentos()) if settings.documentos_automaticos else None
+    documental = asyncio.create_task(procesar_cola_analisis_documental(1)) if settings.documentos_automaticos else None
     compras = asyncio.create_task(compras_agiles_en_paralelo()) if settings.compras_agiles_automaticas else None
     try:
         async with asyncio.timeout_at(plazo):
@@ -69,7 +69,7 @@ async def ingesta_programada(
         if compras:
             compras_agiles = await esperar_hasta(compras, plazo)
     if documental:
-        resultado["documentos"] = documentos
+        resultado["analisis_documental"] = documentos
     if compras:
         resultado["compras_agiles"] = compras_agiles
     return resultado

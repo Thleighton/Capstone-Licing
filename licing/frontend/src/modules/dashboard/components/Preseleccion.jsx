@@ -141,6 +141,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado} mostrarFechas={mostrarFechas}
       onClasificacion={valor => { setFiltro(valor); setOffset(0); }}
       onDesde={valor => { setDesde(valor); setOffset(0); }} onHasta={valor => { setHasta(valor); setOffset(0); }} />
+    {filtro === "" && <p className="pre-nota" role="note">Vista de auditoría: incluye posibles oportunidades, revisiones y descartes. Este total no representa oportunidades para el hotel.</p>}
     {ocupado && <p role="status">{ocupado}</p>}
     {!ocupado && resumen && <p className="sub" role="status">{resumen}</p>}
     {(error || errorCarga) && <p className="msg err" role="alert">{error || errorCarga}</p>}
@@ -152,7 +153,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
           <TituloLicitacion licitacion={fila} />
           {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
           <p>{fila.motivo_seleccion}</p>
-          <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{etiquetas[fila.estado_seleccion]}</span></div>
+          <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{fila.estado_seleccion === "preseleccionada" && fila.motivo_seleccion?.startsWith("Candidato para el hotel:") ? "Posible oportunidad · sede por confirmar" : etiquetas[fila.estado_seleccion]}</span></div>
         <div className="pre-fila-acciones"><button disabled={!!ocupado} onClick={() => abrir(fila)}>Ver resultado</button>{fila.url_oficial && <a href={fila.url_oficial} target="_blank" rel="noreferrer">Mercado Público ↗</a>}</div>
       </article>)}</div>
       {datos.total > 25 && <nav className="pre-controles" aria-label="Páginas de licitaciones"><button disabled={offset === 0 || !!ocupado} onClick={() => setOffset(v => v - 25)}>Anterior</button>

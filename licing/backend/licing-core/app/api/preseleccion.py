@@ -128,15 +128,25 @@ def verificar_integracion():
 async def listar(response: Response, clasificacion: str = Query(default="", max_length=30),
                  q: str = Query(default="", max_length=150), limite: int = Query(default=25, ge=1, le=100),
                  offset: int = Query(default=0, ge=0), db: Session = Depends(get_db),
-                 cierre_desde: date | None = None, cierre_hasta: date | None = None):
+                 cierre_desde: date | None = None, cierre_hasta: date | None = None,
+                 region: str = Query(default="", max_length=200), solo_abiertas: bool = False):
     consulta = filtrar_cierre(select(Licitacion.codigo_externo, Licitacion.raw_id),
                              Licitacion.fecha_cierre, cierre_desde, cierre_hasta)
     if q.strip():
         consulta = consulta.where(or_(*[
-            func.lower(campo).contains(q.strip().lower(), autoescape=True)
+            func.lower(func.coalesce(campo, "")).contains(q.strip().lower(), autoescape=True)
             for campo in (Licitacion.codigo_externo, Licitacion.nombre,
                           Licitacion.nombre_organismo, Licitacion.nombre_unidad)
         ]))
+    if region.strip():
+        consulta = consulta.where(func.lower(func.coalesce(Licitacion.region_comprador, "")).contains(
+            region.strip().lower(), autoescape=True))
+    if solo_abiertas:
+        ahora = datetime.now(CHILE).replace(tzinfo=None)
+        consulta = consulta.where(
+            func.lower(func.coalesce(Licitacion.estado, "")) == "publicada",
+            or_(Licitacion.fecha_cierre.is_(None), Licitacion.fecha_cierre >= ahora),
+        )
     fuentes = dict(db.execute(consulta).all())
     codigos = list(fuentes)
     respuesta = await filtradas.operar("listar", {"codigos": codigos, "fuentes": fuentes, "clasificacion": clasificacion,
@@ -148,6 +158,7 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
         fila.update({campo: entrada.get(campo) for campo in (
             "nombre_organismo", "nombre_unidad", "descripcion", "monto_estimado", "moneda",
             "estimacion", "visibilidad_monto", "fecha_publicacion", "fecha_cierre", "tipo", "estado",
+            "region_comprador", "comuna_comprador",
         )})
         fila["clientes_importantes"] = identificar_clientes_importantes(entrada)
         if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or

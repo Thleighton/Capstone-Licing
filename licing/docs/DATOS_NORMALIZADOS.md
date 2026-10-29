@@ -211,21 +211,21 @@ la región del comprador no prueba el lugar del servicio. La guía indica una cu
 por ticket (10.000 solicitudes en la práctica). Considera también las solicitudes de la
 ingesta de licitaciones si ambas APIs comparten la cuota.
 
-**Preselección.** Las Compras Ágiles pasan por el mismo motor (`reglas-hotel-7`) y los
-mismos tres pilares que las licitaciones: vigencia, lugar de prestación en la RM y
-alojamiento, salones o alimentación. No tienen bases, así que la cobertura es
-`sin_bases`. Como su ficha es toda la información y se entrega, por lo general, donde está
-el comprador, las reglas `ca-1` agregan la región del comprador al pilar de ubicación
-cuando el texto no ubica el servicio:
+**Preselección.** Las Compras Ágiles pasan por el mismo motor y catálogo que las
+licitaciones, con los tres pilares: vigencia, lugar del evento en la RM y pertinencia al
+perfil de salones para eventos. Coffee break y banquetería solo cuentan como complementos
+del salón; el alojamiento independiente queda fuera. Los códigos de productos ajenos se
+resuelven en el catálogo compartido. No tienen bases, así que la cobertura es `sin_bases`.
+La adaptación `ca-2` conserva la región del comprador como referencia administrativa, pero
+no como lugar del evento. Un arriendo directo de salón para un comprador de la RM puede
+quedar como posible oportunidad provisional, con sede por confirmar; catering sin sede
+clara queda en revisión. Si el texto confirma un lugar fuera de la RM, se descarta.
 
-- Comprador fuera de la RM y sin mención de la RM en el texto: no cumple, y la compra se
-  descarta con ese motivo.
-- Comprador en la RM y sin otro lugar en el texto: cumple, y decide el servicio solicitado.
-- Si el texto ubica el servicio o lo menciona de forma ambigua, decide el motor común.
-
-En las licitaciones la región del comprador sigue sin probar el lugar del servicio. Las
-evaluaciones se guardan en LicitacionesFiltradas con `oportunidad.modalidad='compra_agil'`,
-`version_motor` `reglas-hotel-7+ca-1` y los productos como ítems (`correlativo` = posición).
+En las licitaciones la región del comprador tampoco prueba el lugar del evento. Las
+evaluaciones de Compra Ágil se guardan en LicitacionesFiltradas con
+`oportunidad.modalidad='compra_agil'`, la versión combinada del motor y `ca-2`, y los
+productos como ítems (`correlativo` = posición). Un cambio del catálogo compartido invalida
+también las evaluaciones guardadas de Compra Ágil.
 
 A la vez que cada lote de ingesta, con su propia sesión, Core evalúa hasta 100 compras
 abiertas sin evaluación vigente, en llamadas de 20, durante 15 s como máximo, y confirma el

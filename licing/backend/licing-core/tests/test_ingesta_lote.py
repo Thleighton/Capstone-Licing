@@ -1,6 +1,22 @@
 import pytest
 
-from app.services.ingesta_lote import seleccionar_codigos_nuevos
+from app.services.ingesta_lote import priorizar_nuevas_oportunidades, seleccionar_codigos_nuevos
+
+
+def test_prioriza_salon_y_eventos_sin_omitir_otras_licitaciones():
+    listado = [
+        {"CodigoExterno": "AJENO", "Nombre": "Compra de material de aseo"},
+        {"CodigoExterno": "CATERING", "Nombre": "Servicio de banquetería"},
+        {"CodigoExterno": "MIXTO", "Nombre": "Servicio de salón y cafetería para capacitación"},
+        {"CodigoExterno": "ARRIENDO", "Nombre": "Contratación de salón para capacitación"},
+        {"CodigoExterno": "MAQUINAS", "Nombre": "Arriendo de espacios para máquinas dispensadoras"},
+        {"CodigoExterno": "JORNADA", "Nombre": "Jornada de trabajo PLADECO"},
+    ]
+    codigos = ["AJENO", "CATERING", "MIXTO", "ARRIENDO", "MAQUINAS", "JORNADA"]
+
+    assert priorizar_nuevas_oportunidades(listado, codigos) == [
+        "ARRIENDO", "MIXTO", "CATERING", "JORNADA", "AJENO", "MAQUINAS"
+    ]
 
 
 def test_excluye_codigos_ya_procesados():

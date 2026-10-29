@@ -20,3 +20,4 @@ frontend/dist
 venv
 **/.pytest_cache
 backups
+ml/

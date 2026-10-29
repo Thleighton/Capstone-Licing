@@ -24,7 +24,7 @@ const PASOS = [
     <p className="sub">Son datos de la solicitud, distintos del catálogo del hotel. El equipo podría revisar la ficha oficial y las bases para validarlos.</p>
   </> },
   { tab: "3 · Recomendación", body: <>
-    <h3>Licing preselecciona qué oportunidades revisar</h3><p>La preselección revisa tres pilares: que siga abierta, que el servicio se preste en la Región Metropolitana y que pida alojamiento, salones o alimentación. El dashboard muestra el motivo y la evidencia de cada pilar.</p>
+    <h3>Licing preselecciona qué oportunidades revisar</h3><p>La preselección revisa vigencia, lugar y compatibilidad con los salones del hotel. Un arriendo claro de salón para un comprador de la RM puede mostrarse como posible oportunidad aunque falte confirmar la sede; el aviso pide revisar las bases antes de cotizar. Catering o banquetería sin sede se conserva para revisión. Una sede ajena o fuera de la RM se descarta; el alojamiento independiente y la compra de bienes quedan fuera. El dashboard muestra el motivo y la evidencia de cada pilar.</p>
     <div className="help-example"><span className="priority medium">● Posible oportunidad · ejemplo</span><p>“Cumple los tres pilares: abierta y con plazo, servicio en la RM y salón con coffee break.”</p></div>
     <p>La encargada verifica las bases y la agenda antes de decidir. Una recomendación no confirma una reserva ni garantiza una adjudicación.</p>
   </> },

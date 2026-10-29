@@ -32,15 +32,19 @@ def test_todas_las_combinaciones_de_los_tres_pilares(resultados):
         assert motivo == criterios[esperado]["motivo"]
 
 
-@pytest.mark.parametrize("servicio", ["Coffee break", "Coffe-break", "Catering", "Banquetería",
-    "Servicio de alimentación", "Servicio de desayuno", "Cóctel", "Alojamiento y alimentación",
-    "Arriendo de salón y coffee break"])
-def test_servicios_simples_o_combinados_cumplen_los_tres_pilares(servicio):
+@pytest.mark.parametrize("servicio, esperado", [
+    ("Coffee break", "revision_manual"), ("Coffe-break", "revision_manual"),
+    ("Catering", "revision_manual"), ("Banquetería", "revision_manual"),
+    ("Servicio de alimentación", "revision_manual"), ("Servicio de desayuno", "revision_manual"),
+    ("Cóctel", "revision_manual"), ("Alojamiento y alimentación", "descartada"),
+    ("Arriendo de salón y coffee break", "preseleccionada"),
+])
+def test_servicio_segun_alcance_salones_y_eventos(servicio, esperado):
     r = evaluar(nombre=f"{servicio} en Santiago")
-    assert r["clasificacion"] == "preseleccionada"
+    assert r["clasificacion"] == esperado
     assert tuple(r["criterios"]) == PILARES
     assert r["orden_pilares"] == list(PILARES)
-    assert all(c["resultado"] == "cumple" and c["motivo"] for c in r["criterios"].values())
+    assert all(c["motivo"] for c in r["criterios"].values())
 
 
 def test_lugar_pendiente_es_el_primer_motivo_antes_del_servicio_pendiente():
@@ -54,19 +58,20 @@ def test_alimentacion_fuera_de_cobertura_se_descarta_por_ubicacion():
     r = evaluar(nombre="Coffee break en Valparaíso")
     assert r["clasificacion"] == "descartada"
     assert r["pilar_decisivo"] == "ubicacion"
-    assert r["criterios"]["pertinencia"]["resultado"] == "cumple"
+    assert r["criterios"]["pertinencia"]["resultado"] == "sin_informacion"
 
 
-def test_alimentacion_sin_lugar_se_conserva_para_confirmar_ubicacion():
+def test_banqueteria_sin_salon_se_conserva_para_revision():
     r = evaluar(nombre="Servicio de banquetería", region_comprador="Metropolitana")
     assert r["clasificacion"] == "revision_manual"
     assert r["pilar_decisivo"] == "ubicacion"
-    assert r["criterios"]["pertinencia"]["resultado"] == "cumple"
+    assert r["criterios"]["pertinencia"]["resultado"] == "sin_informacion"
 
 
 def test_suministro_de_un_servicio_de_coffee_break_no_es_compra_de_bienes():
     r = evaluar(nombre="Contratar el servicio de suministro de coffee break y cóctel en La Florida")
-    assert r["clasificacion"] == "preseleccionada"
+    assert r["clasificacion"] == "revision_manual"
+    assert r["criterios"]["pertinencia"]["resultado"] == "sin_informacion"
 
 
 def test_lugar_de_alimentacion_no_se_toma_de_otra_linea():
@@ -75,13 +80,13 @@ def test_lugar_de_alimentacion_no_se_toma_de_otra_linea():
         {"descripcion": "Servicio de impresión en Santiago"},
     ])
     assert r["clasificacion"] == "revision_manual"
-    assert r["pilar_decisivo"] == "ubicacion"
+    assert r["pilar_decisivo"] == "pertinencia"
 
 
 def test_documentos_capacidad_presupuesto_y_comprador_no_crean_otros_pilares():
     r = evaluar(nombre="Coffee break en Santiago", monto_estimado=None, nombre_organismo="Comprador nuevo",
         documentos=[{"id": 1, "estado_extraccion": "error"}])
-    assert r["clasificacion"] == "preseleccionada"
+    assert r["clasificacion"] == "revision_manual"
     assert tuple(r["criterios"]) == PILARES
     assert "documentacion" in r
     assert r["documentacion"]["bloquea_preseleccion"] is False
@@ -101,5 +106,5 @@ def test_alimentacion_negada_o_no_humana_no_prueba_servicio_del_hotel(nombre):
     assert r["criterios"]["pertinencia"]["resultado"] != "cumple"
 
 
-def test_alojamiento_sin_alimentacion_sigue_siendo_oportunidad():
-    assert evaluar(nombre="Alojamiento en Santiago sin alimentación")["clasificacion"] == "preseleccionada"
+def test_alojamiento_independiente_queda_fuera_del_perfil_de_salones():
+    assert evaluar(nombre="Alojamiento en Santiago sin alimentación")["clasificacion"] == "descartada"

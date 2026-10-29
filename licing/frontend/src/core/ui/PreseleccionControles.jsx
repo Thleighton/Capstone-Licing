@@ -14,12 +14,14 @@ export default function PreseleccionControles({ clasificacion, desde, hasta, onC
     <label>Mostrar <select value={clasificacion} onChange={e => onClasificacion(e.target.value)} disabled={disabled}>
       <option value="preseleccionada">Posible oportunidad</option>
       <option value="revision_manual">Revisión necesaria</option>
-      <option value="">Todas</option>
+      <option value="descartada">Descartada por regla</option>
+      <option value="pendiente_evaluacion">Sin evaluar</option>
+      <option value="">Todas (auditoría)</option>
     </select></label>
     {mostrarFechas && <>
       <label>Cierre desde <input type="date" value={desde} max={hasta || undefined} onChange={e => onDesde(e.target.value)} disabled={disabled} /></label>
       <label>Hasta <input type="date" value={hasta} min={desde || undefined} onChange={e => onHasta(e.target.value)} disabled={disabled} /></label>
     </>}
-    <span className="sub" aria-live="polite">{total} {total === 1 ? "resultado" : "resultados"}</span>
+    <span className="sub" aria-live="polite">{total} {clasificacion === "" ? "licitaciones en auditoría" : total === 1 ? "resultado" : "resultados"}</span>
   </div>;
 }

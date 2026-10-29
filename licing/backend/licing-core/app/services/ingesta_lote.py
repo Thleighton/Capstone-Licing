@@ -1,5 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
+import re
+import unicodedata
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -18,6 +20,21 @@ from .limpieza import LicitacionNoDisponible, ausencia_confirmada, eliminar_no_d
 
 ID_BLOQUEO_INGESTA = 728401
 CHILE = ZoneInfo("America/Santiago")
+PATRON_ESPACIO_EVENTO = re.compile(
+    r"\b(?:salon(?:es)?|salas?|auditorios?|centros? de eventos?|centros? de convenciones?)\b"
+)
+PATRON_ESPACIO_GENERICO = re.compile(r"\b(?:recintos?|espacios?|local(?:es)?)\b")
+PATRON_ACTIVIDAD_EVENTO = re.compile(
+    r"\b(?:eventos?|seminarios?|congresos?|jornadas?|capacitaciones?|talleres?|"
+    r"conferencias?|reuniones?|ceremonias?|fiestas?|celebraciones?|ferias?|"
+    r"torneos?|debates?|final(?:es)?|pladeco)\b"
+)
+PATRON_CONTRATO_ESPACIO = re.compile(
+    r"\b(?:arriendo|arrendar|arrendamiento|alquiler|contratacion|reserva)\b"
+)
+PATRON_SERVICIO_EVENTO = re.compile(
+    r"\b(?:catering|banqueteria|coffee\s*break|cocteles?|alimentacion|cafeteria)\b"
+)
 
 
 class EjecucionEnCursoError(RuntimeError):
@@ -38,6 +55,47 @@ def seleccionar_codigos_nuevos(listado, codigos_existentes, limite=5):
         if len(seleccionados) >= limite:
             break
     return seleccionados
+
+
+def _prioridad_oportunidad_titulo(titulo):
+    if not isinstance(titulo, str):
+        return 3
+
+    normal = unicodedata.normalize("NFD", titulo.lower())
+    normal = "".join(c for c in normal if not unicodedata.combining(c))
+    espacio_directo = bool(PATRON_ESPACIO_EVENTO.search(normal))
+    espacio = espacio_directo or (
+        bool(PATRON_ESPACIO_GENERICO.search(normal))
+        and bool(PATRON_ACTIVIDAD_EVENTO.search(normal))
+    )
+    contrato = bool(PATRON_CONTRATO_ESPACIO.search(normal))
+    evento = bool(PATRON_SERVICIO_EVENTO.search(normal))
+    actividad = bool(PATRON_ACTIVIDAD_EVENTO.search(normal))
+    if espacio_directo and contrato:
+        return 0
+    if espacio and (evento or actividad):
+        return 1
+    if evento:
+        return 2
+    if actividad:
+        return 3
+    return 4
+
+
+def priorizar_nuevas_oportunidades(listado, codigos):
+    """Adelanta arriendos de salones y servicios de eventos sin omitir el resto del feed."""
+    titulos = {
+        item.get("CodigoExterno", "").strip(): item.get("Nombre", "")
+        for item in listado
+        if isinstance(item.get("CodigoExterno"), str)
+    }
+
+    return [
+        codigo for _, codigo in sorted(
+            enumerate(codigos),
+            key=lambda par: (_prioridad_oportunidad_titulo(titulos.get(par[1], "")), par[0]),
+        )
+    ]
 
 
 def alternar_codigos(nuevos, actualizar, limite, priorizar_actualizacion=False):
@@ -116,6 +174,8 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
             if isinstance(r.get("CodigoExterno"), str) and r["CodigoExterno"].strip()
         ) if codigo not in excluidos
     ]
+    nuevos = priorizar_nuevas_oportunidades(listado_vigente, nuevos)
+    nuevos_set = set(nuevos)
     # Cuenta solo lotes de licitaciones: los de Compra Ágil intercalan sus id en el historial.
     turno = db.scalar(select(func.count()).select_from(EjecucionIngesta).where(
         EjecucionIngesta.fuente == "licitaciones",
@@ -130,6 +190,16 @@ async def planificar_ingesta(db: Session, client: MercadoPublicoClient, limite=5
         "codigos_a_actualizar": [c for c in seleccionados if c in codigos_actualizar],
         "codigos_redescargar": [c for c in seleccionados if c in redescargar or c in codigos_actualizar],
         "nuevos_pendientes": len(nuevos),
+        "nuevas_oportunidades_principales_pendientes": sum(
+            1 for resumen in listado_vigente
+            if resumen.get("CodigoExterno") in nuevos_set
+            and _prioridad_oportunidad_titulo(resumen.get("Nombre")) < 3
+        ),
+        "nuevas_actividades_para_buscar_salon_pendientes": sum(
+            1 for resumen in listado_vigente
+            if resumen.get("CodigoExterno") in nuevos_set
+            and _prioridad_oportunidad_titulo(resumen.get("Nombre")) == 3
+        ),
         "actualizaciones_pendientes": len(codigos_actualizar),
         "pospuestos_por_error": len(pospuestos),
     }

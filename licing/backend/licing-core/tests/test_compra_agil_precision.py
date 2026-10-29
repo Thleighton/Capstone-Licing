@@ -53,7 +53,7 @@ def test_bienes_y_grafica_no_son_servicios_del_hotel(codigo, nombre):
     assert resultado["criterios"]["pertinencia"]["exclusiones_evidentes"][0]["evidencia"]
 
 
-def test_vasos_5251_1194_se_descartan_sin_cambiar_el_motor_de_licitaciones():
+def test_reglas_de_productos_ajenos_se_comparten_con_licitaciones():
     datos = compra(codigo_externo="5251-1194-COT26", nombre="Adquisición de vasos plásticos reutilizables",
         descripcion="Adquisición de vasos plásticos reutilizables, según archivo adjunto.", items=[
             {"codigo_producto": "80141605", "nombre_producto": "Regalos publicitarios",
@@ -61,7 +61,7 @@ def test_vasos_5251_1194_se_descartan_sin_cambiar_el_motor_de_licitaciones():
             {"codigo_producto": "80141611", "nombre_producto": "Personalización de regalos o productos promocionales",
              "descripcion": "Vaso plástico reutilizable con asa y tapa."}])
     assert evaluar(datos)["clasificacion"] == "descartada"
-    assert evaluar_preseleccion(datos)["clasificacion"] == "revision_manual"
+    assert evaluar_preseleccion({**datos, "documentos": []})["clasificacion"] == "descartada"
 
 
 @pytest.mark.parametrize("codigo", ["80141605", "82121511", "46171604"])

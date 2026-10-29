@@ -3,8 +3,15 @@
 .env.*
 !.env.example
 !.env.supabase.example
+backend/licing-core/.envdevelop
 backups/
 .vercel
+
+# Datasets históricos locales: no se necesitan para ejecutar la aplicación.
+ml/01_raw/*.csv
+ml/02_curated/*.csv
+ml/03_clasificacion_estricta/*.csv
+ml/03_clasificacion_estricta/*.xlsx
 
 # Frontend
 node_modules

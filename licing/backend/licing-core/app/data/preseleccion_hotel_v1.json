@@ -1,14 +1,20 @@
 {
-  "version": "hotel-2026-10-v6",
+  "version": "salones-2026-10-v17",
   "estado": "piloto",
-  "alcance": "Licitaciones normales; pertinencia potencial para el Hotel Plaza San Francisco.",
+  "alcance": "Salones para eventos que el Hotel Plaza San Francisco pueda ofrecer. Catering y banquetería con sede no aclarada se conservan para revisión; alojamiento independiente queda fuera.",
   "notas": [
-    "Las coincidencias son señales de pertinencia, no cumplimiento ni decisión de postular.",
-    "Los únicos pilares son vigencia, ubicación del servicio en la RM y solicitud de alojamiento, salones o alimentación, en ese orden.",
-    "La alimentación puede identificar una posible oportunidad por sí sola; no se exige combinarla con alojamiento o salones.",
-    "OTEC, OTIC y capacitación no son palabras de exclusión.",
-    "La ausencia de palabras clave no descarta por sí sola: se contrasta con los productos publicados.",
-    "Las bases son complementarias; su descarga o carga manual no condiciona la preselección."
+    "Las coincidencias son señales de pertinencia, no cumplimiento de bases ni decisión de postular.",
+    "Los únicos pilares son vigencia, lugar del evento en la RM y pertinencia al perfil comercial de salones para eventos.",
+    "La contratación de un salón o centro de eventos es una oportunidad directa si el lugar es compatible.",
+    "Un arriendo claro de salón para un comprador de la RM puede aparecer como posible oportunidad con sede pendiente; el motivo debe indicar que hay que confirmar el lugar en las bases.",
+    "Catering, coffee break y banquetería con lugar no aclarado se conservan para revisar si el hotel puede ofrecer el salón junto con el servicio.",
+    "Si las bases fijan catering, alimentación o el evento en una sede ajena, no se presume que el hotel pueda ofrecer su salón.",
+    "Alojamiento independiente y traslados sin salón para eventos quedan fuera del alcance.",
+    "Recintos clínicos, bienes para una sala y servicios en sedes fijadas de terceros no equivalen a contratar un salón del hotel.",
+    "Las palabras clave son evidencia auxiliar: el perfil comercial decide el alcance, no una palabra aislada.",
+    "Capacitación y temática médica no excluyen un salón para un evento por sí solas.",
+    "Información realmente insuficiente se conserva como duda; no se inventa ubicación ni prestación.",
+    "La decisión de postular corresponde al hotel; la preselección no certifica disponibilidad ni cumplimiento de bases."
   ],
   "grupos": [
     {
@@ -532,7 +538,13 @@
   "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
   "codigos_producto_ajenos": {
     "101101001": "licitaciones de obras",
-    "102101001": "consultorías de obras"
+    "102101001": "consultorías de obras",
+    "82121903": "encuadernación con cola fría o pegamento",
+    "80141507": "investigación de consumidores o estudios mediante focus groups",
+    "80141605": "regalos publicitarios",
+    "80141611": "personalización de productos promocionales",
+    "82121505": "impresión promocional o publicitaria",
+    "82121511": "impresión de manuales y catálogos"
   },
   "familias_producto_ajenas": {
     "8010": "servicios de asesoría y administración",
@@ -590,6 +602,43 @@
     "93": "servicios políticos y cívicos",
     "94": "servicios de organizaciones y asociaciones"
   },
+  "objetos_bienes": [
+    {
+      "id": "bienes_oficina_papeleria",
+      "patron": "\\b(?:fundas? plasticas?|fundas? de etiquetas|articulos de papeleria|papel turno matic|plumones?|plumon|saca\\s*corchetes?|separadores? de oficio|sobres? (?:de )?oficio|pegamentos? en barra|carpetas? plasticas?|carpetas? para archivos|cuchillos? cartoneros?|cintas? (?:de |para )?(?:embalaje|empaquetar)|pilas? alcalinas?|pila cr[- ]?2032)\\b",
+      "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alojamiento o alimentación."
+    },
+    {
+      "id": "insumos_equipos_medicos",
+      "patron": "\\b(?:insumos?|equipos?|dispositivos?|mangas?|medias?)\\b[^.;\\n]{0,220}\\b(?:compresion(?:\\s+neumatica)?|vascular|anti\\s*embolic[oa]s?|tromboembolic[oa]s?|quirurgic[oa]s?|medic[oa]s?|clinic[oa]s?|hospitalari[oa]s?)\\b",
+      "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicita alojamiento, salones ni alimentación."
+    },
+    {
+      "id": "bienes_informaticos",
+      "patron": "\\b(?:discos? duros?|unidades? de estado solido|ssd|hdd|memorias? ram|hardware|insumos? (?:y hardware )?(?:del? )?departamento tic)\\b|\\b(?:adquisicion|adq\\.?|compra|suministro)\\s+(?:de\\s+)?(?:computadores?|computadoras?|notebooks?|laptops?|impresoras?|monitores?|equipos? informaticos?|equipamiento informatico)\\b",
+      "motivo": "Se solicita comprar equipamiento informático; mencionar un salón o una sala como destino no constituye contratación de ese espacio."
+    },
+    {
+      "id": "bienes_limpieza",
+      "patron": "\\b(?:adquisicion|compra|suministro)\\s+(?:de\\s+)?(?:(?:utiles|productos|insumos|articulos|material(?:es)?)\\s+de\\s+(?:limpieza|aseo)|detergentes?|desinfectantes?|escobas?|traperos?|bolsas? de basura)\\b",
+      "motivo": "Se solicita comprar productos o materiales de limpieza, no contratar salones ni servicios hoteleros."
+    },
+    {
+      "id": "bienes_mobiliario",
+      "patron": "\\b(?:adquisicion|compra|suministro)\\s+(?:de\\s+)?(?:mobiliario|sillas?|mesas?|escritorios?|sillones?|muebles?)\\b",
+      "motivo": "Se solicita comprar mobiliario; mencionar un salón como destino no constituye contratación de ese espacio."
+    },
+    {
+      "id": "compra_abarrotes",
+      "patron": "\\b(?:abarrotes|mercaderias|viveres)\\b|\\b(?:compra|adquisicion|suministro)\\s+(?:de\\s+)?(?:productos alimenticios|alimentos no perecibles)\\b",
+      "motivo": "El objeto identificado es el suministro de mercadería o abarrotes, no un servicio de alimentación para personas."
+    },
+    {
+      "id": "materiales_demarcacion",
+      "patron": "\\b(?:sum\\.?|suministro|adq\\.?|adquisicion|compra)\\s+(?:de\\s+)?pintura\\s+acrilica\\b|\\bmicroesferas(?:\\s+de\\s+vidrio)?\\b",
+      "motivo": "Se solicitan materiales de pintura o demarcación, no servicios del hotel."
+    }
+  ],
   "exclusiones_evidentes": [
     {
       "id": "compra_mobiliario",
@@ -613,7 +662,7 @@
     },
     {
       "id": "cursos_especializados",
-      "patron": "\\b(?:servicio|contratacion) (?:de )?cursos de capacitacion\\b",
+      "patron": "\\b(?:servicio|contratacion)\\s+(?:de\\s+)?cursos?\\s+de\\s+capacitacion\\b|\\bcursos?\\s+(?:de\\s+)?(?:wafa|no deje rastro|rescate en aguas blancas)\\b",
       "motivo": "Se contrata impartir cursos de capacitación, sin identificar alojamiento, salones o alimentación asociados."
     },
     {
@@ -628,7 +677,7 @@
     },
     {
       "id": "prestaciones_clinicas",
-      "patron": "\\b(?:prestaciones medicas|procedimientos (?:medicos|quirurgicos)|atencion (?:medica|odontologica)|examenes (?:medicos|de laboratorio))\\b",
+      "patron": "\\b(?:prestaciones medicas|procedimientos (?:medicos|quirurgicos|endovasculares)|atencion (?:medica|odontologica)|examenes (?:medicos|de laboratorio))\\b",
       "motivo": "El objeto explícito corresponde a prestaciones clínicas."
     },
     {
@@ -640,6 +689,40 @@
       "id": "obras_viales",
       "patron": "\\b(?:construccion|reparacion|conservacion|mejoramiento|pavimentacion)\\b[^\\n]{0,100}\\b(?:caminos|carreteras|puentes|calzadas|veredas|pavimentos)\\b",
       "motivo": "El objeto explícito corresponde a obras viales."
+    },
+    {
+      "id": "mantencion_infraestructura_no_salon",
+      "patron": "\\b(?:mantencion|mantenimiento|reparacion|instalacion)\\b[^.;\\n]{0,120}\\b(?:aire acondicionado|climatizacion|ascensores?|calderas?|sistemas? de ventilacion|equipos? de refrigeracion)\\b",
+      "motivo": "Se solicita mantención o instalación de infraestructura y equipos, no la contratación de un salón para eventos."
     }
-  ]
+  ],
+  "codigos_producto_protegidos": {
+    "30222507": "hotel publicado en Mercado Público",
+    "90111501": "servicios de hotel",
+    "90111603": "salas de reuniones o banquetes",
+    "90111801": "habitación sencilla",
+    "90101603": "servicios de catering",
+    "93141504": "acogida: comprobar si incluye alojamiento de personas"
+  },
+  "reglas_contexto_items": [
+    {
+      "id": "material_pintura_por_contexto",
+      "patron_cabecera": "\\b(?:sum\\.?|suministro|adq\\.?|adquisicion|compra)\\s+(?:de\\s+)?pintura\\s+acrilica\\b|\\bmicroesferas\\b",
+      "patron_item": "\\b(?:pintura|microesferas|sacos?)\\b",
+      "motivo": "La ficha y la línea identifican materiales de pintura o demarcación, no servicios hoteleros."
+    },
+    {
+      "id": "campana_publicitaria_por_contexto",
+      "patron_cabecera": "\\b(?:campana comunicacional|plan de medios)\\b",
+      "codigos": [
+        "80141607"
+      ],
+      "patron_item": "\\b(?:promocion|difusion|campana|publicidad|destinos turisticos)\\b",
+      "motivo": "Se contrata una campaña comunicacional o publicitaria, no el uso de salones, alojamiento ni alimentación."
+    }
+  ],
+  "perfil_comercial": {
+    "id": "salones_eventos_en_hotel",
+    "nombre": "Salones para eventos dentro del hotel"
+  }
 }

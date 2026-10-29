@@ -47,7 +47,7 @@ def test_servicios_del_hotel_con_ubicacion_explicita(nombre):
     "Lavandería para hoteles en Santiago", "Limpieza de habitaciones en Santiago",
     "Traslado desde hoteles en Santiago", "Servicios de vigilancia para hoteles en Santiago",
     "Arriendo de salón de belleza en Santiago", "Remodelación de habitaciones en Santiago",
-    "Construcción de hotel en Santiago", "Adquisición de mobiliario para un salón en Santiago",
+    "Construcción de hotel en Santiago",
     "Alojamiento web en servidores de Santiago", "Alojamiento cloud en Santiago",
     "Compra de proyectores para salón en Santiago", "Reparación de salón en Santiago",
     "Capacitación con docentes en un hotel en Santiago",
@@ -274,7 +274,8 @@ def test_codigos_ajenos_descartan_sin_exigir_pdf_ni_lugar(codigo, nombre_product
     assert codigo in e["evidencia"]
 
 
-@pytest.mark.parametrize("codigo", [None, "99999999", "42", 42142502])
+# Un entero de ocho dígitos conocido se reconoce; no es un código desconocido.
+@pytest.mark.parametrize("codigo", [None, "99999999", "42"])
 def test_codigo_desconocido_en_una_linea_impide_descartar_el_conjunto(codigo):
     r = evaluar(nombre="Contrato de servicios", items=[
         {"codigo_producto": "42142502", "nombre_producto": "Agujas"},
@@ -314,3 +315,15 @@ def test_pdf_ilegible_no_inventa_servicio_o_ubicacion_que_no_estan_en_la_ficha()
         "paginas_texto": [{"pagina": 1, "texto": "Alojamiento en Santiago"}]}])
     assert r["clasificacion"] == "revision_manual"
     assert not r["criterios"]["pertinencia"]["directa"]
+
+def test_compra_explicita_de_mobiliario_no_requiere_revision_por_destino_salon():
+    r = evaluar(nombre="Adquisición de mobiliario para un salón en Santiago")
+    assert r["clasificacion"] == "descartada"
+    assert r["criterios"]["pertinencia"]["exclusiones_evidentes"]
+
+
+def test_codigo_medico_entero_reconocido_se_trata_como_su_equivalente_textual():
+    r = evaluar(nombre="Contrato de suministros", items=[
+        {"codigo_producto": 42142502, "descripcion": "Agujas para anestesia"},
+    ])
+    assert r["clasificacion"] == "descartada"

@@ -31,3 +31,8 @@
   .pre-modalidades [role="tab"] { gap: 6px; padding: 10px 6px; font-size: 12px; }
 }
 .pre-hallazgos-compactos{display:grid;gap:6px;margin:10px 0}.pre-hallazgos-compactos>div{display:flex;gap:8px;flex-wrap:wrap}.pre-hallazgo-alerta,.pre-hallazgo-dato{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:650}.pre-hallazgo-alerta{background:#fff0ec;color:#9c321d;border:1px solid #f2c2b7}.pre-hallazgo-dato{background:var(--surface-soft);color:var(--heading);border:1px solid var(--line)}
+.pre-fila-meta { justify-content:space-between; align-items:flex-start; gap:10px 18px; }
+.pre-fila-identidad { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.pre-fila-identidad > .sub { overflow-wrap:anywhere; }
+.pre-fila .cierre-plazo { margin-left:auto; }
+@media(max-width:650px){.pre-fila .cierre-plazo{margin-left:0}.pre-fila-meta{align-items:flex-start}}

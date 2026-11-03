@@ -1,6 +1,7 @@
 // Sesión con Supabase Auth del proyecto Usuarios/Licitaciones (vía REST).
 // Mismo comportamiento que tenía el index.html original.
 import { getConfig } from "../api/config";
+import { detalleRespuesta, mensajeConexion, mensajeHttp } from "../api/httpErrors";
 
 const SESION_KEY = "licing-sesion";
 let sesion = null;
@@ -41,11 +42,16 @@ function errorAuth(d) {
 
 export async function auth(path, { method = "POST", body, token } = {}) {
   const { USUARIOS_URL, USUARIOS_KEY } = getConfig();
-  const res = await fetch(USUARIOS_URL + "/auth/v1/" + path, {
-    method,
-    headers: { apikey: USUARIOS_KEY, "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res;
+  try {
+    res = await fetch(USUARIOS_URL + "/auth/v1/" + path, {
+      method,
+      headers: { apikey: USUARIOS_KEY, "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(mensajeConexion(error, "el servicio de autenticación"));
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(errorAuth(data));
   return data;
@@ -69,9 +75,17 @@ export async function tokenVigente() {
 export async function cargarPerfil(token) {
   const { USUARIOS_URL, USUARIOS_KEY } = getConfig();
   const id = jwtSub(token);
-  const res = await fetch(USUARIOS_URL + "/rest/v1/usuario?select=id,nombre,email,rol,activo&id=eq." + encodeURIComponent(id),
-    { headers: { apikey: USUARIOS_KEY, Authorization: "Bearer " + token } });
-  if (!res.ok) throw new Error("No se pudo leer tu perfil (HTTP " + res.status + ").");
+  let res;
+  try {
+    res = await fetch(USUARIOS_URL + "/rest/v1/usuario?select=id,nombre,email,rol,activo&id=eq." + encodeURIComponent(id),
+      { headers: { apikey: USUARIOS_KEY, Authorization: "Bearer " + token } });
+  } catch (error) {
+    throw new Error(mensajeConexion(error, "el servicio de perfiles"));
+  }
+  if (!res.ok) {
+    const detalle = detalleRespuesta(await res.clone().json().catch(() => ({})));
+    throw new Error(mensajeHttp(res.status, detalle || "No se pudo leer tu perfil."));
+  }
   return (await res.json())[0] || null;
 }
 

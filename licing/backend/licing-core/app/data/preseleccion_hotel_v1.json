@@ -1,17 +1,18 @@
 {
-  "version": "salones-2026-10-v17",
+  "version": "hotel-2026-11-v31",
   "estado": "piloto",
-  "alcance": "Salones para eventos que el Hotel Plaza San Francisco pueda ofrecer. Catering y banquetería con sede no aclarada se conservan para revisión; alojamiento independiente queda fuera.",
+  "alcance": "Habitaciones y hospedaje para huéspedes, salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
     "Las coincidencias son señales de pertinencia, no cumplimiento de bases ni decisión de postular.",
-    "Los únicos pilares son vigencia, lugar del evento en la RM y pertinencia al perfil comercial de salones para eventos.",
-    "La contratación de un salón o centro de eventos es una oportunidad directa si el lugar es compatible.",
+    "Los únicos pilares son vigencia, ubicación del servicio en la RM y pertinencia a los servicios comerciales del hotel.",
+    "La contratación de habitaciones para huéspedes y el arriendo de salones para eventos son servicios pertinentes si la ubicación es compatible.",
     "Un arriendo claro de salón para un comprador de la RM puede aparecer como posible oportunidad con sede pendiente; el motivo debe indicar que hay que confirmar el lugar en las bases.",
     "Catering, coffee break y banquetería con lugar no aclarado se conservan para revisar si el hotel puede ofrecer el salón junto con el servicio.",
     "Si las bases fijan catering, alimentación o el evento en una sede ajena, no se presume que el hotel pueda ofrecer su salón.",
-    "Alojamiento independiente y traslados sin salón para eventos quedan fuera del alcance.",
-    "Recintos clínicos, bienes para una sala y servicios en sedes fijadas de terceros no equivalen a contratar un salón del hotel.",
+    "El hospedaje explícito de personas puede ser pertinente aunque no incluya salón. Menciones a casas de acogida, hospederías y residencias institucionales no equivalen por sí solas a reservar habitaciones del hotel.",
+    "Recintos clínicos, bienes para una sala y servicios en sedes fijadas de terceros no equivalen a contratar los servicios del hotel.",
     "Las palabras clave son evidencia auxiliar: el perfil comercial decide el alcance, no una palabra aislada.",
+    "Una palabra a una edición de un término hotelero solo genera revisión cuando aparece en contexto pertinente; nunca es una coincidencia directa ni un descarte automático.",
     "Capacitación y temática médica no excluyen un salón para un evento por sí solas.",
     "Información realmente insuficiente se conserva como duda; no se inventa ubicación ni prestación.",
     "La decisión de postular corresponde al hotel; la preselección no certifica disponibilidad ni cumplimiento de bases."
@@ -229,6 +230,7 @@
     "Rancagua": "O’Higgins",
     "San Fernando": "O’Higgins",
     "Talca": "Maule",
+    "Curepto": "Maule",
     "Curicó": "Maule",
     "Linares": "Maule",
     "Chillán": "Ñuble",
@@ -537,6 +539,11 @@
   ],
   "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
   "codigos_producto_ajenos": {
+    "80141607": "servicio de producción de eventos; contratar producción no equivale a arrendar un salón o contratar alojamiento del hotel",
+    "86141601": "clubes recreativos para estudiantes; el ítem describe talleres o actividades, no arriendo de salón, alojamiento ni catering",
+    "51191603": "soluciones de nutrición parenteral y electrolitos; insumo farmacéutico para pacientes, no alimentación para eventos",
+    "90141703": "deportes para la recreación; el ítem contrata talleres o actividad física, no arriendo de salón, alojamiento ni catering",
+    "73152101": "mantenimiento y reparación de equipo de fabricación; la Central de Alimentación es una unidad hospitalaria, no un servicio de alimentación para eventos",
     "101101001": "licitaciones de obras",
     "102101001": "consultorías de obras",
     "82121903": "encuadernación con cola fría o pegamento",
@@ -604,8 +611,28 @@
   },
   "objetos_bienes": [
     {
+      "id": "mantencion_equipos_central_alimentacion",
+      "patron": "\\b(?:mantencion|mantenimiento|reparacion|reparativo|preventivo|preventiva|correctivo|correctiva)\\b[^.;\\n]{0,140}\\b(?:equipos?|maquinarias?)\\b[^.;\\n]{0,100}\\bcentral (?:de )?alimentacion\\b|\\bcentral (?:de )?alimentacion\\b[^.;\\n]{0,140}\\b(?:equipos?|maquinarias?|mantencion|mantenimiento|reparacion)\\b",
+      "motivo": "Se solicita mantener o reparar equipos de una Central de Alimentación institucional; no es catering ni alimentación para eventos."
+    },
+    {
+      "id": "talleres_actividad_fisica",
+      "patron": "\\b(?:talleres? de actividad fisica|planificacion y ejecucion de talleres de actividad fisica|deportes juveniles)\\b",
+      "motivo": "Se contrata la ejecución de talleres o actividades deportivas; no se solicita por sí sola una habitación, un salón ni un servicio de alimentación para eventos."
+    },
+    {
+      "id": "talleres_educativos_salud_escolar",
+      "patron": "\\btalleres?\\s+educativos?\\b[^.;\\n]{0,180}\\bsalud sexual y reproductiva\\b|\\bsalud sexual y reproductiva\\b[^.;\\n]{0,180}\\b(?:estudiantes?|liceos?|colegios?)\\b",
+      "motivo": "Se contrata impartir talleres educativos de salud sexual y reproductiva a estudiantes; no se solicita alojamiento ni el arriendo de un salón del hotel."
+    },
+    {
+      "id": "concesion_casino_institucional",
+      "patron": "\\bconcesionarios? de casinos? de comida\\b|\\bservicio de alimentacion\\b[^.;\\n]{0,120}\\bcasinos?\\s+(?:de|del|de la|de los|de las)\\s+(?:empresa|institucion|organismo|hospital|ejercito|igm)\\b",
+      "motivo": "Se contrata la operación regular de un casino de comida institucional o empresarial, no banquetería o catering puntual para un evento."
+    },
+    {
       "id": "bienes_oficina_papeleria",
-      "patron": "\\b(?:fundas? plasticas?|fundas? de etiquetas|articulos de papeleria|papel turno matic|plumones?|plumon|saca\\s*corchetes?|separadores? de oficio|sobres? (?:de )?oficio|pegamentos? en barra|carpetas? plasticas?|carpetas? para archivos|cuchillos? cartoneros?|cintas? (?:de |para )?(?:embalaje|empaquetar)|pilas? alcalinas?|pila cr[- ]?2032)\\b",
+      "patron": "\\b(?:fundas? plasticas?|fundas? de etiquetas|articulos? (?:de |para )?(?:papeleria|oficina)|materiales? (?:de |para )?oficina|insumos? (?:de |para )?oficina|utiles? (?:de |para )?oficina|papel turno matic|plumones?|plumon|saca\\s*corchetes?|separadores? de oficio|sobres? (?:de )?oficio|pegamentos? en barra|carpetas? plasticas?|carpetas? para archivos|cuchillos? cartoneros?|cintas? (?:de |para )?(?:embalaje|empaquetar)|pilas? alcalinas?|pila cr[- ]?2032)\\b",
       "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alojamiento o alimentación."
     },
     {
@@ -614,13 +641,33 @@
       "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicita alojamiento, salones ni alimentación."
     },
     {
+      "id": "nutricion_parenteral",
+      "patron": "\\b(?:bolsas?|soluciones?|nutricion|alimentacion)\\b[^.;\\n]{0,140}\\b(?:parenteral|enteral|npt|electrolitos?|lipidos?)\\b|\\b(?:parenteral|enteral|npt)\\b[^.;\\n]{0,140}\\b(?:bolsas?|soluciones?|nutricion|alimentacion)\\b",
+      "motivo": "La alimentación parenteral o enteral es nutrición clínica para pacientes, no un servicio de comida para eventos."
+    },
+    {
+      "id": "equipos_electricos_ups",
+      "patron": "\\b(?:adquisicion|compra|suministro)\\b[^.;\\n]{0,180}\\b(?:ups|sistema de alimentacion ininterrumpida|tableros? electricos?|bypass)\\b|\\b(?:ups|sistema de alimentacion ininterrumpida)\\b[^.;\\n]{0,180}\\b(?:tableros? electricos?|bypass|servidores?)\\b",
+      "motivo": "Se solicitan equipos eléctricos o para servidores; la palabra alimentación no corresponde a un servicio de comida ni la sala a un salón para eventos."
+    },
+    {
+      "id": "medios_electronicos_alimentacion",
+      "patron": "\\b(?:tarjetas?|aplicaciones?|vales?|bonos?)\\b[^.;\\n]{0,120}\\b(?:alimentacion|alimentos?|comprar? alimentos?)\\b|\\b(?:alimentacion|alimentos?)\\b[^.;\\n]{0,120}\\b(?:tarjetas?|aplicaciones?|vales?|bonos?)\\b",
+      "motivo": "Se contrata un medio de pago o beneficio electrónico para comprar alimentos; no es un servicio de catering o banquetería del hotel."
+    },
+    {
+      "id": "obras_salas_reunion",
+      "patron": "\\b(?:recuperacion|restauracion|reparacion|remodelacion|construccion|mantencion|mantenimiento|mejoramiento|habilitacion)\\b[^.;\\n]{0,100}\\bsalas? de reuniones?\\b|\\bsalas? de reuniones?\\b[^.;\\n]{0,100}\\b(?:recuperacion|restauracion|reparacion|remodelacion|construccion|mantencion|mantenimiento|mejoramiento|habilitacion)\\b",
+      "motivo": "Se solicita una obra o reparación de una sala de reuniones, no el arriendo del salón para un evento."
+    },
+    {
       "id": "bienes_informaticos",
       "patron": "\\b(?:discos? duros?|unidades? de estado solido|ssd|hdd|memorias? ram|hardware|insumos? (?:y hardware )?(?:del? )?departamento tic)\\b|\\b(?:adquisicion|adq\\.?|compra|suministro)\\s+(?:de\\s+)?(?:computadores?|computadoras?|notebooks?|laptops?|impresoras?|monitores?|equipos? informaticos?|equipamiento informatico)\\b",
       "motivo": "Se solicita comprar equipamiento informático; mencionar un salón o una sala como destino no constituye contratación de ese espacio."
     },
     {
       "id": "bienes_limpieza",
-      "patron": "\\b(?:adquisicion|compra|suministro)\\s+(?:de\\s+)?(?:(?:utiles|productos|insumos|articulos|material(?:es)?)\\s+de\\s+(?:limpieza|aseo)|detergentes?|desinfectantes?|escobas?|traperos?|bolsas? de basura)\\b",
+      "patron": "\\b(?:adquisicion|compra|suministro)\\s+(?:de\\s+)?(?:(?:utiles|productos|insumos|articulos|material(?:es)?)\\s+(?:de|para)\\s+(?:limpieza|aseo)|detergentes?|desinfectantes?|escobas?|traperos?|bolsas? de basura)\\b|\\b(?:productos?|insumos?|articulos?|material(?:es)?|utiles?)\\s+(?:de|para)\\s+(?:limpieza|aseo)\\b",
       "motivo": "Se solicita comprar productos o materiales de limpieza, no contratar salones ni servicios hoteleros."
     },
     {
@@ -632,6 +679,11 @@
       "id": "compra_abarrotes",
       "patron": "\\b(?:abarrotes|mercaderias|viveres)\\b|\\b(?:compra|adquisicion|suministro)\\s+(?:de\\s+)?(?:productos alimenticios|alimentos no perecibles)\\b",
       "motivo": "El objeto identificado es el suministro de mercadería o abarrotes, no un servicio de alimentación para personas."
+    },
+    {
+      "id": "materiales_ferreteria",
+      "patron": "\\b(?:adquisicion|compra|suministro|adq\\.?)\\b[^.;\\n]{0,160}\\b(?:materiales?|insumos?|articulos?)\\s+(?:de|para)\\s+ferreteria\\b|\\b(?:materiales?|insumos?|articulos?)\\s+(?:de|para)\\s+ferreteria\\b",
+      "motivo": "Se compran materiales o insumos de ferretería; la feria es el destino de los bienes y no una contratación de salón, alojamiento o catering."
     },
     {
       "id": "materiales_demarcacion",
@@ -722,7 +774,7 @@
     }
   ],
   "perfil_comercial": {
-    "id": "salones_eventos_en_hotel",
-    "nombre": "Salones para eventos dentro del hotel"
+    "id": "servicios_hotel_eventos_y_alojamiento",
+    "nombre": "Hospedaje y eventos dentro del hotel"
   }
 }

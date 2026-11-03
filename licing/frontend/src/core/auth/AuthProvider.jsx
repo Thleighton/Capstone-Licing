@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
       const cfg = await cargarConfig();
       setConfigured(cfg.configured);
       if (!cfg.configured) {
-        return mostrarLogin("Falta configurar USUARIOS_URL y USUARIOS_ANON_KEY en el .env (o en las variables de entorno de Vercel).");
+        return mostrarLogin(cfg.error || "Falta configurar USUARIOS_URL y USUARIOS_ANON_KEY en Vercel.");
       }
       if (hashAuth?.error) return mostrarLogin(hashAuth.error);
       if (hashAuth && (hashAuth.tipo === "invite" || hashAuth.tipo === "recovery")) {

@@ -585,3 +585,11 @@ dialog::backdrop, .intake-help::backdrop { background: var(--backdrop); backdrop
 /* Vista temporal de solo dashboard; los módulos conservan su código y estilos. */
 .dashboard-workspace.dashboard-only { grid-template-columns: minmax(0, 1fr); }
 .dashboard-only .preview-row { grid-template-columns: minmax(0, 1fr); }
+
+/* Estado del plazo y fecha de búsqueda de cada fuente. */
+.ultima-busqueda { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.ultima-busqueda strong { color: var(--heading); }
+.pre-fila-meta, .ca-codigo-estado { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pre-fila-meta .badge, .ca-codigo-estado .badge { font-size: 11px; }
+.pre-regla-aplicada { padding: 9px 12px; border-left: 3px solid var(--err); border-radius: 5px; background: var(--err-bg); color: var(--text); }
+.pre-regla-aplicada strong { color: var(--heading); }

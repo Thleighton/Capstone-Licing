@@ -1,4 +1,4 @@
-"""Pruebas del perfil de salones. Sin base, red ni pytest."""
+"""Pruebas del perfil hotelero. Sin base, red ni pytest."""
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -31,10 +31,10 @@ CASOS = [
     ("acogida_descripcion_real", {"nombre": "CASA DE ACOGIDA PROGRAMA MAPUCHE HOSPITAL VICTORIA", "descripcion": ACOGIDA,
         "items": [item("93141504", ACOGIDA, "Servicios de acogida familiar u orfanatos")]}, "descartada"),
     ("acogida_en_rm", {"nombre": "Casa de acogida", "descripcion": ACOGIDA + " El alojamiento se prestará en Santiago."}, "descartada"),
-    ("alojamiento_solo", {"nombre": "Servicio de alojamiento en Santiago"}, "descartada"),
-    ("habitacion_sola", {"nombre": "Servicio", "items": [item("90111801", "Habitación para dos personas")]}, "descartada"),
-    ("hoteles_categoria", {"nombre": "Servicio", "items": [item("90111501", "", "Hoteles")]}, "descartada"),
-    ("alojamiento_para_seminario", {"nombre": "Alojamiento para participantes de seminario en Santiago"}, "descartada"),
+    ("alojamiento_solo", {"nombre": "Servicio de alojamiento en Santiago"}, "preseleccionada"),
+    ("habitacion_sola", {"nombre": "Servicio", "items": [item("90111801", "Habitación para dos personas")]}, "revision_manual"),
+    ("hoteles_categoria", {"nombre": "Servicio", "items": [item("90111501", "", "Hoteles")]}, "revision_manual"),
+    ("alojamiento_para_seminario", {"nombre": "Alojamiento para participantes de seminario en Santiago"}, "preseleccionada"),
     ("coffee_solo", {"nombre": "Coffee break en Santiago"}, "revision_manual"),
     ("catering_para_actividades_sin_sede", {"nombre": "Servicio de catering y cóctel para actividades deportivas y ceremonias en Santiago"}, "revision_manual"),
     ("catering_comprador_rm_sin_salon", {"nombre": "Servicio de catering para ceremonias", "region_comprador": "Región Metropolitana de Santiago"}, "revision_manual"),
@@ -106,8 +106,8 @@ CASOS = [
 class PruebasPerfilSalones(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        if (cargar_catalogo().get("perfil_comercial") or {}).get("id") != "salones_eventos_en_hotel":
-            raise AssertionError("El perfil de salones no está activado en el catálogo.")
+        if (cargar_catalogo().get("perfil_comercial") or {}).get("id") != "servicios_hotel_eventos_y_alojamiento":
+            raise AssertionError("El perfil hotelero no está activado en el catálogo.")
 
 
 def crear_prueba(cambios, esperado):

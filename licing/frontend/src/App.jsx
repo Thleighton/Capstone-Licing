@@ -8,40 +8,42 @@ import Sidebar from "./core/layout/Sidebar";
 import Topbar from "./core/layout/Topbar";
 import PageHeading from "./core/layout/PageHeading";
 import Footer from "./core/layout/Footer";
-import { useHashRoute } from "./core/router/useHashRoute";
+import { irA, useHashRoute } from "./core/router/useHashRoute";
 import { ThemeProvider } from "./core/ui/ThemeProvider";
+import ErrorBoundary from "./core/ui/ErrorBoundary";
 import { MODULOS, MODULO_INICIAL, Globales, MODULOS_MENU } from "./modules";
 
 function Shell() {
   const ruta = useHashRoute(MODULOS, MODULO_INICIAL.id);
-  const modulo = MODULOS.find(m => m.id === ruta) || MODULO_INICIAL;
+  const modulo = MODULOS.find(m => m.id === ruta);
   const tituloRef = useRef(null);
   const primeraVez = useRef(true);
-  const [visitados, setVisitados] = useState(() => new Set([modulo.id]));
+  const [visitados, setVisitados] = useState(() => new Set(modulo ? [modulo.id] : []));
 
   useEffect(() => {
+    if (!modulo) return;
     setVisitados(previos => previos.has(modulo.id) ? previos : new Set([...previos, modulo.id]));
-  }, [modulo.id]);
+  }, [modulo]);
 
   useEffect(() => {
-    document.title = "LICING · " + modulo.titulo;
+    document.title = "LICING · " + (modulo?.titulo || "Página no encontrada");
     if (primeraVez.current) { primeraVez.current = false; return; }
     tituloRef.current?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }, [modulo]);
 
-  const { HeaderExtra } = modulo;
+  const HeaderExtra = modulo?.HeaderExtra;
   return (
-    <div className="app" data-module={modulo.id}>
-      <Sidebar modulos={MODULOS_MENU} activo={modulo.id} />
+    <div className="app" data-module={modulo?.id || "not-found"}>
+      <Sidebar modulos={MODULOS_MENU} activo={modulo?.id} />
       <main>
         <Topbar />
         <div className="content">
-          <PageHeading ref={tituloRef} titulo={modulo.titulo} descripcion={modulo.descripcion} extra={HeaderExtra ? <HeaderExtra /> : null} />
+          <PageHeading ref={tituloRef} titulo={modulo?.titulo || "Página no encontrada"} descripcion={modulo?.descripcion || "El enlace no corresponde a una sección de LICING."} extra={HeaderExtra ? <HeaderExtra /> : null} mostrarAccion={Boolean(modulo)} />
           {/* Cargar cada módulo al abrirlo y conservar después sus formularios y filtros. */}
-          {MODULOS.filter(({ id }) => id === modulo.id || visitados.has(id)).map(({ id, Page }) => (
+          {modulo ? MODULOS.filter(({ id }) => id === modulo.id || visitados.has(id)).map(({ id, Page }) => (
             <section key={id} data-page={id} hidden={id !== modulo.id}><Page activo={id === modulo.id} /></section>
-          ))}
+          )) : <section className="empty" role="status"><h2>No encontramos esa página</h2><p>Puede que el enlace esté incompleto o que la sección ya no esté disponible.</p><button className="primary" type="button" onClick={() => irA(MODULO_INICIAL.id)}>Ir al inicio</button></section>}
           <Footer />
         </div>
       </main>
@@ -60,7 +62,7 @@ function Gate() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider><Gate /></AuthProvider>
+      <ErrorBoundary><AuthProvider><Gate /></AuthProvider></ErrorBoundary>
     </ThemeProvider>
   );
 }

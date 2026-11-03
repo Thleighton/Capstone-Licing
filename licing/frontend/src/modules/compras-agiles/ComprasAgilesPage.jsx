@@ -4,6 +4,7 @@ import VistaPreseleccion from "./components/VistaPreseleccion";
 import { useActualizarComprasAgiles, useResumenComprasAgiles } from "./comun";
 import { PilaresPreseleccion } from "../../core/ui/PreseleccionControles";
 import BotonIngesta from "../../core/layout/BotonIngesta";
+import UltimaBusqueda from "../../core/ui/UltimaBusqueda";
 import "./compras-agiles.css";
 
 export function ObtenerComprasAgiles() {
@@ -25,6 +26,8 @@ export default function ComprasAgilesPage() {
   const pre = resumen?.preseleccion;
   return <div className="ca-page">
     <p className="overview-note">Compras Ágiles para el hotel, evaluadas con los mismos criterios que las licitaciones.</p>
+    <UltimaBusqueda fuente="compra_agil" />
+    <p className="pre-nota" role="note">La lista puede incluir procesos abiertos y cerrados. Cada resultado indica si el plazo para ofertar sigue vigente.</p>
     {error && <div className="msg err" role="alert">No se pudo actualizar el resumen. {error}</div>}
     {resumen && !resumen.carga_inicial_completa && <p className="ca-aviso" role="status"><Icon name="clock" />Carga inicial en curso: las Compras Ágiles abiertas se incorporan de a poco en cada turno.</p>}
     <section className="stats" aria-label="Indicadores de Compras Ágiles">

@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { apiJson } from "../../../core/api/client";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
-import { dinero, fecha } from "../../../core/ui/format";
+import CierrePlazo from "../../../core/ui/CierrePlazo";
+import { dinero } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { ETIQUETAS, TONOS, plazo } from "../comun";
+import { ETIQUETAS, TONOS } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
+import EstadoPlazo from "../../../core/ui/EstadoPlazo";
 import VistaTodas from "./VistaTodas";
 
 const LIMITE = 25;
@@ -41,18 +43,17 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
       onDesde={setDesde} onHasta={setHasta} onClasificacion={setClasificacion} /> : <>
     {datos.pendientes > 0 && <p className="sub" role="status">{actualizando ? "Actualizando evaluaciones…" : `${datos.pendientes} Compras Ágiles pendientes de evaluar.`}</p>}
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">
-      <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: 130 }} /><col style={{ width: 135 }} /><col style={{ width: 150 }} /></colgroup>
+      <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: 190 }} /><col style={{ width: 135 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Cierre</th><th>Presupuesto</th><th>Preselección</th></tr></thead>
       <tbody>{datos.filas.map(f => {
-        const aviso = plazo(f.fecha_cierre);
         return <tr key={f.id} onClick={() => abrirCompraAgil(f.id)}
           className={f.clientes_importantes?.length ? "opportunity-important" : undefined}>
-          <td><button className="cod" onClick={e => { e.stopPropagation(); abrirCompraAgil(f.id); }}>{f.codigo_externo}</button>
+          <td><span className="ca-codigo-estado"><button className="cod" onClick={e => { e.stopPropagation(); abrirCompraAgil(f.id); }}>{f.codigo_externo}</button><EstadoPlazo fila={f} /></span>
             {f.url_oficial && <div className="sub"><a href={f.url_oficial} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Mercado Público ↗</a></div>}</td>
           <td className="nom"><TituloLicitacion as="div" licitacion={f} />
             <ClienteImportanteBadge clientes={f.clientes_importantes} />
             <p className="ca-motivo">{f.motivo_seleccion}</p></td>
-          <td>{fecha(f.fecha_cierre)}{aviso && <div><span className="ca-plazo" data-nivel={aviso.nivel}>{aviso.texto}</span></div>}</td>
+          <td><CierrePlazo fechaCierre={f.fecha_cierre} compacto /></td>
           <td>{f.monto_disponible_clp == null ? "-" : dinero(f.monto_disponible_clp, "CLP")}<div className="sub">{f.region_comprador}</div></td>
           <td><span className={"badge " + (TONOS[f.estado_seleccion] || "")}>{ETIQUETAS[f.estado_seleccion] || f.estado_seleccion}</span></td>
         </tr>;

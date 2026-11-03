@@ -3,10 +3,13 @@ import { apiJson } from "../../../core/api/client";
 import Icon from "../../../core/ui/Icon";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
-import { dinero, fecha } from "../../../core/ui/format";
+import { dinero } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { plazo, useActualizarComprasAgiles, useResumenComprasAgiles } from "../comun";
+import { useActualizarComprasAgiles, useResumenComprasAgiles } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
+import EstadoPlazo from "../../../core/ui/EstadoPlazo";
+import CierrePlazo from "../../../core/ui/CierrePlazo";
+import UltimaBusqueda from "../../../core/ui/UltimaBusqueda";
 import "../compras-agiles.css";
 
 const VISIBLES = 6;
@@ -37,6 +40,7 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
       <a href="#compras-agiles">Ver todas →</a>
     </div>}
     {error && <p className="msg err" role="alert">No se pudo cargar el resumen de Compras Ágiles. {error}</p>}
+    {integrado && <><UltimaBusqueda fuente="compra_agil" /><p className="pre-nota" role="note">Se muestran procesos disponibles; revisa la etiqueta de estado y el plazo para saber si aún aceptan ofertas.</p></>}
     {resumen && !resumen.carga_inicial_completa && <p className="ca-aviso" role="status"><Icon name="clock" />Carga inicial en curso: las Compras Ágiles se incorporan de a poco en cada turno.</p>}
     <PreseleccionControles clasificacion={pestaña} total={lista.total} onClasificacion={setPestaña} mostrarFechas={false} />
     {!integrado && <button type="button" onClick={actualizar} disabled={actualizando}>{actualizando ? "Actualizando…" : "Actualizar preselección"}</button>}
@@ -47,16 +51,17 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
         : (lista.cargando || actualizando) && !lista.filas.length ? <p className="empty" role="status">{actualizando ? "Actualizando la preselección de Compras Ágiles…" : "Cargando Compras Ágiles…"}</p>
         : !lista.filas.length ? <p className="empty">{pestaña === "preseleccionada" ? "No hay posibles oportunidades en esta carga. Puedes consultar Revisión necesaria o Todas." : "No hay Compras Ágiles en esta vista."}</p>
         : <div className="ca-lista">{lista.filas.map(f => {
-          const aviso = plazo(f.fecha_cierre);
           return <article className="ca-item" data-estado={f.estado_seleccion} key={f.id}>
             <div className="ca-item-head">
-              {f.url_oficial ? <a href={f.url_oficial} target="_blank" rel="noopener noreferrer" aria-label={`Ver Compra Ágil ${f.codigo_externo} en Mercado Público`}>{f.codigo_externo} ↗</a> : <span>{f.codigo_externo}</span>}
-              {aviso && <span className="ca-plazo" data-nivel={aviso.nivel}>{aviso.texto}</span>}
+              <span className="ca-codigo-estado">{f.url_oficial ? <a href={f.url_oficial} target="_blank" rel="noopener noreferrer" aria-label={`Ver Compra Ágil ${f.codigo_externo} en Mercado Público`}>{f.codigo_externo} ↗</a> : <span>{f.codigo_externo}</span>}<EstadoPlazo fila={f} /></span>
             </div>
             <ClienteImportanteBadge clientes={f.clientes_importantes} mostrarNombre={false} />
             <TituloLicitacion licitacion={f} className="ca-item-title" />
             <div className="ca-item-foot">
-              <span>{f.monto_disponible_clp == null ? "Presupuesto no informado" : dinero(f.monto_disponible_clp, "CLP")} · cierra {fecha(f.fecha_cierre)}</span>
+              <div className="ca-item-resumen">
+                <span>{f.monto_disponible_clp == null ? "Presupuesto no informado" : dinero(f.monto_disponible_clp, "CLP")}</span>
+                <CierrePlazo fechaCierre={f.fecha_cierre} />
+              </div>
               <button type="button" onClick={() => abrirCompraAgil(f.id)}>Ver ficha</button>
             </div>
           </article>;

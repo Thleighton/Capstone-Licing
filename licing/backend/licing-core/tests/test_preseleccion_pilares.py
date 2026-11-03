@@ -106,5 +106,5 @@ def test_alimentacion_negada_o_no_humana_no_prueba_servicio_del_hotel(nombre):
     assert r["criterios"]["pertinencia"]["resultado"] != "cumple"
 
 
-def test_alojamiento_independiente_queda_fuera_del_perfil_de_salones():
-    assert evaluar(nombre="Alojamiento en Santiago sin alimentación")["clasificacion"] == "descartada"
+def test_alojamiento_en_rm_es_pertinente_a_las_habitaciones_del_hotel():
+    assert evaluar(nombre="Alojamiento en Santiago sin alimentación")["clasificacion"] == "preseleccionada"

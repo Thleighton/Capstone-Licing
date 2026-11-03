@@ -15,6 +15,7 @@ export default function BotonIngesta({ fuente = "licitaciones" }) {
       setMensaje(r.errores?.length ? "La ingesta terminó con errores. Revisa la actividad reciente."
         : r.procesados ? compras ? `${r.procesados} Compras Ágiles guardadas.` : "Licitación guardada."
         : compras ? "No se incorporaron nuevas Compras Ágiles en este turno." : "No hay licitaciones nuevas para descargar.");
+      window.dispatchEvent(new Event("licing:ingesta-actualizada"));
       await cargar();
     } catch (e) { setMensaje(e.message); }
     finally { setOcupado(false); }

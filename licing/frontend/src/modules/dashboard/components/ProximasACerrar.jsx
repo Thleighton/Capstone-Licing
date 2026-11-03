@@ -22,7 +22,8 @@ export default function ProximasACerrar({ rows, disponibles = true, estado, abri
   if (estado === "err") return <p className="empty">No se pudieron cargar los datos. Recarga la página para volver a intentar.</p>;
   if (estado !== "ok") return <p className="empty">Cargando oportunidades…</p>;
   if (!disponibles) return <p className="empty">No se pudo consultar la preselección. Recarga la página para volver a intentar.</p>;
-  const next = rows.filter(r => r.estado_seleccion === pestaña)
+  const filasConCierre = rows.filter(r => r.fecha_cierre && Number.isFinite(new Date(r.fecha_cierre).getTime()));
+  const next = filasConCierre.filter(r => r.estado_seleccion === pestaña)
     .sort((a, b) => new Date(a.fecha_cierre) - new Date(b.fecha_cierre) || a.id - b.id);
   function moverPestaña(e, indice) {
     const destino = e.key === "Home" ? 0 : e.key === "End" ? pestañas.length - 1
@@ -38,7 +39,7 @@ export default function ProximasACerrar({ rows, disponibles = true, estado, abri
       key={p.estado} id={`${id}-${p.estado}`} type="button" role="tab" aria-selected={pestaña === p.estado}
       aria-controls={`${id}-contenido`} tabIndex={pestaña === p.estado ? 0 : -1}
       onClick={() => setPestaña(p.estado)} onKeyDown={e => moverPestaña(e, i)}>
-      <span className="closing-tab-label">{p.nombre}</span><span className="closing-count">{rows.filter(r => r.estado_seleccion === p.estado).length}</span>
+      <span className="closing-tab-label">{p.nombre}</span><span className="closing-count">{filasConCierre.filter(r => r.estado_seleccion === p.estado).length}</span>
     </button>)}</div>
     <div className="closing-list" id={`${id}-contenido`} role="tabpanel" aria-labelledby={`${id}-${pestaña}`} tabIndex={0}>
       {!next.length && <p className="empty">{pestaña === "preseleccionada" ? "No hay posibles oportunidades con cierre pendiente." : "No hay licitaciones pendientes de revisión con cierre pendiente."}</p>}
@@ -48,8 +49,11 @@ export default function ProximasACerrar({ rows, disponibles = true, estado, abri
         const aviso = restantes <= 4 * dia;
         const nivel = restantes <= dia ? "critical" : "warning";
         const unidad = restantes <= 3600000 ? "min" : restantes <= dia ? "h" : "días";
-        const cantidad = Math.max(1, Math.ceil(restantes / (unidad === "min" ? 60000 : unidad === "h" ? 3600000 : dia)));
-        const mensaje = restantes <= 0 ? "Plazo vencido" : `${cantidad === 1 ? "Queda" : "Quedan"} ${cantidad} ${unidad}`;
+        const dias = Math.floor(restantes / dia);
+        const horas = Math.floor((restantes % dia) / 3600000);
+        const cantidad = Math.max(1, Math.ceil(restantes / (unidad === "min" ? 60000 : 3600000)));
+        const mensajeDias = `${dias} ${dias === 1 ? "día" : "días"}${horas ? ` y ${horas} h` : ""}`;
+        const mensaje = restantes <= 0 ? "Plazo vencido" : restantes > dia ? `Quedan ${mensajeDias}` : `${cantidad === 1 ? "Queda" : "Quedan"} ${cantidad} ${unidad}`;
         return <article className="closing-item" data-urgency={aviso ? nivel : undefined} data-cliente-importante={!!r.clientes_importantes?.length} key={r.id}>
           <div className="closing-item-header">
             {officialOpportunityUrl(r) ? <a className="closing-reference" href={officialOpportunityUrl(r)} target="_blank" rel="noopener noreferrer" aria-label={`Ver licitación ${r.codigo_externo} en Mercado Público`}>{r.codigo_externo} ↗</a> : <span className="closing-reference">{r.codigo_externo}</span>}

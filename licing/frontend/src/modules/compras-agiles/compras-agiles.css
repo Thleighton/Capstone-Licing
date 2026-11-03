@@ -57,6 +57,8 @@
 .ca-item-head .ca-plazo { margin-top: 0; }
 .ca-item-title { margin: 0; font-size: 13.5px; }
 .ca-item-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; font-size: 12px; color: var(--muted); }
+.ca-item-resumen { display: grid; gap: 8px; min-width: 0; }
+.ca-item-resumen .cierre-plazo { justify-content: flex-start; }
 .ca-item-foot button { flex: none; color: var(--accent); background: var(--accent-bg); border-color: transparent; border-radius: 9px; }
 .ca-mas { margin: 12px 0 0; }
 

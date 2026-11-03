@@ -212,10 +212,12 @@ por ticket (10.000 solicitudes en la práctica). Considera también las solicitu
 ingesta de licitaciones si ambas APIs comparten la cuota.
 
 **Preselección.** Las Compras Ágiles pasan por el mismo motor y catálogo que las
-licitaciones, con los tres pilares: vigencia, lugar del evento en la RM y pertinencia al
-perfil de salones para eventos. Coffee break y banquetería solo cuentan como complementos
-del salón; el alojamiento independiente queda fuera. Los códigos de productos ajenos se
-resuelven en el catálogo compartido. No tienen bases, así que la cobertura es `sin_bases`.
+licitaciones, con los tres pilares: vigencia, lugar del servicio en la RM y pertinencia al
+perfil del hotel. El hospedaje explícito de huéspedes y la contratación de habitaciones
+pueden ser pertinentes sin salón; casa de acogida, hospedería o residencia institucional
+no se toma automáticamente como reserva hotelera. Coffee break y banquetería con sede no
+aclarada quedan en revisión para confirmar si acompañan un salón del hotel. Los códigos de
+productos ajenos se resuelven en el catálogo compartido. No tienen bases, así que la cobertura es `sin_bases`.
 La adaptación `ca-2` conserva la región del comprador como referencia administrativa, pero
 no como lugar del evento. Un arriendo directo de salón para un comprador de la RM puede
 quedar como posible oportunidad provisional, con sede por confirmar; catering sin sede

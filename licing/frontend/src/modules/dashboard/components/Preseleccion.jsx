@@ -7,6 +7,9 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import PanelComprasAgiles from "../../compras-agiles/components/PanelDashboard";
 import ResumenLicitacion from "../../oportunidades/components/ResumenLicitacion";
 import PreseleccionControles, { PilaresPreseleccion } from "../../../core/ui/PreseleccionControles";
+import EstadoPlazo from "../../../core/ui/EstadoPlazo";
+import CierrePlazo from "../../../core/ui/CierrePlazo";
+import UltimaBusqueda from "../../../core/ui/UltimaBusqueda";
 import "./preseleccion.css";
 
 const URL = "/api/preseleccion";
@@ -21,7 +24,7 @@ const pilares = [
   { codigo: "ubicacion", nombre: "Lugar del servicio" },
   { codigo: "pertinencia", nombre: "Servicio solicitado" },
 ];
-const fecha = valor => valor ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(valor)) : "Sin fecha";
+const nombrePilar = { vigencia: "Vigencia", ubicacion: "Lugar del servicio", pertinencia: "Servicio solicitado", documentacion: "Documentación" };
 
 export default function Preseleccion({ onActualizada, versionComprasAgiles, mostrarModalidades = false, mostrarInformacion = false, mostrarFechas = true, q = "" }) {
   const id = useId();
@@ -138,7 +141,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       ? `No hay posibles oportunidades ${mostrarFechas ? "para estas fechas" : "en esta carga"}. Puedes consultar Revisión necesaria o Todas.`
       : `No hay resultados en esta vista${mostrarFechas ? " y rango de fechas" : ""}.`;
   return <section className="card panel preseleccion" aria-labelledby={`${id}-titulo`}>
-    <div className="section-title pre-heading"><div className="pre-heading-title"><span className="pre-heading-icon"><Icon name="briefcase" /></span><div><h2 id={`${id}-titulo`}>{mostrarModalidades ? "Oportunidades para el hotel" : "Licitaciones para el hotel"}</h2><p className="sub">Tres pilares: vigencia, ubicación en la RM y servicio solicitado.</p></div></div>
+    <div className="section-title pre-heading"><div className="pre-heading-title"><span className="pre-heading-icon"><Icon name="briefcase" /></span><div><h2 id={`${id}-titulo`}>{mostrarModalidades ? "Oportunidades para el hotel" : "Licitaciones para el hotel"}</h2><p className="sub">Considera habitaciones, salones para eventos y servicios de alimentación asociados. Se evalúan vigencia, ubicación en la RM y pertinencia.</p></div></div>
       {modalidad === "licitaciones"
         ? <button className="primary" disabled={!!ocupado || cargando} onClick={evaluar}>Actualizar preselección</button>
         : <button className="primary" type="button" disabled={actualizandoCompras} onClick={actualizarCompras}>{actualizandoCompras ? "Actualizando…" : "Actualizar preselección"}</button>}</div>
@@ -150,6 +153,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     <PilaresPreseleccion />
     <div className="pre-modalidad-panel" id={`${id}-panel-licitaciones`} role={mostrarModalidades ? "tabpanel" : undefined}
       aria-labelledby={mostrarModalidades ? `${id}-tab-licitaciones` : undefined} hidden={modalidad !== "licitaciones"} tabIndex={mostrarModalidades ? 0 : undefined}>
+    <UltimaBusqueda fuente="licitaciones" />
+    <p className="pre-nota" role="note">La lista puede incluir procesos abiertos y cerrados. La etiqueta junto al código muestra si aún reciben ofertas.</p>
     <PreseleccionControles clasificacion={filtro} desde={desde} hasta={hasta} total={datos.total} disabled={!!ocupado} mostrarFechas={mostrarFechas} mostrarBusquedaId={mostrarInformacion}
       busquedaId={busquedaId} onBusquedaId={setBusquedaId}
       onClasificacion={valor => { setFiltro(valor); setOffset(0); }}
@@ -161,7 +166,10 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     {cargando ? <p role="status">Cargando preselección…</p> : <>
       {!datos.filas.length && !error && !errorCarga && !ocupado && <p className="pre-vacio">{mensajeVacio}</p>}
       <div className="pre-lista" role="region" aria-label="Resultados de licitaciones para el hotel" tabIndex={datos.filas.length ? 0 : undefined}>{datos.filas.map(fila => <article key={fila.id} className="pre-fila" data-estado={fila.estado_seleccion} data-cliente-importante={!!fila.clientes_importantes?.length && ["preseleccionada", "revision_manual"].includes(fila.estado_seleccion)}>
-        <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><span className="sub">{fila.codigo_externo}{!mostrarInformacion && <> · Cierra {fecha(fila.fecha_cierre)}</>}</span>
+        <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><div className="pre-fila-meta">
+          <div className="pre-fila-identidad"><span className="sub">{fila.codigo_externo}</span><EstadoPlazo fila={fila} /></div>
+          <CierrePlazo fechaCierre={fila.fecha_cierre} />
+        </div>
           {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
           <TituloLicitacion licitacion={fila} />
           {!!fila.hallazgos_documentales?.length && <div className="pre-hallazgos-compactos">{fila.hallazgos_documentales.slice(0, 2).map((h, i) => <div key={i}>
@@ -170,7 +178,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
             {h.ubicacion?.resumen && <span className="pre-hallazgo-dato">{h.ubicacion.resumen}</span>}
           </div>)}</div>}
           {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
-          <p>{fila.motivo_seleccion}</p>
+          {fila.estado_seleccion === "descartada" && <p className="pre-regla-aplicada"><strong>Regla automática{fila.pilar_decisivo ? ` · ${nombrePilar[fila.pilar_decisivo] || fila.pilar_decisivo}` : " aplicada"}:</strong> {fila.motivo_seleccion || "No se recibió el detalle de la regla."}</p>}
+          {fila.estado_seleccion !== "descartada" && <p>{fila.motivo_seleccion}</p>}
           <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{fila.estado_seleccion === "preseleccionada" && fila.motivo_seleccion?.startsWith("Candidato para el hotel:") ? "Posible oportunidad · sede por confirmar" : etiquetas[fila.estado_seleccion]}</span></div>
         <div className="pre-fila-acciones"><button disabled={!!ocupado} onClick={() => abrir(fila)}>Ver resultado</button>{fila.url_oficial && <a href={fila.url_oficial} target="_blank" rel="noreferrer">Mercado Público ↗</a>}</div>
       </article>)}</div>

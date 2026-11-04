@@ -33,10 +33,10 @@ def test_todas_las_combinaciones_de_los_tres_pilares(resultados):
 
 
 @pytest.mark.parametrize("servicio, esperado", [
-    ("Coffee break", "revision_manual"), ("Coffe-break", "revision_manual"),
+    ("Coffee break", "preseleccionada"), ("Coffe-break", "preseleccionada"),
     ("Catering", "revision_manual"), ("Banquetería", "revision_manual"),
     ("Servicio de alimentación", "revision_manual"), ("Servicio de desayuno", "revision_manual"),
-    ("Cóctel", "revision_manual"), ("Alojamiento y alimentación", "descartada"),
+    ("Cóctel", "revision_manual"), ("Alojamiento y alimentación", "preseleccionada"),
     ("Arriendo de salón y coffee break", "preseleccionada"),
 ])
 def test_servicio_segun_alcance_salones_y_eventos(servicio, esperado):
@@ -58,7 +58,7 @@ def test_alimentacion_fuera_de_cobertura_se_descarta_por_ubicacion():
     r = evaluar(nombre="Coffee break en Valparaíso")
     assert r["clasificacion"] == "descartada"
     assert r["pilar_decisivo"] == "ubicacion"
-    assert r["criterios"]["pertinencia"]["resultado"] == "sin_informacion"
+    assert r["criterios"]["pertinencia"]["resultado"] == "cumple"
 
 
 def test_banqueteria_sin_salon_se_conserva_para_revision():
@@ -70,8 +70,8 @@ def test_banqueteria_sin_salon_se_conserva_para_revision():
 
 def test_suministro_de_un_servicio_de_coffee_break_no_es_compra_de_bienes():
     r = evaluar(nombre="Contratar el servicio de suministro de coffee break y cóctel en La Florida")
-    assert r["clasificacion"] == "revision_manual"
-    assert r["criterios"]["pertinencia"]["resultado"] == "sin_informacion"
+    assert r["clasificacion"] == "preseleccionada"
+    assert r["criterios"]["pertinencia"]["resultado"] == "cumple"
 
 
 def test_lugar_de_alimentacion_no_se_toma_de_otra_linea():
@@ -86,7 +86,7 @@ def test_lugar_de_alimentacion_no_se_toma_de_otra_linea():
 def test_documentos_capacidad_presupuesto_y_comprador_no_crean_otros_pilares():
     r = evaluar(nombre="Coffee break en Santiago", monto_estimado=None, nombre_organismo="Comprador nuevo",
         documentos=[{"id": 1, "estado_extraccion": "error"}])
-    assert r["clasificacion"] == "revision_manual"
+    assert r["clasificacion"] == "preseleccionada"
     assert tuple(r["criterios"]) == PILARES
     assert "documentacion" in r
     assert r["documentacion"]["bloquea_preseleccion"] is False

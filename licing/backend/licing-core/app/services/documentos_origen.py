@@ -191,18 +191,20 @@ def registrar_incidencia(db, licitacion_id, codigo, nombre=None):
 
 
 def reservar(db, licitacion_id=None, manual=False):
-    fila = db.execute(text("""
+    filtro_licitacion = "AND id=:licitacion_id" if licitacion_id is not None else ""
+    fila = db.execute(text(f"""
       SELECT id,codigo_externo,raw_id,ingesta_documental FROM public.licitacion
       WHERE coalesce(codigo_estado,5)=5 AND (fecha_cierre IS NULL OR
          fecha_cierre>clock_timestamp() AT TIME ZONE 'America/Santiago')
-       AND (:licitacion_id IS NULL OR id=:licitacion_id)
+       {filtro_licitacion}
        AND coalesce((ingesta_documental->>'reservada_hasta')::timestamptz,'-infinity')<=clock_timestamp()
        AND (:manual OR coalesce((ingesta_documental->>'proximo_intento')::timestamptz,'-infinity')<=clock_timestamp()
             OR ingesta_documental->>'raw_id' IS DISTINCT FROM raw_id::text)
-      ORDER BY (ingesta_documental='{}') DESC,
+      ORDER BY (ingesta_documental='{{}}') DESC,
        coalesce((ingesta_documental->>'ultimo_intento')::timestamptz,'-infinity'),id
       LIMIT 1 FOR UPDATE SKIP LOCKED
-    """), {"licitacion_id": licitacion_id, "manual": manual}).mappings().first()
+    """), {"licitacion_id": licitacion_id, "manual": manual} if licitacion_id is not None
+            else {"manual": manual}).mappings().first()
     if not fila:
         db.rollback()
         return None

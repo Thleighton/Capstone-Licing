@@ -246,7 +246,13 @@ async def _pedir(cliente, metodo, url, datos=None, limite=MAX_BYTES):
                                 destino = r.headers.get("location")
                                 if not destino:
                                     raise BasesNoDisponibles("respuesta_invalida")
-                                url = urljoin(str(r.url), destino)
+                                url_destino = urljoin(str(r.url), destino)
+                                if (
+                                    urlsplit(url_destino).path.lower() == PATH_ADJUNTOS.lower()
+                                    and urlsplit(str(r.url)).path.lower() != PATH_ADJUNTOS.lower()
+                                ):
+                                    raise BasesNoDisponibles("redireccion_no_admitida")
+                                url = url_destino
                                 if r.status_code in (301, 302, 303):
                                     metodo, datos = "GET", None
                                 continue
@@ -254,7 +260,7 @@ async def _pedir(cliente, metodo, url, datos=None, limite=MAX_BYTES):
                                 cuerpo = await r.aread()
                                 if _captcha_solicitado(cuerpo):
                                     raise BasesNoDisponibles("captcha_requerido")
-                                raise BasesNoDisponibles("acceso_portal")
+                                raise BasesNoDisponibles("acceso_restringido")
                             if r.status_code == 404:
                                 raise BasesNoDisponibles("sin_ficha")
                             r.raise_for_status()
@@ -317,6 +323,10 @@ async def listar_anexos(cliente, ficha):
         html, url = await _pedir(cliente, "GET", urljoin(ficha.url, href), limite=1024 * 1024)
         pagina = _Anexos()
         pagina.feed(_html(html))
+        if not pagina.filas and _captcha_solicitado(html):
+            raise BasesNoDisponibles("captcha_requerido")
+        if not pagina.filas and _acceso_denegado(html):
+            raise BasesNoDisponibles("acceso_restringido")
         for fila in pagina.filas.values():
             if not fila.get("boton") or not fila.get("nombre"):
                 continue

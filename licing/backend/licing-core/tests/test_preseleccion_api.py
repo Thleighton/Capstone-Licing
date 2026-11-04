@@ -122,7 +122,8 @@ def test_falla_filtradas_no_borra_fuente(client,fila,monkeypatch,integration_db)
 def test_documento_invalido_no_llega_a_storage(client,fila,monkeypatch):
     mock=AsyncMock();monkeypatch.setattr(filtradas,'operar',mock)
     response=client.post(f'/api/preseleccion/{fila.id}/documentos',json={'nombre':'base.pdf','contenido_base64':'bm90IHBkZg=='})
-    assert response.status_code==422
+    assert response.status_code==410
+    assert 'ya no recibe documentos' in response.json()['error']
     mock.assert_not_called()
 
 
@@ -220,14 +221,10 @@ def test_pdf_vacio_queda_pendiente_aunque_filtradas_este_caida(client, fila, mon
     operar=AsyncMock(side_effect=filtradas.FiltradasNoDisponible('Temporal'))
     monkeypatch.setattr(filtradas,'operar',operar)
     r=client.post(f'/api/preseleccion/{fila.id}/documentos',json={'nombre':'vacio.pdf','contenido_base64':''})
-    assert r.status_code==200,r.text
-    assert r.json()['incidencia']['codigo']=='archivo_vacio'
-    pendientes=client.get('/api/preseleccion/pendientes-documentales')
-    assert pendientes.status_code==200,pendientes.text
-    assert pendientes.json()['total']==1
-    assert pendientes.json()['filas'][0]['id']==fila.id
-    assert 'vacío' in pendientes.json()['filas'][0]['motivo_seleccion']
+    assert r.status_code==410,r.text
+    assert 'ya no recibe documentos' in r.json()['error']
     storage.assert_not_called()
+    operar.assert_not_called()
     assert integration_db.get(Licitacion,fila.id) is not None
 
 

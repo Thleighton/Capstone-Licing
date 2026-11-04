@@ -98,8 +98,8 @@ def test_orden_de_compra_no_confunde_una_contratacion_de_alojamiento():
 def test_orden_de_compra_no_oculta_una_compra_de_bienes_en_el_mismo_texto():
     r = evaluar("Compra de sábanas para habitaciones de hotel en Santiago",
         "Aceptar la orden de compra. Compra de sábanas para habitaciones de hotel.")
-    assert r["clasificacion"] == "revision_manual"
-    assert r["criterios"]["pertinencia"]["ambiguedades"]
+    assert r["clasificacion"] == "descartada"
+    assert r["criterios"]["pertinencia"]["exclusiones_evidentes"]
 
 
 def test_ubicacion_de_alojamiento_para_pacientes_derivados():

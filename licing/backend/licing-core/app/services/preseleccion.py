@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-41"
+VERSION_MOTOR = "reglas-hotel-42"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -415,6 +415,8 @@ def _mencion_ajena(grupo, m, normal):
             return True
 
     if grupo == "alojamiento":
+        if re.match(r"\s+(?:hospitalarias?|clinicas?|sanitarias?)\b", despues):
+            return True
         if re.fullmatch(r"residencia(?: temporal)?", m.group()):
             # Un electrodoméstico destinado a una residencia no contrata estadías.
             contratacion = re.search(
@@ -819,7 +821,7 @@ _SEDE_ALTERNATIVA = re.compile(
     r"o\s+(?:en\s+)?(?:un\s+)?hotel)\b"
 )
 _ALOJAMIENTO_SALONES = re.compile(
-    r"\b(?:alojamientos?|hospedajes?|estadias?|habitacion(?:es)?|"
+    r"\b(?:alojamientos?|hospedajes?|estadias?|residencias?|habitacion(?:es)?|"
     r"casa\s+de\s+acogida|hoteleria|hoteles?)\b"
 )
 _ALOJAMIENTO_HOTEL_DIRECTO = re.compile(
@@ -828,7 +830,10 @@ _ALOJAMIENTO_HOTEL_DIRECTO = re.compile(
     r"(?:reserva|reservacion|contratacion|arriendo|alquiler)\s+(?:de\s+)?"
     r"(?:alojamientos?|hospedajes?|habitaciones?|hoteles?)|"
     r"habitaciones?\s+(?:para|dobles?|individuales?|simples?)|"
-    r"(?:hotel(?:es)?|hoteleria)\s+(?:para|por)\b)"
+    r"(?:hotel(?:es)?|hoteleria)\s+(?:para|por)\b|"
+    r"(?:se\s+)?(?:requiere|solicita|contrata|contratar)\s+(?:un\s+)?"
+    r"hotel(?:es)?\s+(?:en|para)\b|"
+    r"(?:servicios?\s+de\s+)?residencias?\s+temporal(?:es)?\b)"
 )
 _ALOJAMIENTO_INSTITUCIONAL = re.compile(
     r"\b(?:casas?\s+de\s+acogida|hospederias?|residencias?\s+de\s+(?:acogida|proteccion))\b"
@@ -848,7 +853,11 @@ _COMIDA_SALONES = re.compile(
 _ALIMENTACION_ELECTRICA = re.compile(
     r"\b(?:alimentacion\s+(?:electrica|ininterrumpida)|"
     r"sistema\s+de\s+alimentacion\s+ininterrumpida|"
-    r"ups|tableros?\s+electricos?|bypass)\b"
+    r"ups|tableros?\s+electricos?|bypass)\b|"
+    r"\b(?:tension|voltaje|fuentes?|cables?|conector(?:es)?|adaptador(?:es)?|puerto(?:s)?)"
+    r"\s+de\s+alimentacion\b|"
+    r"\balimentacion\s*[:=]?\s*(?:de\s+)?\d+(?:[.,]\d+)?"
+    r"(?:\s*[-/]\s*\d+(?:[.,]\d+)?)?\s*(?:v(?:ac|dc)?|voltios?|w|watts?|hz)\b"
 )
 _ALIMENTACION_CLINICA = re.compile(
     r"\b(?:alimentacion|nutricion)\b[^.;\n]{0,120}"
@@ -927,8 +936,8 @@ _ALIMENTACION_PAGO_ELECTRONICO = re.compile(
 _OBRA_ESPACIO_REUNION = re.compile(
     r"\b(?:recuperacion|restauracion|reparacion|remodelacion|construccion|"
     r"mantencion|mantenimiento|mejoramiento|habilitacion)\b[^.;\n]{0,100}"
-    r"\bsalas?\s+de\s+reuniones?\b|"
-    r"\bsalas?\s+de\s+reuniones?\b[^.;\n]{0,100}"
+    r"\b(?:salon(?:es)?|salas?\s+de\s+reuniones?)\b|"
+    r"\b(?:salon(?:es)?|salas?\s+de\s+reuniones?)\b[^.;\n]{0,100}"
     r"\b(?:recuperacion|restauracion|reparacion|remodelacion|construccion|"
     r"mantencion|mantenimiento|mejoramiento|habilitacion)\b"
 )
@@ -981,7 +990,8 @@ def _evaluar_perfil_hotel(datos, campos, base):
         cargar_catalogo().get("hotel", {}).get("nombre") or "Hotel Plaza San Francisco"
     )
     validas, rechazadas, genericas, fijas = [], [], [], []
-    alojamientos, alojamientos_directos, comidas, clinicas, obligaciones, producciones = [], [], [], [], [], []
+    alojamientos, alojamientos_directos, comidas, comidas_directas = [], [], [], []
+    clinicas, obligaciones, producciones = [], [], []
     contexto_institucional = False
     hay_evento = False
     estados = {e.get("fuente"): e.get("estado") for e in base.get("evaluacion_items", [])}
@@ -1003,6 +1013,13 @@ def _evaluar_perfil_hotel(datos, campos, base):
             )
             for actividad in _EVENTO_SALONES.finditer(normal):
                 clausula_evento = _clausula_local(normal, actividad.start())
+                # “sala de reuniones” describe el destino de un bien, no un evento.
+                es_sala_reuniones = actividad.group().startswith("reunion") and bool(
+                    re.search(
+                        r"\b(?:salas?\s+de\s+reuniones?|mesas?\s+(?:de\s+)?reunion(?:es)?)\b",
+                        clausula_evento,
+                    )
+                )
                 es_taller_mecanico = actividad.group().startswith("taller") and bool(
                     re.search(
                         r"\b(?:maquinarias?|fiscal|mantencion|mantenimiento|"
@@ -1010,7 +1027,9 @@ def _evaluar_perfil_hotel(datos, campos, base):
                         clausula_evento,
                     )
                 )
-                if not es_taller_mecanico:
+                if not es_taller_mecanico and not (
+                    es_sala_reuniones and fuente.startswith("items[")
+                ):
                     hay_evento = True
             for patron, destino, codigo in (
                 (_ALOJAMIENTO_SALONES, alojamientos, "alojamiento_sin_salon"),
@@ -1027,7 +1046,54 @@ def _evaluar_perfil_hotel(datos, campos, base):
                     and not _mencion_negada(normal, m.start())
                     and not _mencion_de_item_ajeno(datos, fuente, m, normal)
                 ):
-                    destino.append(_evidencia_perfil(fuente, texto, normal, mapa, m, codigo, "Objeto identificado en el contexto de la solicitud."))
+                    evidencia = _evidencia_perfil(fuente, texto, normal, mapa, m, codigo, "Objeto identificado en el contexto de la solicitud.")
+                    destino.append(evidencia)
+                    tiene_personas = bool(re.search(
+                        r"\b\d+\s+(?:personas|participantes|asistentes|funcionarios)\b",
+                        _clausula_local(normal, m.start()),
+                    ))
+                    servicio_alimentacion_en_ficha = (
+                        codigo == "alimentacion_sin_salon"
+                        and not fuente.startswith("items[")
+                        and re.search(r"\bservicios?\s+de\s+alimentacion\b", normal)
+                        and re.search(r"\balimentacion\b", _clausula_local(normal, m.start()))
+                        and any(
+                            re.search(r"\b\d+\s+(?:personas|participantes|asistentes|funcionarios)\b", texto_ficha)
+                            for campo_ficha, texto_ficha in campos
+                            if not campo_ficha.startswith("items[") and isinstance(texto_ficha, str)
+                        )
+                    )
+                    es_coffee_break = bool(re.match(r"cof+e+e?\s*[- ]?breaks?", m.group()))
+                    coffee_break_solicitado = (
+                        codigo == "alimentacion_sin_salon"
+                        and es_coffee_break
+                        and (
+                            _SERVICIO_EXPLICITO.search(_clausula_local(normal, m.start()))
+                            or _patrones()[3].search(_clausula_local(normal, m.start()))
+                        )
+                    )
+                    alimentacion_grupal_explicita = (
+                        codigo == "alimentacion_sin_salon"
+                        and m.group() == "alimentacion"
+                        and servicio_alimentacion_en_ficha
+                    )
+                    if coffee_break_solicitado or alimentacion_grupal_explicita:
+                        if servicio_alimentacion_en_ficha:
+                            evidencia = next((
+                                _evidencia_perfil(campo_ficha, texto_ficha, normal_ficha, mapa_ficha,
+                                    m_ficha, "alimentacion_sin_salon", "Se solicita alimentación para un grupo de personas.")
+                                for campo_ficha, texto_ficha in campos
+                                if not campo_ficha.startswith("items[") and isinstance(texto_ficha, str)
+                                for normal_ficha, mapa_ficha in [_texto_con_mapa(texto_ficha)]
+                                for m_ficha in _COMIDA_SALONES.finditer(normal_ficha)
+                                if m_ficha.group() == "alimentacion"
+                                and re.search(
+                                    r"\b\d+\s+(?:personas|participantes|asistentes|funcionarios)\b",
+                                    _clausula_local(normal_ficha, m_ficha.start()),
+                                )
+                                and not _alimentacion_no_hotelera(_clausula_local(normal_ficha, m_ficha.start()))
+                            ), evidencia)
+                        comidas_directas.append(evidencia)
             hosp = _alojamiento_directo(normal)
             if (
                 hosp
@@ -1073,10 +1139,27 @@ def _evaluar_perfil_hotel(datos, campos, base):
             m_comida = next((c for c in _COMIDA_SALONES.finditer(clausula)
                 if not (c.group() == "alimentacion" and _alimentacion_no_hotelera(clausula))), None)
             servicio_asociado = bool(m_comida)
+            salon_alquilado = arriendo and bool(
+                re.match(r"salas?|salon(?:es)?|auditorios?", m.group())
+            ) and not re.search(r"\bsalon(?:es)?\s+de\s+belleza\b", clausula)
+            espacio_para_evento = m.group().startswith("espacio") and evento
+            recinto_para_evento = m.group().startswith("recinto") and arriendo and evento
             if (
-                _SALA_EVENTO.search(clausula)
-                or (arriendo and (evento or es_salon))
-                or (es_salon and (evento or servicio_asociado))
+                (
+                    _SALA_EVENTO.search(clausula)
+                    and (
+                        not fuente.startswith("items[")
+                        or estados.get(_unidad(fuente)) != "objeto_ajeno"
+                    )
+                )
+                or salon_alquilado
+                or espacio_para_evento
+                or recinto_para_evento
+                or (
+                    es_salon
+                    and (evento or servicio_asociado)
+                    and (estados.get(_unidad(fuente)) != "objeto_ajeno" or arriendo)
+                )
             ):
                 if estados.get(_unidad(fuente)) == "objeto_ajeno" and not (arriendo or evento):
                     genericas.append(registro)
@@ -1095,10 +1178,13 @@ def _evaluar_perfil_hotel(datos, campos, base):
     ] + [
         e for e in alojamientos_directos
         if e.get("fuente", "").startswith("items[")
+    ] + [
+        e for e in comidas_directas
+        if e.get("fuente", "").startswith("items[")
     ]
     ficha_hotelera_explicita = any(
         not e.get("fuente", "").startswith("items[")
-        for e in validas + alojamientos_directos + comidas
+        for e in validas + alojamientos_directos + comidas_directas
     )
     # Los ítems concretos pesan más que las menciones genéricas de la ficha.
     peso_pertinencia = (
@@ -1138,10 +1224,10 @@ def _evaluar_perfil_hotel(datos, campos, base):
     items_suficientemente_ajenos = bool(
         items
         and not items_hoteleros
-        and (
-            len(items_ajenos) == len(items)
-            or peso_pertinencia <= -4
-        )
+        and not comidas
+        and not ficha_hotelera_explicita
+        and len(items_ajenos) == len(items)
+        and not hay_evento
     )
     if items_suficientemente_ajenos:
         evidencias_items = [e.get("evidencia") for e in items_ajenos if e.get("evidencia")]
@@ -1154,7 +1240,12 @@ def _evaluar_perfil_hotel(datos, campos, base):
             )
             evidencias = evidencias_items[:30]
         else:
-            resultado, codigo = "no_cumple", "items_fuera_alcance"
+            resultado = "no_cumple"
+            codigo = (
+                evidencias_items[0].get("codigo")
+                if evidencias_items and isinstance(evidencias_items[0], dict)
+                else "items_fuera_alcance"
+            )
             motivo = evidencias_items[0]["motivo"] if evidencias_items else (
                 "Los ítems identificados no corresponden a alojamiento, salones "
                 "ni servicios de alimentación para eventos."
@@ -1177,6 +1268,10 @@ def _evaluar_perfil_hotel(datos, campos, base):
             resultado, codigo = "cumple", "salon_eventos"
             motivo = "Se solicita un salón para eventos; los servicios asociados solo aplican dentro de ese espacio del hotel."
             evidencias = validas
+    elif comidas_directas and not fijas and not producciones:
+        resultado, codigo = "cumple", "alimentacion_para_personas"
+        motivo = "Se solicita un servicio de alimentación para participantes; confirmar en las bases si se presta en el hotel o como parte de un evento."
+        evidencias = comidas_directas
     elif alojamientos_directos and not contexto_institucional:
         resultado, codigo = "cumple", "alojamiento_hotel"
         motivo = "Se solicita alojamiento o habitaciones, servicio que puede ofrecer el hotel. Confirmar cantidad de personas, noches, fechas y disponibilidad en las bases."
@@ -1210,10 +1305,25 @@ def _evaluar_perfil_hotel(datos, campos, base):
         ]
     elif fijas and (comidas or rechazadas):
         resultado, codigo, motivo, evidencias = "no_cumple", "servicio_en_tercero", "Se solicita prestar el servicio en una sede de tercero, sin contratación del salón del hotel.", fijas
-    elif rechazadas and not genericas_concretas:
+    elif rechazadas and not genericas_concretas and not any(
+        e.get("motivo", "").startswith("La referencia al salón es el destino de bienes")
+        for e in rechazadas
+    ):
         resultado, codigo, motivo, evidencias = "no_cumple", "espacio_no_eventos", rechazadas[0]["motivo"], rechazadas
     elif clinicas and not genericas_concretas and not hay_evento:
         resultado, codigo, motivo, evidencias = "no_cumple", "objeto_clinico", "El objeto es una prestación o infraestructura clínica, no hospedaje ni un servicio para eventos del hotel.", clinicas
+    elif comidas:
+        codigo, motivo, evidencias = "alimentacion_salon_por_confirmar", "Se solicita catering, coffee break o banquetería, pero no se confirma el lugar. Revisar si el hotel puede ofrecer su salón junto con el servicio.", comidas
+    elif (
+        not items_hoteleros
+        and not ficha_hotelera_explicita
+        and not genericas
+        and not hay_evento
+        and _evidencia_objeto_ajeno([(f, t) for f, t in campos if not f.startswith("items[")])
+    ):
+        evidencia = _evidencia_objeto_ajeno([(f, t) for f, t in campos if not f.startswith("items[")])
+        resultado, codigo, evidencias = "no_cumple", "objeto_ajeno", [evidencia]
+        motivo = evidencia["motivo"]
     elif genericas and (
         hay_evento
         or any(
@@ -1223,28 +1333,52 @@ def _evaluar_perfil_hotel(datos, campos, base):
     ):
         codigo, motivo, evidencias = "espacio_por_confirmar", "Se menciona un espacio o categoría, pero falta confirmar el arriendo o uso de un salón para un evento en el hotel.", genericas
     elif alojamientos and any(_ALOJAMIENTO_INSTITUCIONAL.search(normalizar_texto(x)) for x in [datos.get("nombre") or "", datos.get("descripcion") or ""]):
-        resultado, codigo, motivo, evidencias = "no_cumple", "alojamiento_institucional", "La solicitud corresponde a una casa de acogida, hospedería o residencia institucional; no identifica reserva de habitaciones del hotel.", alojamientos
+        resultado, codigo, motivo, evidencias = "no_cumple", "alojamiento_institucional", "La solicitud corresponde a una casa de acogida o residencia institucional; no identifica reservas de habitaciones para huéspedes del hotel.", alojamientos
     elif alojamientos:
         codigo, motivo, evidencias = "alojamiento_por_confirmar", "Se menciona hotel o alojamiento, pero falta confirmar si se requieren habitaciones para huéspedes y las condiciones del hospedaje.", alojamientos
     elif comidas:
         codigo, motivo, evidencias = "alimentacion_salon_por_confirmar", "Se solicita catering, coffee break o banquetería, pero no se confirma el lugar. Revisar si el hotel puede ofrecer su salón junto con el servicio.", comidas
-    elif base.get("exclusiones_evidentes") or _evidencia_objeto_ajeno(campos):
+    elif (
+        base.get("exclusiones_evidentes") or _evidencia_objeto_ajeno(campos)
+    ) and not (alojamientos or genericas or comidas or rechazadas) and not (
+        items and any(
+            e.get("estado") != "objeto_ajeno"
+            for e in base.get("evaluacion_items", [])
+        )
+    ):
         exclusiones = base.get("exclusiones_evidentes") or [_evidencia_objeto_ajeno(campos)]
         resultado, codigo, motivo, evidencias = "no_cumple", "objeto_ajeno", exclusiones[0]["motivo"], exclusiones
     elif hay_evento:
         codigo, motivo = "evento_sin_espacio_definido", "La actividad podría requerir espacio, pero no se identifica qué salón se contrata ni si puede ofrecerlo el hotel."
-    elif datos.get("items"):
+        if not evidencias:
+            evidencias = next((
+                [_evidencia_perfil(
+                    fuente, texto, normal, mapa, actividad,
+                    "evento_sin_espacio_definido",
+                    "La actividad puede requerir un espacio; falta confirmar si se contrata un salón del hotel.",
+                )]
+                for fuente, texto in campos
+                if not fuente.endswith(("categoria", "nombre_producto"))
+                for normal, mapa in [_texto_con_mapa(texto)]
+                for actividad in _EVENTO_SALONES.finditer(normal)
+                if not _mencion_negada(normal, actividad.start())
+            ), [])
+    elif datos.get("items") and len(base.get("evaluacion_items", [])) == len(datos.get("items") or []) and all(
+        e.get("estado") == "objeto_ajeno" for e in base.get("evaluacion_items", [])
+    ) and not hay_evento:
         resultado, codigo = "no_cumple", "sin_salon_identificado"
         motivo = "Los ítems no identifican habitaciones, salones ni otros servicios hoteleros concretos."
+    elif datos.get("items"):
+        codigo, motivo = "servicio_no_confirmado", "Los ítems disponibles no confirman un servicio del hotel. Revisar el alcance antes de descartarla."
     else:
         codigo, motivo = "alcance_indeterminado", "La ficha no entrega suficiente información para confirmar si podría requerir habitaciones o servicios para eventos; se conserva para revisión."
     return {
-        "grupos": (["salones"] if libres else []) + (["alojamiento"] if alojamientos_directos and not contexto_institucional else []),
-        "directa": bool(libres or (alojamientos_directos and not contexto_institucional)),
-        "coincidencias": (libres + alojamientos_directos)[:100], "ambiguedades": evidencias[:30] if resultado == "sin_informacion" else [],
+        "grupos": (["salones"] if libres else []) + (["alojamiento"] if alojamientos_directos and not contexto_institucional else []) + (["alimentacion_asociada"] if comidas or comidas_directas else []),
+        "directa": bool(libres or (alojamientos_directos and not contexto_institucional) or comidas_directas),
+        "coincidencias": (libres + alojamientos_directos + comidas_directas)[:100], "ambiguedades": evidencias[:30] if resultado == "sin_informacion" else [],
         "exclusiones_evidentes": ([{**e, "codigo": codigo, "motivo": motivo} for e in evidencias[:30]] if resultado == "no_cumple" else []),
         "evaluacion_items": [
-            {**e, "estado": "servicio_hotel" if _unidad(e["fuente"]) in {_unidad(x["fuente"]) for x in alojamientos_directos} else "salon_eventos" if _unidad(e["fuente"]) in {_unidad(x["fuente"]) for x in libres} else "fuera_alcance_hotel" if resultado == "no_cumple" else "por_verificar_perfil_hotel" if e.get("estado") in {"servicio_hotelero", "potencial_hotelero"} else e.get("estado")}
+            {**e, "estado": "servicio_hotel" if _unidad(e["fuente"]) in {_unidad(x["fuente"]) for x in alojamientos_directos + comidas_directas} else "salon_eventos" if _unidad(e["fuente"]) in {_unidad(x["fuente"]) for x in libres} else "fuera_alcance_hotel" if resultado == "no_cumple" else "por_verificar_perfil_hotel" if e.get("estado") in {"servicio_hotelero", "potencial_hotelero"} else e.get("estado")}
             for e in base.get("evaluacion_items", [])
         ],
         "resultado_perfil": resultado, "motivo_perfil": motivo,
@@ -1252,7 +1386,7 @@ def _evaluar_perfil_hotel(datos, campos, base):
         "alimentacion_complementaria": bool(libres and comidas),
         "alojamiento_no_decisivo": bool(alojamientos and (not alojamientos_directos or contexto_institucional)),
         "evidencias_limitadas": len(libres) > 100 or len(rechazadas) > 30,
-        "truncada": len(libres) > 100,
+        "truncada": bool(base.get("truncada") or len(libres) > 100),
         "ponderacion": senales_ponderadas,
     }
 
@@ -1744,6 +1878,27 @@ def detectar_ubicacion(
     ):
         estado = "ambigua"
 
+    # Una línea hotelera adicional sin lugar no queda descartada solo porque
+    # otra línea del proceso indique una ciudad fuera de la RM.
+    if estado == "fuera_rm":
+        localizadas = set(vinculo["unidades_localizadas"])
+        for indice, item in enumerate(datos.get("items") or []):
+            unidad = f"items[{indice}]"
+            if unidad in localizadas:
+                continue
+            texto_item = " ".join(
+                str(item.get(campo) or "")
+                for campo in ("nombre_producto", "descripcion")
+            )
+            normal_item = normalizar_texto(texto_item)
+            if (
+                _ALOJAMIENTO_SALONES.search(normal_item)
+                or _COMIDA_SALONES.search(normal_item)
+                or _ESPACIO_SALONES.search(normal_item)
+            ):
+                estado = "ambigua"
+                break
+
     if estado in {"rm", "fuera_rm"}:
         if any(
             re.search(
@@ -1813,8 +1968,17 @@ def _vincular_servicio(pertinencia, evidencias):
             e["contexto_local"],
         )
 
+        servicio_salon_separado_de_ubicacion = (
+            "salones" in (pertinencia.get("grupos") or [])
+            and bool(otro_servicio)
+            and not re.search(
+                r"\b(?:salon(?:es)?|sala(?:s)?|auditorio(?:s)?|espacio(?:s)?)\b",
+                e["contexto_local"],
+            )
+            and not bool(actividad)
+        )
         if (
-            local["directa"]
+            (local["directa"] and not servicio_salon_separado_de_ubicacion)
             or e["lugar_explicito"]
             or (actividad and not otro_servicio)
         ):
@@ -2078,6 +2242,7 @@ def evaluar_preseleccion(
         and pertinencia.get("perfil") == "servicios_hotel_eventos_y_alojamiento"
         and pertinencia.get("resultado_perfil") == "cumple"
         and any(x.get("grupo") == "salones" for x in pertinencia.get("coincidencias", []))
+        and pertinencia.get("ponderacion", {}).get("actividad_generica_en_ficha", 0)
         and ubicacion["estado"] == "sin_determinar"
         and bool(re.search(r"\bmetropolitana\b", region_comprador))
     )
@@ -2097,7 +2262,13 @@ def evaluar_preseleccion(
         criterios["pertinencia"]["resultado"] == "no_cumple"
         and bool(criterios["pertinencia"].get("exclusiones_evidentes"))
     )
-    bloquear_descarte = documento_no_verificado and not servicio_ajeno_confirmado
+    bloqueo_por_pilar = (
+        criterios["vigencia"]["resultado"] != "no_cumple"
+        and criterios["ubicacion"]["resultado"] != "no_cumple"
+    )
+    bloquear_descarte = (
+        documento_no_verificado and not servicio_ajeno_confirmado and bloqueo_por_pilar
+    )
     if bloquear_descarte and clasificacion == "descartada":
         clasificacion = "revision_manual"
         motivo = "No se puede confirmar el descarte: hay documentos de la licitación sin lectura completa. Revisar las bases manualmente."

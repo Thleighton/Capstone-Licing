@@ -159,18 +159,18 @@ def test_sin_documentos_utilizables_registra_el_motivo(monkeypatch):
 def test_cron_espera_documentos_en_paralelo_sin_frenar_ingesta(monkeypatch):
     async def escenario():
         iniciada = asyncio.Event()
-        async def documentos():
+        async def documentos(_limite=1):
             iniciada.set()
             return {'pendiente': True, 'motivo': 'sin_descarga_publica'}
         async def ingesta(**_):
             await iniciada.wait()
             return {'procesados': 1}
         monkeypatch.setattr(settings, 'documentos_automaticos', True)
-        monkeypatch.setattr(cron, 'correr_documentos', documentos)
+        monkeypatch.setattr(cron, 'procesar_cola_analisis_documental', documentos)
         monkeypatch.setattr(cron, 'correr_lote', ingesta)
         return await asyncio.wait_for(cron.ingesta_programada(limite=1, db=Mock()), 1)
     r = asyncio.run(escenario())
-    assert r['procesados'] == 1 and r['documentos']['pendiente']
+    assert r['procesados'] == 1 and r['analisis_documental']['pendiente']
 
 
 def test_documentos_privados(client):

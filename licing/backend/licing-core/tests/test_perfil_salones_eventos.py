@@ -35,7 +35,7 @@ CASOS = [
     ("habitacion_sola", {"nombre": "Servicio", "items": [item("90111801", "Habitación para dos personas")]}, "revision_manual"),
     ("hoteles_categoria", {"nombre": "Servicio", "items": [item("90111501", "", "Hoteles")]}, "revision_manual"),
     ("alojamiento_para_seminario", {"nombre": "Alojamiento para participantes de seminario en Santiago"}, "preseleccionada"),
-    ("coffee_solo", {"nombre": "Coffee break en Santiago"}, "revision_manual"),
+    ("coffee_solo", {"nombre": "Coffee break en Santiago"}, "preseleccionada"),
     ("catering_para_actividades_sin_sede", {"nombre": "Servicio de catering y cóctel para actividades deportivas y ceremonias en Santiago"}, "revision_manual"),
     ("catering_comprador_rm_sin_salon", {"nombre": "Servicio de catering para ceremonias", "region_comprador": "Región Metropolitana de Santiago"}, "revision_manual"),
     ("banqueteria_sola", {"nombre": "Servicio de banquetería en Santiago"}, "revision_manual"),
@@ -86,7 +86,7 @@ CASOS = [
     ("direccion_administrativa", {"nombre": "Arriendo de salón para seminario en Santiago", "descripcion": "El domicilio del comprador está en las oficinas de la institución."}, "preseleccionada"),
     ("proveedor_docencia", {"nombre": "Arriendo de salón en Santiago", "descripcion": "El proveedor deberá impartir los cursos y certificar la capacitación."}, "revision_manual"),
     ("clinica_y_evento_separado", {"nombre": "Contratación de servicios", "items": [item("42142801", CLINICA), item("90111603", "Arriendo de salón para congreso médico en Santiago")]}, "preseleccionada"),
-    ("negacion_del_salon", {"nombre": "Coffee break en Santiago. No se requiere salón."}, "descartada"),
+    ("negacion_del_salon", {"nombre": "Coffee break en Santiago. No se requiere salón."}, "preseleccionada"),
     ("lectura_incompleta", {"nombre": "Arriendo de salón en Santiago", "descripcion": "x"*31000}, "revision_manual"),
     ("vigencia_prioritaria", {"nombre": "Arriendo de salón para evento en Santiago", "fecha_cierre": "2020-01-01T12:00:00"}, "descartada"),
     ("no_ubicar_por_alojamiento", {"nombre": "Arriendo de salón para evento", "descripcion": "Servicio de alojamiento en Santiago."}, "revision_manual"),
@@ -97,7 +97,7 @@ CASOS = [
     ("otro_hotel_en_descripcion", {"nombre": "Arriendo de salón para evento en Santiago", "descripcion": "El evento se realizará en el Hotel Ejemplo."}, "descartada"),
     ("hotel_propuesto_por_proveedor", {"nombre": "Arriendo de salón en un hotel para seminario en Santiago"}, "preseleccionada"),
 
-    ("compra_agil_coffee_solo", {"codigo_externo": "100-1-COT26", "codigo_estado": None, "estado": "publicada", "nombre": "Coffee break para jornada en Santiago"}, "revision_manual"),
+    ("compra_agil_coffee_solo", {"codigo_externo": "100-1-COT26", "codigo_estado": None, "estado": "publicada", "nombre": "Coffee break para jornada en Santiago"}, "preseleccionada"),
     ("compra_agil_salon_coffee", {"codigo_externo": "100-1-COT26", "codigo_estado": None, "estado": "publicada", "nombre": "Arriendo de salón con coffee break en Santiago"}, "preseleccionada"),
 
 ]

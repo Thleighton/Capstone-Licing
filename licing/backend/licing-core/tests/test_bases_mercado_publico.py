@@ -57,7 +57,7 @@ def test_no_descarga_ficha_equivocada_o_sin_acceso(html, motivo):
         asyncio.run(descargar_bases(CODIGO, transporte=httpx.MockTransport(responder)))
 
 
-@pytest.mark.parametrize("contenido,motivo", [(b"", "archivo_vacio"), (b"<html>captcha</html>", "respuesta_no_pdf"),
+@pytest.mark.parametrize("contenido,motivo", [(b"", "archivo_vacio"), (b"<html>captcha</html>", "captcha_requerido"),
  (b"%PDF-" + b"a" * MAX_BYTES, "limite_tamano")])
 def test_no_guarda_html_ni_pdf_fuera_de_limite(contenido, motivo):
     def responder(req):
@@ -133,7 +133,7 @@ def test_descarga_anexos_de_antecedentes_sin_tocar_adjuntos_protegidos():
 
 
 @pytest.mark.parametrize("respuesta,motivo", [
- (lambda: httpx.Response(200, text='<script src="https://www.google.com/recaptcha/enterprise.js"></script>'), "acceso_restringido"),
+ (lambda: httpx.Response(200, text='<script src="https://www.google.com/recaptcha/enterprise.js"></script>'), "captcha_requerido"),
  (lambda: httpx.Response(302, headers={"location": "/Procurement/Modules/Attachment/ViewAttachment.aspx?enc=x"}), "redireccion_no_admitida"),
  (lambda: httpx.Response(429), "acceso_restringido"),
 ])

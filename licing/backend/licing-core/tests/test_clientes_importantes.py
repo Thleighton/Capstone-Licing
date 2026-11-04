@@ -1,4 +1,5 @@
 import asyncio
+from fastapi import BackgroundTasks
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -80,12 +81,17 @@ def test_enriquece_revision_guardada_sin_reevaluar_o_escribir(monkeypatch):
     fila = {"id": 1, "codigo_externo": datos["codigo_externo"], "fuente_raw_id": 25,
         "hash_fuente": preseleccion.firma_fuente(datos), "estado_seleccion": "revision_manual"}
     db = MagicMock()
-    db.execute.side_effect = [MagicMock(all=lambda: [(datos["codigo_externo"], 25)]), MagicMock(all=lambda: [(1, 25)])]
+    db.execute.side_effect = [
+        MagicMock(all=lambda: [(datos["codigo_externo"], 25)]),
+        MagicMock(all=lambda: [(1, 25)]),
+        MagicMock(all=lambda: [(1, 25, {})]),
+        MagicMock(__iter__=lambda self: iter([])),
+    ]
     db.scalars.return_value = [1]
     monkeypatch.setattr(preseleccion, "cargar_entradas", lambda db, ids: {"1": datos})
     operar = AsyncMock(return_value={"filas": [fila], "total": 1})
     monkeypatch.setattr(filtradas, "operar", operar)
-    r = asyncio.run(preseleccion.listar(Response(), clasificacion="revision_manual", q="", limite=25, offset=0, db=db))
+    r = asyncio.run(preseleccion.listar(Response(), BackgroundTasks(), clasificacion="revision_manual", q="", limite=25, offset=0, codigo="", region="", db=db))
     assert r["filas"][0]["clientes_importantes"][0]["id"] == "junji"
     assert r["filas"][0]["estado_seleccion"] == "revision_manual"
     assert r["filas"][0]["nombre_organismo"] == "JUNJI"

@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-11-v31",
+  "version": "hotel-2026-11-v32",
   "estado": "piloto",
   "alcance": "Habitaciones y hospedaje para huéspedes, salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
@@ -651,6 +651,11 @@
       "motivo": "Se solicitan equipos eléctricos o para servidores; la palabra alimentación no corresponde a un servicio de comida ni la sala a un salón para eventos."
     },
     {
+      "id": "equipos_control_electrico",
+      "patron": "\\b(?:regulador(?:es)? de velocidad|variador(?:es)? de frecuencia|fuentes? de alimentacion|cables? de alimentacion|conector(?:es)? de alimentacion|adaptador(?:es)? de alimentacion)\\b",
+      "motivo": "Se solicita un componente o equipo eléctrico; la palabra alimentación describe energía eléctrica y no un servicio del hotel."
+    },
+    {
       "id": "medios_electronicos_alimentacion",
       "patron": "\\b(?:tarjetas?|aplicaciones?|vales?|bonos?)\\b[^.;\\n]{0,120}\\b(?:alimentacion|alimentos?|comprar? alimentos?)\\b|\\b(?:alimentacion|alimentos?)\\b[^.;\\n]{0,120}\\b(?:tarjetas?|aplicaciones?|vales?|bonos?)\\b",
       "motivo": "Se contrata un medio de pago o beneficio electrónico para comprar alimentos; no es un servicio de catering o banquetería del hotel."
@@ -674,6 +679,11 @@
       "id": "bienes_mobiliario",
       "patron": "\\b(?:adquisicion|compra|suministro)\\s+(?:de\\s+)?(?:mobiliario|sillas?|mesas?|escritorios?|sillones?|muebles?)\\b",
       "motivo": "Se solicita comprar mobiliario; mencionar un salón como destino no constituye contratación de ese espacio."
+    },
+    {
+      "id": "bienes_textiles_hotelarios",
+      "patron": "\\b(?:adquisicion|compra|suministro)\\b[^.;\\n]{0,120}\\b(?:sabanas?|toallas?|frazadas?|cubrecolchones?|fundas? de almohada)\\b",
+      "motivo": "Se solicitan textiles o artículos de cama; su uso en habitaciones no equivale a contratar alojamiento del hotel."
     },
     {
       "id": "compra_abarrotes",

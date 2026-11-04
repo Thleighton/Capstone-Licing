@@ -65,7 +65,7 @@ CASOS = [
     ("alimentacion_no_se_ubica_por_comprador", {"nombre": "SERVICIOS DE ALIMENTACIÓN PARA ACCIONES DPTO EDUC",
         "nombre_organismo": "SECRETARIA REGIONAL MINISTERIAL DE EDUCACION VI REGION"}, "revision_manual"),
     ("casa_acogida_sin_lugar", {"nombre": "CASA DE ACOGIDA PROGRAMA MAPUCHE HOSPITAL VICTORIA",
-        "items": [item("93141504", "Servicios de alojamiento y traslado de usuarios del programa de salud mapuche")]}, "revision_manual"),
+        "items": [item("93141504", "Servicios de alojamiento y traslado de usuarios del programa de salud mapuche")]}, "descartada"),
     ("casa_acogida_santiago", {"nombre": "Alojamiento de personas",
         "items": [item("93141504", "Servicio de alojamiento en Santiago para pacientes")]}, "preseleccionada"),
     ("hotel_30222507_no_es_material_construccion", {"nombre": "Contratación",

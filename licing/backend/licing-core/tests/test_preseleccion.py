@@ -139,9 +139,15 @@ def test_no_excluye_por_otec_capacitacion_o_ausencia_de_hotel(texto):
 
 
 @pytest.mark.parametrize("texto", ["Compra de sábanas para habitaciones de hotel en Santiago.",
-    "Remodelación de salón en Santiago.", "Servicios de capacitación con docentes en Santiago."])
-def test_bienes_obras_y_docencia_requieren_desambiguacion(texto):
+    "Remodelación de salón en Santiago."])
+def test_bienes_y_obras_ajenos_se_descartan(texto):
     r = evaluar(nombre=texto)
+    assert r["clasificacion"] == "descartada"
+    assert r["criterios"]["pertinencia"]["exclusiones_evidentes"]
+
+
+def test_capacitacion_con_docentes_requiere_confirmar_salon():
+    r = evaluar(nombre="Servicios de capacitación con docentes en Santiago.")
     assert r["clasificacion"] == "revision_manual"
     assert r["criterios"]["pertinencia"]["ambiguedades"]
 

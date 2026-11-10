@@ -64,7 +64,35 @@ jobs:
         env:
           TEST_DATABASE_URL_SQL: postgresql://postgres:test@localhost:5432/licing_test
       - run: python -m alembic upgrade head
-      - run: python -m pytest -q --tb=short
+      - name: Run Python tests
+        run: |
+          set +e
+          python -m pytest -q --tb=short --junitxml="$RUNNER_TEMP/pytest-results.xml"
+          test_status=$?
+          if [ "$test_status" -ne 0 ]; then
+            python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          report = Path(os.environ["RUNNER_TEMP"]) / "pytest-results.xml"
+          root = ET.parse(report).getroot()
+          for case in root.iter("testcase"):
+              failure = case.find("failure")
+              if failure is None:
+                  failure = case.find("error")
+              if failure is None:
+                  continue
+              label = f"{case.get('classname', '')}.{case.get('name', 'test')}"
+              detail = failure.get("message")
+              if not detail:
+                  lines = (failure.text or "").splitlines()
+                  detail = lines[0] if lines else "Falló la prueba"
+              detail = detail.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error title={label}::{detail[:500]}")
+          PY
+          fi
+          exit "$test_status"
 
   filtradas_y_frontend:
     runs-on: ubuntu-24.04

@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-11-v35",
+  "version": "hotel-2026-11-v36",
   "estado": "piloto",
   "alcance": "Salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
@@ -710,8 +710,8 @@
   "exclusiones_evidentes": [
     {
       "id": "alojamiento_fuera_alcance",
-      "patron": "\\bservicios?\\s+(?:de\\s+)?(?:alojamiento|hospedaje)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:alojamientos?|hospedajes?|hospeder[ií]as?|pernoctaciones?|estad[ií]as?)\\s+(?:en|para|de)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:arriendo|alquiler|contratacion|reserva)\\s+de\\s+habitaciones?\\b|\\bhabitaciones?\\s+para\\s+\\d+\\s+personas?\\b|\\balojamiento\\b[^.;\\n]{0,60}\\b(?:pacientes|usuarios|derivados)\\b",
-      "motivo": "La solicitud corresponde a alojamiento, habitaciones u hospedaje, que quedan fuera del alcance de esta versión; aquí solo se consideran salones y servicios de alimentación para eventos."
+      "patron": "\\bservicios?\\s+(?:de\\s+)?(?:alojamiento|hospedaje|residencia)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:alojamientos?|hospedajes?|hospeder[ií]as?|pernoctaciones?|estad[ií]as?|residencias?)\\s+(?:en|para|de)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:arriendo|alquiler|contratacion|reserva)\\s+de\\s+habitaciones?\\b|\\bhabitaciones?\\s+para\\s+\\d+\\s+personas?\\b|\\balojamiento\\b[^.;\\n]{0,60}\\b(?:pacientes|usuarios|derivados)\\b",
+      "motivo": "La solicitud corresponde a hospedaje, habitaciones o residencia, que quedan fuera del alcance de esta versión; aquí solo se consideran salones y servicios de alimentación para eventos."
     },
     {
       "id": "compra_mobiliario",

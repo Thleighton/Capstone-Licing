@@ -66,14 +66,14 @@ def test_cobertura_de_comunas_rm(comuna):
 
 def test_comprador_fuera_de_rm_puede_contratar_en_santiago():
     r = evaluar(nombre="Arriendo de salón para capacitación", region_comprador="Los Lagos",
-        descripcion="La Seremi de la Región de Los Lagos requiere el servicio en Santiago.")
+        descripcion="Lugar del evento: Santiago, Región Metropolitana. La Seremi de Los Lagos requiere la contratación del salón.")
     assert r["clasificacion"] == "preseleccionada"
     assert {e["region"] for e in r["criterios"]["ubicacion"]["evidencias"]} == {"Metropolitana"}
 
 
 def test_comprador_en_rm_no_convierte_servicio_fuera_en_candidato():
     r = evaluar(nombre="Arriendo de salón para evento", region_comprador="Metropolitana",
-        descripcion="Se contrata el salón en La Serena para una delegación.")
+        descripcion="Lugar de ejecución del evento: La Serena, Región de Coquimbo.")
     assert r["clasificacion"] == "descartada"
     assert r["criterios"]["ubicacion"]["estado"] == "fuera_rm"
 
@@ -113,9 +113,9 @@ def test_licitacion_multirregional_se_conserva_para_revisar_ofertas_parciales():
 
 
 def test_una_linea_fuera_de_rm_no_descarta_otras_lineas_sin_ubicacion():
-    r = evaluar(nombre="Alojamiento para delegaciones", items=[
-        {"nombre_producto": "Hoteles", "descripcion": "Hospedaje en Valparaíso."},
-        {"nombre_producto": "Hoteles", "descripcion": "Alojamiento, lugar por coordinar."},
+    r = evaluar(nombre="Arriendo de salones para delegaciones", items=[
+        {"nombre_producto": "Salones", "descripcion": "Arriendo de salón para evento en Valparaíso."},
+        {"nombre_producto": "Salones", "descripcion": "Arriendo de salón para evento, lugar por coordinar."},
     ])
     assert r["clasificacion"] == "revision_manual"
 

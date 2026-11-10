@@ -49,9 +49,10 @@ def test_otra_alimentacion_real_se_conserva_en_el_mismo_texto():
 
 @pytest.mark.parametrize("servicio", ["Servicio de residencia temporal en Santiago",
     "Se requiere residencia en Santiago", "Residencia para 20 estudiantes en Santiago"])
-def test_residencia_contratada_para_personas_sigue_siendo_servicio(servicio):
+def test_residencias_quedan_fuera_del_alcance_del_hotel(servicio):
     r = evaluar(servicio)
-    assert r["criterios"]["pertinencia"]["directa"]
+    assert r["clasificacion"] == "descartada"
+    assert not r["criterios"]["pertinencia"]["directa"]
 
 
 @pytest.mark.parametrize("nombre,descripcion,codigo", CASOS_AJENOS,
@@ -67,7 +68,7 @@ def test_objeto_ajeno_se_descarta_con_motivo_y_evidencia(nombre, descripcion, co
 
 @pytest.mark.parametrize("nombre,descripcion,codigo", CASOS_AJENOS,
     ids=["mecanica", "mobiliario", "investigacion", "informatica", "cursos", "publicidad"])
-@pytest.mark.parametrize("servicio", ["Arriendo de salón en Santiago", "Alojamiento en Santiago",
+@pytest.mark.parametrize("servicio", ["Arriendo de salón en Santiago", "Arriendo de salón en Providencia",
     "Coffee break para los asistentes"])
 def test_objeto_ajeno_no_descarta_un_paquete_con_servicios_hoteleros(nombre, descripcion, codigo, servicio):
     r = evaluar(nombre, items=[{"codigo_producto": codigo, "descripcion": descripcion},

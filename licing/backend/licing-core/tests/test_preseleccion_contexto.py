@@ -127,7 +127,7 @@ def test_categorias_genericas_repetidas_no_agotan_las_evidencias_del_servicio():
 
 def test_limite_de_menciones_no_oculta_un_servicio_al_final_del_texto():
     r = evaluar("Contrato de suministros", descripcion="Alojamiento de servidores. " * 110
-        + "También se requiere alojamiento en Santiago para los asistentes.",
+        + "También se requiere arriendo de salón en Santiago para los asistentes.",
         items=[{"codigo_producto": "43211503"}])
     assert r["entrada_parcial"]
     assert r["clasificacion"] == "revision_manual"

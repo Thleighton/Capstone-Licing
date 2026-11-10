@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-45"
+VERSION_MOTOR = "reglas-hotel-47"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -896,6 +896,12 @@ _ALIMENTACION_INSTITUCIONAL = re.compile(
     r"[^.;\n]{0,140}\b(?:alimentacion|servicio de alimentacion|"
     r"suministro de alimentos?)\b"
 )
+_ALIMENTACION_PACIENTES = re.compile(
+    r"\b(?:alimentacion|servicio de alimentacion|suministro de alimentos?)\b"
+    r"[^.;\n]{0,140}\b(?:pacientes?|hospitalizados?|usuarios? derivados?)\b|"
+    r"\b(?:pacientes?|hospitalizados?|usuarios? derivados?)\b"
+    r"[^.;\n]{0,140}\b(?:alimentacion|servicio de alimentacion|suministro de alimentos?)\b"
+)
 _COMPRA_BIENES = re.compile(r"\b(?:adquisicion|adq\.?|compra|suministro|sum\.?|materiales? para)\b")
 _BIENES_NO_HOTELEROS = re.compile(
     r"\b(?:mobiliario|materiales? (?:de|para) oficina|insumos? (?:de|para) oficina|"
@@ -971,6 +977,7 @@ def _evaluar_perfil_hotel(datos, campos, base):
     validas, rechazadas, genericas, fijas = [], [], [], []
     comidas, comidas_directas = [], []
     clinicas, obligaciones, producciones = [], [], []
+    alimentacion_pacientes = []
     hay_evento = False
     estados = {e.get("fuente"): e.get("estado") for e in base.get("evaluacion_items", [])}
 
@@ -979,6 +986,14 @@ def _evaluar_perfil_hotel(datos, campos, base):
             continue
         normal, mapa = _texto_con_mapa(texto)
         producto_generico = fuente.endswith("nombre_producto")
+        if not producto_generico:
+            alimentacion_paciente = _ALIMENTACION_PACIENTES.search(normal)
+            if alimentacion_paciente and not _mencion_negada(normal, alimentacion_paciente.start()):
+                alimentacion_pacientes.append(_evidencia_perfil(
+                    fuente, texto, normal, mapa, alimentacion_paciente,
+                    "alimentacion_pacientes",
+                    "La alimentación solicitada está destinada a pacientes o personas hospitalizadas, no a participantes de un evento.",
+                ))
         produccion = _PRODUCCION_EVENTOS.search(normal)
         if produccion and not _mencion_negada(normal, produccion.start()):
             producciones.append(_evidencia_perfil(
@@ -1210,6 +1225,10 @@ def _evaluar_perfil_hotel(datos, campos, base):
             resultado, codigo = "cumple", "salon_eventos"
             motivo = "Se solicita un salón para eventos; los servicios asociados solo aplican dentro de ese espacio del hotel."
             evidencias = validas
+    elif alimentacion_pacientes and not hay_evento and not comidas_directas:
+        resultado, codigo = "no_cumple", "alimentacion_pacientes"
+        motivo = "La alimentación se solicita para pacientes o personas hospitalizadas, no como catering para un evento del hotel."
+        evidencias = alimentacion_pacientes
     elif comidas_directas and not fijas and not producciones:
         resultado, codigo = "cumple", "alimentacion_para_personas"
         motivo = "Se solicita un servicio de alimentación para participantes; confirmar en las bases si se presta en el hotel o como parte de un evento."
@@ -1591,6 +1610,7 @@ _ROTULO_LUGAR = re.compile(
     r"\b(?:ubicacion|lugar|direccion|comuna|region)"
     r"\s+(?:(?:de|del)\s+)?(?:(?:la|el)\s+)?"
     r"(?:prestacion|ejecucion|realizacion|servicio|evento)"
+    r"(?:\s+(?:del|de la|de los|de las)\s+(?:evento|servicio|actividad|licitacion))?"
     r"\s*:\s*$"
 )
 

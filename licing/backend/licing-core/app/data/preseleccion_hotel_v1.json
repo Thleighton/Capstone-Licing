@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-11-v36",
+  "version": "hotel-2026-11-v38",
   "estado": "piloto",
   "alcance": "Salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
@@ -545,6 +545,7 @@
   "codigos_producto_ajenos": {
     "90111501": "servicios de hotel y alojamiento, fuera del alcance de esta versión, que solo considera salones y alimentación para eventos",
     "90111801": "servicios de habitaciones y hospedaje, fuera del alcance de esta versión",
+    "93141504": "servicios sociales de acogida o residencia, no arriendo de salones ni servicios de alimentación para eventos",
     "80141607": "servicio de producción de eventos; contratar producción no equivale a arrendar un salón o contratar alojamiento del hotel",
     "86141601": "clubes recreativos para estudiantes; el ítem describe talleres o actividades, no arriendo de salón, alojamiento ni catering",
     "51191603": "soluciones de nutrición parenteral y electrolitos; insumo farmacéutico para pacientes, no alimentación para eventos",
@@ -773,7 +774,6 @@
     "30222507": "hotel publicado en Mercado Público",
     "90111603": "salas de reuniones o banquetes",
     "90101603": "servicios de catering",
-    "93141504": "acogida: comprobar si incluye alojamiento de personas"
   },
   "reglas_contexto_items": [
     {

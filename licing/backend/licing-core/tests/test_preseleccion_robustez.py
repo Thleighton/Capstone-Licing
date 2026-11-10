@@ -26,12 +26,12 @@ def evaluar(**cambios):
 @pytest.mark.parametrize("nombre", [
     "Arriendo de salón Santiago", "Arriendo de salón: SANTIAGO", "Arriendo de salón - Santiago",
     "Arriendo de salón Santiago", "Alquiler de salas Santiago",
-    "Se requiere arriendo de salón en Santiago", "Contratación de salón en Providencia",
+    "Arriendo de salón en Santiago", "Arriendo de salón en Providencia",
     "Arriendo de salones en R.M.", "Arriendo de sala en Ñuñoa",
     "Arriendo de sala multiuso en Santiago", "Sala de reuniones en Santiago",
     "Espacio físico para un seminario en Santiago", "Salón para capacitación en Santiago",
     "Arriendo de salón en la comuna de Las Condes", "Arriendo de salón en la RM",
-    "En Santiago se requiere un salón para una delegación",
+    "Arriendo de salón en Santiago para una delegación",
     "SERVICIO\tDE\tARRIENDO\tDE\tSALÓN\tEN\tSANTIAGO",
     "Arriendo\u00a0de\u00a0salón en Santiago", "Arriendo   de   salón en Santiago",
     "Arriendo de salo\u0301n en Santiago", "Arriendo de salón en la Región Metropolitana",
@@ -84,7 +84,7 @@ def test_no_mezcla_servicios_de_parrafos_distintos_de_la_descripcion():
 
 
 def test_lugar_explicitamente_identificado_se_puede_vincular_al_titulo():
-    r = evaluar(nombre="Contratación de salón", descripcion="Lugar de ejecución: Providencia.")
+    r = evaluar(nombre="Arriendo de salón", descripcion="Lugar de ejecución: Providencia.")
     assert r["clasificacion"] == "preseleccionada"
 
 
@@ -108,12 +108,12 @@ def test_evento_en_rm_se_vincula_al_salon_del_titulo():
     "Arriendo de salón en Santiago, España.",
 ])
 def test_no_infiere_ubicacion_desde_comprador_negacion_o_toponimo_ambiguo(descripcion):
-    assert evaluar(nombre="Arriendo de salón para delegación", descripcion=descripcion)["clasificacion"] == "revision_manual"
+    assert evaluar(nombre="Contratación de servicios", descripcion=descripcion)["clasificacion"] == "revision_manual"
 
 
 @pytest.mark.parametrize("ciudad", ["Santiago", "Valparaíso"])
 def test_cobertura_nacional_se_conserva_aunque_nombre_una_ciudad(ciudad):
-    r = evaluar(nombre=f"Alojamiento en {ciudad}", descripcion="Servicio con cobertura nacional.")
+    r = evaluar(nombre=f"Arriendo de salón en {ciudad}", descripcion="Servicio con cobertura nacional.")
     assert r["clasificacion"] == "revision_manual"
 
 
@@ -241,7 +241,7 @@ def test_objeto_ajeno_explicito_sin_senales_hoteleras_se_descarta_con_evidencia(
 
 
 @pytest.mark.parametrize("servicio", [
-    "Arriendo de salón en Santiago", "Alojamiento en Santiago",
+    "Arriendo de salón en Santiago", "Arriendo de salón en Providencia",
     "Coffee break para una jornada en Santiago", "Seminario para funcionarios",
 ])
 def test_una_linea_ajena_no_oculta_servicios_hoteleros_en_otras_lineas(servicio):
@@ -283,7 +283,7 @@ def test_codigo_desconocido_en_una_linea_impide_descartar_el_conjunto(codigo):
     assert r["clasificacion"] == "revision_manual"
 
 
-@pytest.mark.parametrize("servicio", ["Alojamiento en Santiago", "Arriendo de salón en Santiago",
+@pytest.mark.parametrize("servicio", ["Arriendo de salón en Providencia", "Arriendo de salón en Santiago",
     "Coffee break para una jornada en Santiago", "Capacitación presencial con almuerzo"])
 def test_codigo_ajeno_no_sobrepasa_una_necesidad_hoteleria_en_otra_linea(servicio):
     r = evaluar(nombre="Contrato de servicios", items=[

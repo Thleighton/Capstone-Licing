@@ -10,6 +10,7 @@ from ..database import SessionLocal
 from ..config import settings
 from . import bases_mercado_publico as portal
 from . import documentos_origen as origen
+from . import filtradas
 from .bases_mercado_publico import BasesNoDisponibles
 from .lectura_office import extraer_office
 from .pdf_bases import extraer_pdf
@@ -33,6 +34,33 @@ TERMINOS_RELEVANTES = re.compile(
     r"lugar|sal[oó]n|sal[oó]nes|evento|banqueter[ií]a|catering|coffee|alimentaci[oó]n|"
     r"alojamiento|traslado|hospedaje|servicio|entrega|fecha|horario|capacidad|"
     r"montaje|desayuno|almuerzo|cena|coffee\s*break)\b", re.I)
+
+
+async def estado_seleccion_documental(fila):
+    """Devuelve la clasificación vigente desde Filtradas antes de tocar el portal.
+
+    None significa que no se pudo verificar; en ese caso la lectura documental
+    falla cerrada y no consulta Mercado Público.
+    """
+    codigo = getattr(fila, "codigo_externo", None)
+    raw_id = getattr(fila, "raw_id", None)
+    if not codigo or raw_id is None:
+        return None
+    try:
+        respuesta = await filtradas.operar("listar", {
+            "codigos": [codigo], "fuentes": {codigo: str(raw_id)},
+            "limite": 1, "offset": 0,
+        })
+        filas = respuesta.get("filas", []) if isinstance(respuesta, dict) else []
+    except Exception:
+        return None
+    if not isinstance(filas, list):
+        return None
+    fila_resultado = next((f for f in filas if isinstance(f, dict)
+                           if f.get("codigo_externo") == codigo), None)
+    if not fila_resultado:
+        return None
+    return fila_resultado.get("estado_seleccion")
 
 
 def _recortar_paginas(paginas):
@@ -180,6 +208,10 @@ async def analizar_documentos_temporal(db, licitacion_id, actor=None, automatico
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         return {"pendiente": True, "motivo": "licitacion_no_disponible"}
+    estado_seleccion = await estado_seleccion_documental(fila)
+    if estado_seleccion not in {"preseleccionada", "revision_manual"}:
+        motivo = "clasificacion_no_verificada" if estado_seleccion is None else "fuera_de_alcance"
+        return {"pendiente": True, "motivo": motivo, "documentos": [], "incidencias": []}
     capturados, cacheados, vistos, total_bytes = [], [], set(), 0
     documentos_observados = []
     incidencias, captcha = [], False

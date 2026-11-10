@@ -5,6 +5,7 @@ import Dialog from "../../../core/ui/Dialog";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
+import ResumenAnalisis from "../../../core/ui/ResumenAnalisis";
 import { cerrarCompraAgil, fichaCompraAgil } from "../store";
 import { ETIQUETAS, PILARES, TONOS } from "../comun";
 import "../../dashboard/components/resultado-preseleccion.css";
@@ -51,9 +52,13 @@ export default function FichaCompraAgil() {
             <span className={"badge " + (TONOS[estado] || "")}>{ETIQUETAS[estado]}</span>
             <ClienteImportanteBadge clientes={c.clientes_importantes} />
           </div>
-          <p className="pre-result-reason">{vigente ? evaluacion.motivo : actual.preseleccion
+          <ResumenAnalisis estado={estado} motivo={vigente ? evaluacion.motivo : actual.preseleccion
             ? "La preselección se actualizará en el próximo turno de ingesta."
-            : "No se pudo consultar la preselección. Los datos de la compra están disponibles."}</p>
+            : "No se pudo consultar la preselección. Los datos de la compra están disponibles."}
+            criterios={vigente ? actual.preseleccion.criterios || [] : []} items={actual.items} descripcion={c.descripcion}
+            fechaCierre={fecha(c.fecha_cierre)}
+            monto={c.monto_disponible == null ? "" : dinero(c.monto_disponible, c.moneda)}
+            lugar={c.direccion_entrega} />
           <section className="pre-result-section" aria-label="Información general">
             <h3>Información de la Compra Ágil</h3>
             <dl className="pre-result-facts">

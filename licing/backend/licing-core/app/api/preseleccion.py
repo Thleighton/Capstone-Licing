@@ -359,7 +359,11 @@ async def detalle(licitacion_id: int, response: Response, background: Background
         (incidencia_actual.get("codigo") == "sin_documentos" and not (
             control_actual.get("documentos_adjuntos_detectados") or control_actual.get("documentos_adjuntos_url"))) or motor_antiguo or
         (incidencia_actual.get("codigo") == "lista_adjuntos_no_detectada" and not cache_analisis_activa))
+    from ..services.ingesta_documental import estado_seleccion_documental
+    estado_documental = (await estado_seleccion_documental(fila)
+        if settings.documentos_automaticos and documentos_desactualizados else None)
     if (settings.documentos_automaticos and documentos_desactualizados and
+            estado_documental in {"preseleccionada", "revision_manual"} and
             control_actual.get("analisis_documental_estado") not in {"pendiente", "procesando"}):
         from ..services.ingesta_documental import encolar_analisis_documental, procesar_cola_analisis_documental
         await encolar_analisis_documental([licitacion_id])
@@ -379,10 +383,16 @@ async def detalle(licitacion_id: int, response: Response, background: Background
 
 @router.post("/{licitacion_id}/documentos/analizar")
 async def analizar_documentos_licitacion(licitacion_id: int, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
-    if db.get(Licitacion, licitacion_id) is None:
+    fila = db.get(Licitacion, licitacion_id)
+    if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
     from ..services.ingesta_documental import analizar_documentos_temporal
     resultado = await analizar_documentos_temporal(db, licitacion_id, str(UUID(usuario["id"])))
+    if resultado.get("motivo") in {"clasificacion_no_verificada", "fuera_de_alcance"}:
+        motivo = ("No se pudo confirmar la clasificación actual; no se consultaron documentos."
+                  if resultado["motivo"] == "clasificacion_no_verificada" else
+                  "El análisis de documentos se limita a posibles oportunidades y revisiones necesarias.")
+        raise HTTPException(409, motivo)
     resultado["detalle"] = await documentos_origen.detalle(db, licitacion_id)
     return resultado
 

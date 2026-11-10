@@ -9,6 +9,7 @@ services:
       - .env          # <--- Esto carga automáticamente todo el .env al backend
     environment:
       - PYTHONUNBUFFERED=1
+      - WATCHFILES_FORCE_POLLING=true
 
   frontend:
     image: node:20-alpine

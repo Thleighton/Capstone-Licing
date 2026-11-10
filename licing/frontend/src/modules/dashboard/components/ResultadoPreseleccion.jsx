@@ -3,6 +3,7 @@ import Dialog from "../../../core/ui/Dialog";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
+import ResumenAnalisis from "../../../core/ui/ResumenAnalisis";
 import "./resultado-preseleccion.css";
 
 const resultados = { cumple: "Cumple", no_cumple: "No cumple", sin_informacion: "Por verificar" };
@@ -47,7 +48,11 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
           <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{etiquetas[fila.estado_seleccion] || "Sin evaluar"}</span>
           <ClienteImportanteBadge clientes={licitacion.clientes_importantes || fila.clientes_importantes} />
         </div>
-        {fila.motivo_seleccion && <p className="pre-result-reason">{fila.motivo_seleccion}</p>}
+        {detalle && <ResumenAnalisis estado={fila.estado_seleccion} motivo={fila.motivo_seleccion}
+          criterios={detalle.criterios || []} items={detalle.items || []} descripcion={licitacion.descripcion} hallazgos={hallazgos}
+          documentosLeidos={(detalle.documentos || []).some(d => d.paginas_texto?.length)}
+          fechaCierre={fecha(licitacion.fecha_cierre)}
+          monto={licitacion.monto_estimado == null ? "" : dinero(licitacion.monto_estimado, licitacion.moneda)} />}
         {(!!hallazgos.length || !!documentosTemporales.length) && <section className="pre-result-operativo" aria-label="Requisitos detectados en las bases">
           <div className="pre-result-operativo-titulo"><div><span className="pre-result-kicker">DETECTADO EN LAS BASES</span><h3>Condiciones para el evento</h3></div>
             {hallazgos.some(h => h.ubicacion?.fuera_zona_rm) && <span className="pre-result-alerta">Fuera de zona objetivo RM</span>}</div>

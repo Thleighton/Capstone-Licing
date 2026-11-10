@@ -190,6 +190,45 @@ def test_no_accede_al_portal_ni_a_storage_si_el_canal_no_esta_confirmado(monkeyp
     abrir.assert_not_called(); storage.assert_not_called(); db.assert_not_called()
 
 
+def test_analisis_temporal_no_consulta_mercado_publico_para_descartadas(monkeypatch):
+    fila = SimpleNamespace(codigo_externo=CODIGO, raw_id='raw-1')
+    db = Mock()
+    db.get.return_value = fila
+    monkeypatch.setattr(servicio.filtradas, 'operar', AsyncMock(return_value={
+        'filas': [{'codigo_externo': CODIGO, 'estado_seleccion': 'descartada'}]}))
+    abrir = AsyncMock()
+    monkeypatch.setattr(servicio.portal, 'abrir_ficha', abrir)
+
+    resultado = asyncio.run(servicio.analizar_documentos_temporal(db, 1, automatico=True))
+
+    assert resultado['pendiente'] and resultado['motivo'] == 'fuera_de_alcance'
+    abrir.assert_not_awaited()
+
+
+def test_revision_necesaria_es_candidata_para_analisis_documental(monkeypatch):
+    fila = SimpleNamespace(codigo_externo=CODIGO, raw_id='raw-1')
+    monkeypatch.setattr(servicio.filtradas, 'operar', AsyncMock(return_value={
+        'filas': [{'codigo_externo': CODIGO, 'estado_seleccion': 'revision_manual'}]}))
+
+    assert asyncio.run(servicio.estado_seleccion_documental(fila)) == 'revision_manual'
+    servicio.filtradas.operar.assert_awaited_once_with('listar', {
+        'codigos': [CODIGO], 'fuentes': {CODIGO: 'raw-1'}, 'limite': 1, 'offset': 0})
+
+
+def test_analisis_temporal_falla_cerrado_si_no_puede_confirmar_clasificacion(monkeypatch):
+    fila = SimpleNamespace(codigo_externo=CODIGO, raw_id='raw-1')
+    db = Mock()
+    db.get.return_value = fila
+    monkeypatch.setattr(servicio.filtradas, 'operar', AsyncMock(side_effect=RuntimeError('sin conexión')))
+    abrir = AsyncMock()
+    monkeypatch.setattr(servicio.portal, 'abrir_ficha', abrir)
+
+    resultado = asyncio.run(servicio.analizar_documentos_temporal(db, 1, automatico=True))
+
+    assert resultado['pendiente'] and resultado['motivo'] == 'clasificacion_no_verificada'
+    abrir.assert_not_awaited()
+
+
 def test_filtradas_caida_no_impide_confirmar_ingesta_documental(monkeypatch):
     finalizar, guardar, _, evaluar = preparar(monkeypatch)
     evaluar.side_effect = RuntimeError('Filtradas no disponible')

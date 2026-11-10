@@ -198,3 +198,53 @@ def test_lista_adjuntos_ingresados_y_enlace_directo_ver():
     assert [a['nombre'] for a in adjuntos] == ['Bases Hotel.pdf']
     assert archivo['contenido'].startswith(b'%PDF-')
     assert [r.method for r in llamadas] == ['GET', 'GET', 'GET']
+
+
+def test_grilla_dwnl_permite_leer_y_descargar_un_adjunto_aunque_haya_captcha_masivo():
+    """La grilla antigua tiene botón individual; el CAPTCHA corresponde a selección múltiple."""
+    ficha_html = FICHA.replace('</form>',
+        '<input type="image" id="imgAdjuntos" '
+        'onclick="open(\'/Procurement/Modules/Attachment/ViewAttachment.aspx?enc=lista\')"></form>')
+    pagina_adjuntos = '''<form action="ViewAttachment.aspx?enc=lista">
+    <input type="hidden" name="__VIEWSTATE" value="estado-lista">
+    <table id="DWNL_grdId">
+      <tr><th>Sel.</th><th>Anexo</th><th>Tipo</th><th>Descripción</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr>
+      <tr><td><input id="DWNL_grdId_ctl03_chk" type="checkbox" name="DWNL$grdId$ctl03$chk"></td>
+      <td><span id="DWNL_grdId_ctl03_File">Bases Hotel.pdf</span></td>
+      <td><span id="DWNL_grdId_ctl03_Type">Otros Anexos</span></td>
+      <td><span id="DWNL_grdId_ctl03_Description">Bases administrativas</span></td>
+      <td><span id="DWNL_grdId_ctl03_FileLength">2640 KB</span></td>
+      <td><span id="DWNL_grdId_ctl03_AtcDateTime">21-10-2026 12:05:34</span></td>
+      <td><input type="image" name="DWNL$grdId$ctl03$search" id="DWNL_grdId_ctl03_search" title="Ver Anexo"></td></tr>
+    </table><img src="/Procurement/Captcha/Captcha.aspx?n=1">
+    <input name="DWNL$ctl10" type="text"><input type="submit" value="Descargar seleccionados"></form>'''
+    llamadas = []
+
+    def responder(req):
+        llamadas.append(req)
+        if req.url.path.lower().endswith('detailsacquisition.aspx'):
+            return httpx.Response(200, text=ficha_html)
+        if req.method == 'GET':
+            return httpx.Response(200, text=pagina_adjuntos)
+        formulario = parse_qs(req.content.decode())
+        assert formulario['__VIEWSTATE'] == ['estado-lista']
+        assert formulario['DWNL$grdId$ctl03$search.x'] == ['8']
+        assert formulario['DWNL$grdId$ctl03$search.y'] == ['8']
+        return httpx.Response(200, content=b'%PDF-1.7 documento individual')
+
+    async def flujo():
+        async with sesion(httpx.MockTransport(responder)) as cliente:
+            ficha = await abrir_ficha(cliente, CODIGO)
+            adjuntos = await listar_adjuntos_ingresados(cliente, ficha)
+            archivo = await descargar_adjunto_ingresado(cliente, adjuntos[0])
+            return adjuntos, archivo
+
+    adjuntos, archivo = asyncio.run(flujo())
+    assert len(adjuntos) == 1
+    assert adjuntos[0]['nombre'] == 'Bases Hotel.pdf'
+    assert adjuntos[0]['descripcion'] == 'Bases administrativas'
+    assert adjuntos[0]['tamano'] == '2640 KB'
+    assert adjuntos[0]['fecha'] == '21-10-2026 12:05:34'
+    assert adjuntos[0]['boton'] == 'DWNL$grdId$ctl03$search'
+    assert archivo['contenido'].startswith(b'%PDF-')
+    assert [r.method for r in llamadas] == ['GET', 'GET', 'POST']

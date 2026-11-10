@@ -1,15 +1,15 @@
 {
-  "version": "hotel-2026-11-v32",
+  "version": "hotel-2026-11-v34",
   "estado": "piloto",
-  "alcance": "Habitaciones y hospedaje para huéspedes, salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
+  "alcance": "Salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
     "Las coincidencias son señales de pertinencia, no cumplimiento de bases ni decisión de postular.",
     "Los únicos pilares son vigencia, ubicación del servicio en la RM y pertinencia a los servicios comerciales del hotel.",
-    "La contratación de habitaciones para huéspedes y el arriendo de salones para eventos son servicios pertinentes si la ubicación es compatible.",
+    "El arriendo de salones para eventos es pertinente si la ubicación es compatible.",
     "Un arriendo claro de salón para un comprador de la RM puede aparecer como posible oportunidad con sede pendiente; el motivo debe indicar que hay que confirmar el lugar en las bases.",
     "Catering, coffee break y banquetería con lugar no aclarado se conservan para revisar si el hotel puede ofrecer el salón junto con el servicio.",
     "Si las bases fijan catering, alimentación o el evento en una sede ajena, no se presume que el hotel pueda ofrecer su salón.",
-    "El hospedaje explícito de personas puede ser pertinente aunque no incluya salón. Menciones a casas de acogida, hospederías y residencias institucionales no equivalen por sí solas a reservar habitaciones del hotel.",
+    "El hospedaje y la contratación de habitaciones quedan fuera del alcance de esta versión; solo se evalúan salones para eventos y servicios de alimentación asociados.",
     "Recintos clínicos, bienes para una sala y servicios en sedes fijadas de terceros no equivalen a contratar los servicios del hotel.",
     "Las palabras clave son evidencia auxiliar: el perfil comercial decide el alcance, no una palabra aislada.",
     "Una palabra a una edición de un término hotelero solo genera revisión cuando aparece en contexto pertinente; nunca es una coincidencia directa ni un descarte automático.",
@@ -18,28 +18,6 @@
     "La decisión de postular corresponde al hotel; la preselección no certifica disponibilidad ni cumplimiento de bases."
   ],
   "grupos": [
-    {
-      "id": "alojamiento",
-      "nivel": "directa",
-      "descripcion": "Contratación de alojamiento, hospedaje o estadías en habitaciones de hotel para personas o delegaciones.",
-      "patrones": [
-        "\\balojamientos?\\b",
-        "\\bhospedajes?\\b",
-        "\\bhoteleria\\b",
-        "\\bhotel(?:es)?\\b",
-        "\\bservicios? hoteleros?\\b",
-        "\\bhabitacion(?:es)?\\b",
-        "\\bpernocta(?:cion(?:es)?|r|s)?\\b",
-        "\\bestadias?\\b",
-        "\\bpension completa\\b",
-        "\\bhospederia\\b",
-        "\\b(?:servicios? de )?residencia(?: temporal)?\\b",
-        "\\bhospedamiento\\b",
-        "\\b(?:rooming|overnight|huespedes)\\b",
-        "\\b(?:servicios? de )?(?:accommodation|lodging)\\b",
-        "\\bbed (?:and|&) breakfast\\b"
-      ]
-    },
     {
       "id": "salones",
       "nivel": "directa",
@@ -61,7 +39,7 @@
     {
       "id": "actividades",
       "nivel": "contexto",
-      "descripcion": "Actividades que podrían necesitar salones, alojamiento o servicios asociados; la actividad por sí sola no identifica el servicio contratado.",
+      "descripcion": "Actividades que podrían necesitar salones o servicios asociados; la actividad por sí sola no identifica el servicio contratado.",
       "patrones": [
         "\\bjornadas?(?: institucional(?:es)?)?\\b",
         "\\bencuentros?\\b",
@@ -82,7 +60,7 @@
     {
       "id": "alimentacion_asociada",
       "nivel": "directa",
-      "descripcion": "Servicios de alimentación independientes o combinados con alojamiento y salones: desayuno, almuerzo, cena, coffee break, cóctel y banquetería.",
+      "descripcion": "Servicios de alimentación asociados a salones y eventos: desayuno, almuerzo, cena, coffee break, cóctel y banquetería.",
       "patrones": [
         "\\bcof+e+e?\\s*[- ]?breaks?\\b",
         "\\bpausas? (?:de|para) cafe\\b",
@@ -135,7 +113,7 @@
     {
       "id": "otros_servicios_en_hoteles",
       "patron": "\\b(?:fumigacion|desratizacion|desinsectacion|lavanderia|lavado|limpieza|aseo|vigilancia|seguridad privada|transporte|traslados?|pasajes|turismo|excursiones?)\\b",
-      "motivo": "Comprobar si se contrata alojamiento o salones, o un servicio distinto relacionado con un hotel. No excluir paquetes que incluyan servicios hoteleros."
+      "motivo": "Comprobar si se contrata un salón o un servicio asociado a eventos, o un servicio distinto que mencione un hotel."
     },
     {
       "id": "espacios_no_hoteleros",
@@ -273,6 +251,33 @@
     "Magallanes",
     "Arica y Parinacota"
   ],
+  "aliases_regiones_fuera_rm": {
+    "Región del Libertador General Bernardo O'Higgins": "O'Higgins",
+    "Región del Libertador General Bernardo O’Higgins": "O'Higgins",
+    "Región del Libertador Gral. Bernardo O'Higgins": "O'Higgins",
+    "Región de Aysén del General Carlos Ibáñez del Campo": "Aysén",
+    "Región de Aysén del General Ibañez del Campo": "Aysén",
+    "Región de Magallanes y de la Antártica Chilena": "Magallanes",
+    "Región de Magallanes y Antártica Chilena": "Magallanes"
+  },
+  "comunas_fuera_rm": {
+    "Arica y Parinacota": ["Camarones", "General Lagos", "Putre"],
+    "Tarapacá": ["Alto Hospicio", "Camiña", "Colchane", "Huara", "Pica", "Pozo Almonte"],
+    "Antofagasta": ["María Elena", "Mejillones", "Ollagüe", "Sierra Gorda", "Taltal", "Tocopilla"],
+    "Atacama": ["Alto del Carmen", "Caldera", "Chañaral", "Diego de Almagro", "Freirina", "Huasco", "Tierra Amarilla"],
+    "Coquimbo": ["Andacollo", "Canela", "Combarbalá", "Illapel", "La Higuera", "Los Vilos", "Monte Patria", "Ovalle", "Paihuano", "Punitaqui", "Río Hurtado", "Salamanca", "Vicuña"],
+    "Valparaíso": ["Algarrobo", "Cabildo", "Calle Larga", "Cartagena", "Casablanca", "Catemu", "Concón", "El Quisco", "El Tabo", "Hijuelas", "Isla de Pascua", "Juan Fernández", "La Calera", "La Cruz", "La Ligua", "Limache", "Llaillay", "Los Andes", "Nogales", "Olmué", "Panquehue", "Papudo", "Petorca", "Puchuncaví", "Putaendo", "Quillota", "Quintero", "Rinconada", "San Esteban", "San Felipe", "Santa María", "Santo Domingo", "Zapallar"],
+    "O’Higgins": ["Chépica", "Chimbarongo", "Codegua", "Coinco", "Coltauco", "Doñihue", "Graneros", "La Estrella", "Las Cabras", "Litueche", "Lolol", "Machalí", "Malloa", "Marchihue", "Mostazal", "Nancagua", "Navidad", "Olivar", "Palmilla", "Paredones", "Peralillo", "Peumo", "Pichidegua", "Pichilemu", "Placilla", "Pumanque", "Quinta de Tilcoco", "Rengo", "Requínoa", "Santa Cruz", "San Vicente"],
+    "Maule": ["Cauquenes", "Chanco", "Colbún", "Constitución", "Empedrado", "Hualañé", "Licantén", "Longaví", "Maule", "Molina", "Parral", "Pelarco", "Pelluhue", "Pencahue", "Rauco", "Retiro", "Río Claro", "Romeral", "Sagrada Familia", "San Clemente", "San Javier", "San Rafael", "Teno", "Vichuquén", "Villa Alegre", "Yerbas Buenas"],
+    "Ñuble": ["Bulnes", "Chillán Viejo", "Cobquecura", "Coelemu", "Coihueco", "El Carmen", "Ninhue", "Ñiquén", "Pemuco", "Pinto", "Portezuelo", "Quillón", "Quirihue", "Ránquil", "San Carlos", "San Fabián", "San Ignacio", "San Nicolás", "Treguaco", "Yungay"],
+    "Biobío": ["Alto Biobío", "Antuco", "Arauco", "Cabrero", "Cañete", "Chiguayante", "Contulmo", "Coronel", "Curanilahue", "Florida", "Hualpén", "Hualqui", "Laja", "Lebu", "Los Álamos", "Lota", "Mulchén", "Nacimiento", "Negrete", "Penco", "Quilaco", "Quilleco", "San Rosendo", "Santa Bárbara", "Santa Juana", "Tirúa", "Tomé", "Tucapel", "Yumbel"],
+    "La Araucanía": ["Angol", "Carahue", "Cholchol", "Collipulli", "Cunco", "Curacautín", "Curarrehue", "Ercilla", "Freire", "Galvarino", "Gorbea", "Lautaro", "Loncoche", "Lonquimay", "Los Sauces", "Lumaco", "Melipeuco", "Nueva Imperial", "Padre Las Casas", "Perquenco", "Pitrufquén", "Purén", "Renaico", "Saavedra", "Teodoro Schmidt", "Toltén", "Traiguén", "Victoria", "Vilcún"],
+    "Los Ríos": ["Corral", "Futrono", "Lago Ranco", "Lanco", "La Unión", "Los Lagos", "Máfil", "Mariquina", "Paillaco", "Panguipulli", "Río Bueno"],
+    "Los Lagos": ["Ancud", "Calbuco", "Chaitén", "Chonchi", "Cochamó", "Curaco de Vélez", "Dalcahue", "Fresia", "Frutillar", "Futaleufú", "Hualaihué", "Llanquihue", "Los Muermos", "Maullín", "Palena", "Puerto Octay", "Puqueldón", "Purranque", "Puyehue", "Queilén", "Quellón", "Quemchi", "Quinchao", "Río Negro", "San Juan de la Costa", "San Pablo"],
+    "Aysén": ["Aysén", "Chile Chico", "Cisnes", "Cochrane", "Guaitecas", "Lago Verde", "O’Higgins", "Río Ibáñez", "Tortel"],
+    "Magallanes": ["Antártica", "Cabo de Hornos", "Laguna Blanca", "Natales", "Porvenir", "Primavera", "Río Verde", "San Gregorio", "Timaukel", "Torres del Paine"]
+  },
+  "fuentes_comunas": "https://www.bcn.cl/siit/mapoteca/comunas",
   "fuente_territorial": "https://www.gobiernosantiago.cl/nuestra-region/",
   "clientes_estrategicos": [
     {
@@ -310,7 +315,6 @@
     "nombre": "Hotel Plaza San Francisco",
     "comuna": "Santiago",
     "region": "13",
-    "habitaciones_disponibles": null,
     "disponibilidad_por_fecha": null,
     "servicios_fuera_del_hotel_confirmados": false,
     "presupuesto_minimo": null,
@@ -633,12 +637,12 @@
     {
       "id": "bienes_oficina_papeleria",
       "patron": "\\b(?:fundas? plasticas?|fundas? de etiquetas|articulos? (?:de |para )?(?:papeleria|oficina)|materiales? (?:de |para )?oficina|insumos? (?:de |para )?oficina|utiles? (?:de |para )?oficina|papel turno matic|plumones?|plumon|saca\\s*corchetes?|separadores? de oficio|sobres? (?:de )?oficio|pegamentos? en barra|carpetas? plasticas?|carpetas? para archivos|cuchillos? cartoneros?|cintas? (?:de |para )?(?:embalaje|empaquetar)|pilas? alcalinas?|pila cr[- ]?2032)\\b",
-      "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alojamiento o alimentación."
+    "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alimentación para eventos."
     },
     {
       "id": "insumos_equipos_medicos",
       "patron": "\\b(?:insumos?|equipos?|dispositivos?|mangas?|medias?)\\b[^.;\\n]{0,220}\\b(?:compresion(?:\\s+neumatica)?|vascular|anti\\s*embolic[oa]s?|tromboembolic[oa]s?|quirurgic[oa]s?|medic[oa]s?|clinic[oa]s?|hospitalari[oa]s?)\\b",
-      "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicita alojamiento, salones ni alimentación."
+    "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicitan salones ni servicios de alimentación para eventos."
     },
     {
       "id": "nutricion_parenteral",
@@ -725,7 +729,7 @@
     {
       "id": "cursos_especializados",
       "patron": "\\b(?:servicio|contratacion)\\s+(?:de\\s+)?cursos?\\s+de\\s+capacitacion\\b|\\bcursos?\\s+(?:de\\s+)?(?:wafa|no deje rastro|rescate en aguas blancas)\\b",
-      "motivo": "Se contrata impartir cursos de capacitación, sin identificar alojamiento, salones o alimentación asociados."
+      "motivo": "Se contrata impartir cursos de capacitación, sin identificar el arriendo de un salón o servicios de alimentación asociados."
     },
     {
       "id": "infraestructura_informatica",
@@ -785,6 +789,6 @@
   ],
   "perfil_comercial": {
     "id": "servicios_hotel_eventos_y_alojamiento",
-    "nombre": "Hospedaje y eventos dentro del hotel"
+    "nombre": "Salones, eventos y alimentación asociada"
   }
 }

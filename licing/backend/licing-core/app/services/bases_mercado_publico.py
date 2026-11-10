@@ -103,7 +103,11 @@ class _Ficha(HTMLParser):
 class _Anexos(HTMLParser):
     """Grilla de VerAntecedentes: nombre, descripción, fecha y botón «Ver» por fila."""
     CAMPOS = {"SourceFileName": "nombre", "FileName": "nombre", "FileDescription": "descripcion",
-              "FileDate": "fecha", "FileType": "tipo", "FileSize": "tamano"}
+              "FileDate": "fecha", "FileType": "tipo", "FileSize": "tamano",
+              # ViewAttachmentLC también usa la grilla DWNL_grdId para los
+              # anexos ingresados. Sus nombres de controles no usan grdLbl*.
+              "File": "nombre", "Type": "tipo", "Description": "descripcion",
+              "FileLength": "tamano", "AtcDateTime": "fecha"}
 
     def __init__(self):
         super().__init__()
@@ -133,11 +137,18 @@ class _Anexos(HTMLParser):
         if m := re.search(r"(?:^|_)grdAttachment_(ctl\d+)_grdLbl(\w+)$", a.get("id") or ""):
             if m[2] in self.CAMPOS:
                 self.actual = (m[1], self.CAMPOS[m[2]])
+        if m := re.search(r"(?:^|_)DWNL_grdId_(ctl\d+)_(File|Type|Description|FileLength|AtcDateTime)$",
+                          a.get("id") or ""):
+            self.actual = (m[1], self.CAMPOS[m[2]])
         nombre_input = a.get("name") or ""
         if tag == "input" and (m := re.search(r"((?:[\w-]+\$)*grdAttachment\$(ctl\d+)\$grdIbtnView)$", nombre_input)):
             self.filas.setdefault(m[2], {})["boton"] = m[1]
+        if tag == "input" and (m := re.search(r"(DWNL\$grdId\$(ctl\d+)\$search)$", nombre_input)):
+            self.filas.setdefault(m[2], {})["boton"] = m[1]
         if tag == "input" and (m := re.search(r"(?:^|_)grdAttachment_(ctl\d+)_grdIbtnView$", a.get("id") or "")):
             self.filas.setdefault(m[1], {})["boton"] = f"grdAttachment${m[1]}$grdIbtnView"
+        if tag == "input" and (m := re.search(r"(?:^|_)DWNL_grdId_(ctl\d+)_search$", a.get("id") or "")):
+            self.filas.setdefault(m[1], {})["boton"] = f"DWNL$grdId${m[1]}$search"
         # Mercado Público muestra el icono «Ver» como un enlace directo en
         # algunas versiones y como ImageButton en otras.
         for valor in (a.get("href") or "", a.get("onclick") or ""):
@@ -159,13 +170,17 @@ class _Anexos(HTMLParser):
             if evento:
                 self.filas.setdefault(evento[2], {})["boton"] = evento[1]
         nombre_control = a.get("name") or a.get("id") or ""
-        fila = re.search(r"grdAttachment(?:\$|_)(ctl\d+)", nombre_control)
+        fila = re.search(r"(?:grdAttachment(?:\$|_)|DWNL(?:\$grdId\$|_grdId_))(ctl\d+)", nombre_control)
         if fila:
             self.fila_actual = fila[1]
-            if tag == "input" and ("view" in nombre_control.lower() or
+            if tag == "input" and ("view" in nombre_control.lower() or "search" in nombre_control.lower() or
                     (a.get("type", "").lower() == "image" and "ver" in (a.get("alt", "") + a.get("title", "")).lower())):
-                self.filas.setdefault(self.fila_actual, {})["boton"] = (a.get("name") if "$" in nombre_control
-                    else f"grdAttachment${self.fila_actual}$grdIbtnView")
+                boton = a.get("name") if "$" in nombre_control else None
+                if not boton:
+                    prefijo = "DWNL$grdId" if "DWNL" in nombre_control else "grdAttachment"
+                    sufijo = "search" if prefijo.startswith("DWNL") else "grdIbtnView"
+                    boton = f"{prefijo}${self.fila_actual}${sufijo}"
+                self.filas.setdefault(self.fila_actual, {})["boton"] = boton
 
     def handle_endtag(self, tag):
         if tag == "td" and self.celda is not None:

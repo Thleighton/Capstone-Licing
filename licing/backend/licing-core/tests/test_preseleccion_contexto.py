@@ -129,5 +129,5 @@ def test_limite_de_menciones_no_oculta_un_servicio_al_final_del_texto():
     r = evaluar("Contrato de suministros", descripcion="Alojamiento de servidores. " * 110
         + "También se requiere arriendo de salón en Santiago para los asistentes.",
         items=[{"codigo_producto": "43211503"}])
-    assert r["entrada_parcial"]
-    assert r["clasificacion"] == "revision_manual"
+    assert r["clasificacion"] == "preseleccionada"
+    assert r["criterios"]["pertinencia"]["coincidencias"][0]["inicio"] > 2500

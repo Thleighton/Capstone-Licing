@@ -773,7 +773,7 @@
   "codigos_producto_protegidos": {
     "30222507": "hotel publicado en Mercado Público",
     "90111603": "salas de reuniones o banquetes",
-    "90101603": "servicios de catering",
+    "90101603": "servicios de catering"
   },
   "reglas_contexto_items": [
     {

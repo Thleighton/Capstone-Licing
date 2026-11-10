@@ -84,12 +84,14 @@ jobs:
               if failure is None:
                   continue
               label = f"{case.get('classname', '')}.{case.get('name', 'test')}"
-              detail = failure.get("message")
+              detail = failure.get("message") or ""
+              traceback = (failure.text or "").strip()
+              if traceback:
+                  detail = f"{detail}\n{traceback}".strip()
               if not detail:
-                  lines = (failure.text or "").splitlines()
-                  detail = lines[0] if lines else "Falló la prueba"
+                  detail = "Falló la prueba sin detalle en el informe JUnit"
               detail = detail.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-              print(f"::error title={label}::{detail[:500]}")
+              print(f"::error title={label}::{detail[:4000]}")
           PY
           fi
           exit "$test_status"

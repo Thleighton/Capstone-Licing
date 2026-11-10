@@ -9,7 +9,7 @@ from app.services.preseleccion import CHILE, PILARES, clasificar_pilares, evalua
 
 def evaluar(**cambios):
     datos = {"codigo_externo": "100-1-LE26", "estado": "Publicada", "codigo_estado": 5,
-        "fecha_cierre": "2026-12-01T15:00:00", "nombre": "Alojamiento en Santiago"}
+        "fecha_cierre": "2026-12-01T15:00:00", "nombre": "Arriendo de salón en Santiago"}
     return evaluar_preseleccion({**datos, **cambios}, ahora=datetime(2026, 10, 24, 12, tzinfo=CHILE))
 
 
@@ -36,7 +36,7 @@ def test_todas_las_combinaciones_de_los_tres_pilares(resultados):
     ("Coffee break", "preseleccionada"), ("Coffe-break", "preseleccionada"),
     ("Catering", "revision_manual"), ("Banquetería", "revision_manual"),
     ("Servicio de alimentación", "revision_manual"), ("Servicio de desayuno", "revision_manual"),
-    ("Cóctel", "revision_manual"), ("Alojamiento y alimentación", "preseleccionada"),
+    ("Cóctel", "revision_manual"), ("Arriendo de salón y coffee break", "preseleccionada"),
     ("Arriendo de salón y coffee break", "preseleccionada"),
 ])
 def test_servicio_segun_alcance_salones_y_eventos(servicio, esperado):
@@ -106,5 +106,7 @@ def test_alimentacion_negada_o_no_humana_no_prueba_servicio_del_hotel(nombre):
     assert r["criterios"]["pertinencia"]["resultado"] != "cumple"
 
 
-def test_alojamiento_en_rm_es_pertinente_a_las_habitaciones_del_hotel():
-    assert evaluar(nombre="Alojamiento en Santiago sin alimentación")["clasificacion"] == "preseleccionada"
+def test_alojamiento_en_rm_esta_fuera_del_alcance_actual():
+    resultado = evaluar(nombre="Alojamiento en Santiago sin alimentación")
+    assert resultado["clasificacion"] == "descartada"
+    assert resultado["criterios"]["pertinencia"]["resultado"] == "no_cumple"

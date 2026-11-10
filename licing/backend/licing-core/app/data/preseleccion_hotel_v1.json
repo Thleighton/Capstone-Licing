@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-11-v34",
+  "version": "hotel-2026-11-v35",
   "estado": "piloto",
   "alcance": "Salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
@@ -543,6 +543,8 @@
   ],
   "salones_nota": "Incluye combinaciones de salones; sus capacidades no deben sumarse como espacios simultáneos independientes. Disponibilidad por fecha no informada.",
   "codigos_producto_ajenos": {
+    "90111501": "servicios de hotel y alojamiento, fuera del alcance de esta versión, que solo considera salones y alimentación para eventos",
+    "90111801": "servicios de habitaciones y hospedaje, fuera del alcance de esta versión",
     "80141607": "servicio de producción de eventos; contratar producción no equivale a arrendar un salón o contratar alojamiento del hotel",
     "86141601": "clubes recreativos para estudiantes; el ítem describe talleres o actividades, no arriendo de salón, alojamiento ni catering",
     "51191603": "soluciones de nutrición parenteral y electrolitos; insumo farmacéutico para pacientes, no alimentación para eventos",
@@ -707,6 +709,11 @@
   ],
   "exclusiones_evidentes": [
     {
+      "id": "alojamiento_fuera_alcance",
+      "patron": "\\bservicios?\\s+(?:de\\s+)?(?:alojamiento|hospedaje)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:alojamientos?|hospedajes?|hospeder[ií]as?|pernoctaciones?|estad[ií]as?)\\s+(?:en|para|de)\\b(?![^.;\\n]{0,80}\\b(?:web|cloud|servidores?|maquinas virtuales|datos|aplicaciones?|infraestructura)\\b)|\\b(?:arriendo|alquiler|contratacion|reserva)\\s+de\\s+habitaciones?\\b|\\bhabitaciones?\\s+para\\s+\\d+\\s+personas?\\b|\\balojamiento\\b[^.;\\n]{0,60}\\b(?:pacientes|usuarios|derivados)\\b",
+      "motivo": "La solicitud corresponde a alojamiento, habitaciones u hospedaje, que quedan fuera del alcance de esta versión; aquí solo se consideran salones y servicios de alimentación para eventos."
+    },
+    {
       "id": "compra_mobiliario",
       "patron": "\\b(?:adquisicion|compra) (?:de )?mobiliario\\b",
       "motivo": "El objeto explícito es adquirir mobiliario, sin contratar el uso de salones o alojamiento."
@@ -764,9 +771,7 @@
   ],
   "codigos_producto_protegidos": {
     "30222507": "hotel publicado en Mercado Público",
-    "90111501": "servicios de hotel",
     "90111603": "salas de reuniones o banquetes",
-    "90111801": "habitación sencilla",
     "90101603": "servicios de catering",
     "93141504": "acogida: comprobar si incluye alojamiento de personas"
   },

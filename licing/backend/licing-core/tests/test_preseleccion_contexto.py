@@ -77,7 +77,7 @@ def test_objeto_ajeno_no_descarta_un_paquete_con_servicios_hoteleros(nombre, des
 
 
 @pytest.mark.parametrize("ajeno,servicio", [
-    ("Alojamiento de servidores", "alojamiento en Santiago para los participantes"),
+    ("Alojamiento de servidores", "arriendo de salón en Santiago para los participantes"),
     ("Sillas para salón", "arriendo de salón en Santiago"),
     ("Mano de obra fuera de taller", "taller para funcionarios con coffee break"),
     ("Alimentación enteral", "alimentación para los asistentes"),
@@ -89,8 +89,8 @@ def test_primera_mencion_ajena_no_oculta_otra_del_mismo_tipo(ajeno, servicio):
     assert not r["criterios"]["pertinencia"]["exclusiones_evidentes"]
 
 
-def test_orden_de_compra_no_confunde_una_contratacion_de_alojamiento():
-    r = evaluar("Servicios de alojamiento en Santiago para la Universidad de Talca",
+def test_orden_de_compra_no_confunde_una_contratacion_de_salon():
+    r = evaluar("Arriendo de salón en Santiago para la Universidad de Talca",
         "El servicio comienza desde la aceptación de la orden de compra de Mercado Público.")
     assert r["clasificacion"] == "preseleccionada"
 
@@ -105,7 +105,7 @@ def test_orden_de_compra_no_oculta_una_compra_de_bienes_en_el_mismo_texto():
 def test_ubicacion_de_alojamiento_para_pacientes_derivados():
     r = evaluar("Servicio de alojamiento y alimentación transitoria", items=[{
         "descripcion": "Servicio de alojamiento y alimentación transitoria a pacientes del Hospital Hanga Roa derivados a Santiago"}])
-    assert r["clasificacion"] == "preseleccionada"
+    assert r["clasificacion"] == "descartada"
     assert r["criterios"]["ubicacion"]["estado"] == "rm"
 
 

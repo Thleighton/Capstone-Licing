@@ -29,7 +29,7 @@ def test_candidata_no_equivale_a_decision_de_postular():
 @pytest.mark.parametrize('estado,codigo', [('error','pdf_corrupto'),('error','pdf_protegido'),
     ('sin_texto','sin_texto_legible'),('parcial','lectura_parcial')])
 def test_fallos_documentales_no_anulan_ubicacion_explicita_de_la_api(estado, codigo):
-    r = evaluar(nombre='Alojamiento en Valparaíso', documentos=[{'id': 1, 'nombre': 'Bases.pdf',
+    r = evaluar(nombre='Arriendo de salón en Valparaíso', documentos=[{'id': 1, 'nombre': 'Bases.pdf',
         'estado_extraccion': estado, 'cobertura': {'motivo_codigo': codigo}, 'paginas_texto': []}])
     assert r['clasificacion'] == 'descartada'
     assert 'fuera' in r['motivo']
@@ -59,21 +59,21 @@ def test_fallo_documental_no_conserva_licitaciones_que_ya_caducaron():
 
 @pytest.mark.parametrize("comuna", cargar_catalogo()["comunas_rm"])
 def test_cobertura_de_comunas_rm(comuna):
-    r = evaluar(nombre=f"Se requiere alojamiento en la comuna de {comuna}, Región Metropolitana.")
+    r = evaluar(nombre=f"Se requiere arriendo de salón en la comuna de {comuna}, Región Metropolitana.")
     assert r["criterios"]["ubicacion"]["estado"] == "rm"
     assert r["clasificacion"] == "preseleccionada"
 
 
 def test_comprador_fuera_de_rm_puede_contratar_en_santiago():
-    r = evaluar(nombre="Servicio de hotelería", region_comprador="Los Lagos",
-        descripcion="La Seremi de la Región de Los Lagos requiere alojamiento en Santiago.")
+    r = evaluar(nombre="Arriendo de salón para capacitación", region_comprador="Los Lagos",
+        descripcion="La Seremi de la Región de Los Lagos requiere el servicio en Santiago.")
     assert r["clasificacion"] == "preseleccionada"
     assert {e["region"] for e in r["criterios"]["ubicacion"]["evidencias"]} == {"Metropolitana"}
 
 
 def test_comprador_en_rm_no_convierte_servicio_fuera_en_candidato():
-    r = evaluar(nombre="Servicio de alojamiento", region_comprador="Metropolitana",
-        descripcion="Se contrata alojamiento en La Serena para una delegación.")
+    r = evaluar(nombre="Arriendo de salón para evento", region_comprador="Metropolitana",
+        descripcion="Se contrata el salón en La Serena para una delegación.")
     assert r["clasificacion"] == "descartada"
     assert r["criterios"]["ubicacion"]["estado"] == "fuera_rm"
 
@@ -83,8 +83,8 @@ def test_comprador_en_rm_no_convierte_servicio_fuera_en_candidato():
     "La Universidad de Santiago solicita un salón, revisar bases.",
     "Arriendo de salón fuera de Santiago.",
     "El evento no se realizará en Santiago, revisar bases.",
-    "Servicio de hospedaje en San Pedro.",
-    "Servicio de hospedaje en Santiago de Compostela.",
+    "Servicio de salón en San Pedro.",
+    "Servicio de salón en Santiago de Compostela.",
 ])
 def test_menciones_ambiguas_no_se_convierten_en_ubicacion_confirmada(descripcion):
     r = evaluar(nombre="Contratación de servicios", descripcion=descripcion)
@@ -107,7 +107,7 @@ def test_ubicacion_en_la_descripcion_del_item():
 
 
 def test_licitacion_multirregional_se_conserva_para_revisar_ofertas_parciales():
-    r = evaluar(nombre="Servicio de alojamiento en Santiago y Valparaíso")
+    r = evaluar(nombre="Arriendo de salón para evento en Santiago y Valparaíso")
     assert r["criterios"]["ubicacion"]["estado"] == "mixta"
     assert r["clasificacion"] == "revision_manual"
 
@@ -121,14 +121,14 @@ def test_una_linea_fuera_de_rm_no_descarta_otras_lineas_sin_ubicacion():
 
 
 def test_san_pedro_de_atacama_no_coincide_con_san_pedro_rm():
-    r = evaluar(nombre="Servicio de hospedaje en San Pedro de Atacama")
+    r = evaluar(nombre="Arriendo de salón en San Pedro de Atacama")
     assert r["clasificacion"] == "descartada"
     assert r["criterios"]["ubicacion"]["evidencias"][0]["region"] == "Antofagasta"
 
 
 def test_mencion_fuera_de_rm_en_compra_nacional_no_descarta_todo_el_proceso():
-    r = evaluar(nombre="Servicio de alojamiento en diversas regiones",
-        descripcion="Incluye hospedaje en Valparaíso y otras ciudades, revisar cada línea.")
+    r = evaluar(nombre="Arriendo de salones en diversas regiones",
+        descripcion="Incluye salones en Valparaíso y otras ciudades, revisar cada línea.")
     assert r["clasificacion"] == "revision_manual"
 
 
@@ -195,7 +195,7 @@ def test_no_muta_el_original_y_la_huella_cambia_con_los_datos():
     antes = deepcopy(datos)
     a = evaluar_preseleccion(datos, ahora=AHORA)
     assert datos == antes
-    datos["nombre"] = "Hospedaje en Valparaíso"
+    datos["nombre"] = "Arriendo de salón en Valparaíso"
     b = evaluar_preseleccion(datos, ahora=AHORA)
     assert a["huella_entrada"] != b["huella_entrada"]
 

@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-43"
+VERSION_MOTOR = "reglas-hotel-44"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -552,10 +552,10 @@ def _ambiguedad_administrativa(regla, m, normal):
 _SERVICIO_EXPLICITO = re.compile(
     r"\b(?:arriendo|arrendamiento|alquiler|reserva)\s+(?:de\s+)?"
     r"(?:(?:un|una|los|las)\s+)?(?:salon(?:es)?|salas?|recintos?|espacios?|auditorios?)\b"
-    r"|\bservicios?\s+(?:hoteleros?\b|de\s+(?:alojamiento|hospedaje|banqueteria|catering|alimentacion|cof+e+e?\s*[- ]?breaks?)\b)"
+    r"|\bservicios?\s+de\s+(?:banqueteria|catering|alimentacion|cof+e+e?\s*[- ]?breaks?)\b"
     r"|\b(?:se\s+)?(?:requiere|requieren|solicita|solicitan|contrata|contratar)\s+"
-    r"(?:el\s+)?(?:alojamiento|hospedaje|salon(?:es)?|coffee\s*break)\b"
-    r"|\b(?:alojamiento|hospedaje|coffee\s*break|almuerzos?|desayunos?|cenas?|colaciones?)"
+    r"(?:el\s+)?(?:salon(?:es)?|coffee\s*break)\b"
+    r"|\b(?:coffee\s*break|almuerzos?|desayunos?|cenas?|colaciones?)"
     r"\s+para\s+(?:(?:los|las)\s+)?(?:\d+\s+)?(?:personas|participantes|asistentes|delegaciones|pacientes|funcionarios)\b"
 )
 
@@ -651,8 +651,6 @@ def _mencion_negada(normal, inicio):
 
 def _servicio_concreto_en_item(normal):
     if _SERVICIO_EXPLICITO.search(normal):
-        return True
-    if re.search(r"\b(?:alojamiento|hospedaje|estadia)\s+(?:en|para)\s+", normal):
         return True
     if re.search(r"\bcof+e+e?\s*[- ]?breaks?\b", normal):
         return True
@@ -1580,7 +1578,7 @@ def extraer_requisitos(campos):
 
 
 _SERVICIO = re.compile(
-    r"\b(?:servicios?|salon(?:es)?|"
+    r"\b(?:servicios?|alojamiento|hospedaje|hotel(?:es)?|hoteleria|habitacion(?:es)?|estadia|salon(?:es)?|"
     r"salas?|recintos?|espacios?|auditorios?|taller(?:es)?|jornadas?|"
     r"eventos?|reunion(?:es)?|seminarios?|encuentros?|"
     r"ceremonias?|realizara|desarrollara|"

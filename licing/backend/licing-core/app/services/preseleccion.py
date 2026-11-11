@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-50"
+VERSION_MOTOR = "reglas-hotel-51"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -814,7 +814,7 @@ _ESPACIOS_PUBLICOS = re.compile(
 )
 _EVENTO_SALONES = re.compile(
     r"\b(?:eventos?|seminarios?|congresos?|jornadas?|reunion(?:es)?|"
-    r"conferencias?|conciertos?|recitales?|espectaculos?|presentaciones?|"
+    r"conferencias?|conciertos?|recitales?|espectaculos?|presentaciones?|lanzamientos?|"
     r"capacitacion(?:es)?|taller(?:es)?|ceremonias?|"
     r"convencion(?:es)?|encuentros?|actividades?|celebraciones?|"
     r"conmemoraciones?|festivales?|galas?|aniversarios?|ferias?)\b"
@@ -845,7 +845,7 @@ _BIENES_SALONES = re.compile(
     r"microesferas|insumos?|utiles?)\b"
 )
 _SALON_CONTRATADO = re.compile(
-    r"\b(?:arriendo|arrendamiento|alquiler|reserva|uso)\s+(?:de\s+)?"
+    r"\b(?:arriendo|arrendamiento|alquiler|reserva|uso|contratacion)\s+(?:de\s+)?"
     r"(?:(?:un|una|el|la|los|las)\s+)?"
     r"(?:salon(?:es)?|salas?|auditorios?|recintos?|espacios?)\b"
 )

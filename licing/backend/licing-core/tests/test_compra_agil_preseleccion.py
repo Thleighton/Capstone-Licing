@@ -24,6 +24,40 @@ def ahora():
     return datetime.now(CHILE).replace(tzinfo=None, microsecond=0)
 
 
+def evaluar_solicitud_salon(nombre):
+    return preseleccion.evaluar({
+        'codigo_externo': '1591-164-COT26', 'modalidad': 'compra_agil',
+        'estado': 'publicada', 'codigo_estado': None,
+        'fecha_cierre': '2026-11-12T10:00:00-03:00',
+        'nombre': nombre, 'descripcion': 'Según cotización adjunta.',
+        'codigo_region': 13, 'region_comprador': 'Región Metropolitana de Santiago',
+        'direccion_entrega': 'Según cotización adjunta', 'items': [],
+    }, ahora=datetime(2026, 11, 11, 20, tzinfo=CHILE))
+
+
+@pytest.mark.parametrize('nombre', [
+    'CONTRATACIÓN DE SALÓN Y SERVICIO DE COFFEE PARA EL LANZAMIENTO DE LA PLATAFORMA AVANZA TURISMO',
+    'Contratación de salón para lanzamiento de un libro',
+])
+def test_contratacion_de_salon_para_lanzamiento_es_candidata_provisional_en_rm(nombre):
+    resultado = evaluar_solicitud_salon(nombre)
+    assert resultado['clasificacion'] == 'preseleccionada'
+    assert resultado['criterios']['pertinencia']['resultado'] == 'cumple'
+    assert resultado['criterios']['ubicacion']['resultado'] == 'sin_informacion'
+    assert resultado['criterios']['ubicacion']['sede_confirmada'] is False
+    assert 'revisar las bases' in resultado['motivo']
+
+
+@pytest.mark.parametrize('nombre', [
+    'Contratación de salón para lanzamiento de un libro en Valparaíso',
+    'Contratación de salón de belleza en Santiago',
+    'Contratación de salón para lanzamiento en el salón de la municipalidad de Santiago',
+    'Compra de sillas para salón para lanzamiento en Santiago',
+])
+def test_contratacion_y_lanzamiento_conservan_exclusiones_de_alcance(nombre):
+    assert evaluar_solicitud_salon(nombre)['clasificacion'] != 'preseleccionada'
+
+
 # Fijo para todo el módulo: el mismo detalle debe producir el mismo RAW.
 MOMENTO = ahora()
 

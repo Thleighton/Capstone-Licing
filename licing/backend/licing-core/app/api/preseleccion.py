@@ -265,11 +265,11 @@ async def plan(response: Response, db: Session = Depends(get_db)):
     ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
     entradas = cargar_entradas(db, ids)
     fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
-    guardadas = {}
-    for offset in range(0, len(ids), 100):
-        pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
-            "limite": 100, "offset": offset})
-        guardadas.update({str(f["id"]): f for f in pagina.get("filas", [])})
+    # Una sola lectura de firmas: paginar aquí repetía el cruce y el conteo de
+    # toda la fuente por cada cien entradas y agotaba el plazo de la petición.
+    pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
+        "solo_firmas": True}) if fuentes else {"filas": []}
+    guardadas = {str(f["id"]): f for f in pagina.get("filas", [])}
     pendientes = [int(i) for i, d in entradas.items()
         if guardadas.get(i, {}).get("hash_fuente") != firma_fuente(d)
         or guardadas.get(i, {}).get("estado_seleccion") == "pendiente_evaluacion"]

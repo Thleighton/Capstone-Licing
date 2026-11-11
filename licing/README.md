@@ -33,6 +33,8 @@ licing/
 
 El navegador recibe únicamente la configuración pública del proyecto para el login. Las credenciales de PostgreSQL y el ticket de Mercado Público permanecen en el servidor. Ya no se necesitan `SUPABASE_URL` ni `SUPABASE_SERVICE_ROLE_KEY` del backend retirado. `CRON_SECRET` es opcional y solo habilita la ingesta programada.
 
+La lectura asistida con Gemini es opcional: configura `GEMINI_API_KEY` en el `.env` local o en las variables privadas del despliegue. LICING la solicita automáticamente al abrir una posible oportunidad o revisión necesaria, nunca al cargar listas; la clave no llega al navegador. Se envían solo datos públicos de la ficha e ítems y se guarda el resumen breve asociado a esa versión. No se descargan ni procesan las bases: la ficha oficial queda enlazada para abrirlas directamente. Gemini considera que el hotel es Hotel San Francisco, en Av. Libertador Bernardo O’Higgins 816, Santiago Centro, y que esta versión ofrece salones para eventos con banquetería asociada; no considera habitaciones. El resumen no modifica la clasificación. El nivel gratuito de Gemini puede usar las solicitudes para mejorar productos de Google; revisa las condiciones vigentes antes de habilitarlo.
+
 ## Docker
 
 Desde `licing/`:

@@ -19,15 +19,16 @@ from .models import compra_agil, compra_agil_item, compra_agil_sincronizacion  #
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
 REVISION_PREVIA_COMPRA_AGIL = "b5df9fcc5f0d"
-REVISION_ACTUAL = "e3a17c52d9b4"
+REVISION_ACTUAL = "a13c4d7e9f20"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 TABLAS_COMPRA_AGIL = {"compra_agil", "compra_agil_item", "compra_agil_pendiente", "compra_agil_sincronizacion"}
 COLUMNAS_NUEVAS = {
-    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental"},
+    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental", "resumen_ia"},
     "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente", "posicion_fuente"},
     "raw_mercado_publico": {"verificado_en"},
     "ejecucion_ingesta": {"fuente"},
+    "compra_agil": {"resumen_ia"},
 }
 
 
@@ -109,7 +110,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_PREVIA_COMPRA_AGIL, REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_PREVIA_COMPRA_AGIL, "e3a17c52d9b4", REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))

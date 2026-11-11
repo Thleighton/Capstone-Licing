@@ -46,6 +46,15 @@ CASOS = [
     ("coffee_salon_municipal", {"nombre": "Coffee break para evento", "descripcion": "La jornada se realizará en el salón municipal de Santiago."}, "descartada"),
     ("salon_municipal_fijo", {"nombre": "Servicios para evento en salón municipal en Santiago"}, "descartada"),
     ("salon_evento", {"nombre": "Arriendo de salón para seminario en Santiago"}, "preseleccionada"),
+    ("produccion_conciertos_en_espacio_publico", {
+        "nombre": "Producción artística Conciertos a un Metro",
+        "descripcion": "Servicio de producción artística integral para cuatro jornadas culturales Conciertos a un Metro, que se realizarán en espacios públicos de la comuna de Conchalí.",
+        "items": [item("80141607", "Servicio de producción artística integral de jornadas culturales en espacios públicos", "Producción de eventos")],
+    }, "descartada"),
+    ("salon_y_ubicacion_publica_conflictivos", {
+        "nombre": "Arriendo de salón para jornadas culturales en Santiago",
+        "descripcion": "Las jornadas culturales se realizarán en espacios públicos de Conchalí.",
+    }, "revision_manual"),
     ("salon_sin_comida", {"nombre": "Arriendo de salón en Santiago"}, "preseleccionada"),
     ("salon_con_coffee", {"nombre": "Arriendo de salón con coffee break en Santiago"}, "preseleccionada"),
     ("salon_con_banqueteria", {"nombre": "Arriendo de salón con banquetería en Santiago"}, "preseleccionada"),

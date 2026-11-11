@@ -7,13 +7,12 @@ from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..auth import solo_cron, usuario_actual
-from ..config import settings
 from ..database import get_db
 from ..models.licitacion import Licitacion
 from ..models.licitacion_item import LicitacionItem
@@ -45,7 +44,8 @@ def cargar_entradas(db, ids):
     verificaciones = dict(db.execute(select(RawMercadoPublico.id, RawMercadoPublico.verificado_en)
         .where(RawMercadoPublico.id.in_({f.raw_id for f in filas}))).all())
     for fila in filas:
-        datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns if c.name != "ingesta_documental"}
+        datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns
+                 if c.name not in {"ingesta_documental", "resumen_ia"}}
         datos.update(items=[], documentos_version=versiones[fila.id], url_oficial=ficha_oficial(fila.codigo_externo),
                      fuente_verificada_en=verificaciones.get(fila.raw_id))
         if fila.ingesta_documental.get("incidencia_documental"):
@@ -75,7 +75,6 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
     documentos_cache = {i: list((controles.get(i) or {}).get("documentos_analizados", [])) for i in ids}
     documentos_extra = documentos_extra or {}
     lote = []
-    documentos_pendientes_auto = []
     ahora_cache = datetime.now(timezone.utc)
     for datos in entradas.values():
         lic_id = datos["id"]
@@ -96,12 +95,6 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
                                if str(d.get("id")) not in {str(p.get("id")) for p in persistidos}]]
         entrada = {**datos, "documentos": docs}
         resultado = evaluar_preseleccion(entrada)
-        necesita_documentos = (resultado.get("clasificacion") == "preseleccionada" or
-            (resultado.get("clasificacion") == "revision_manual" and
-             (resultado.get("pilar_decisivo") in {"ubicacion", "pertinencia", "documentacion"} or resultado.get("entrada_parcial"))))
-        en_cola = control.get("analisis_documental_estado") in {"pendiente", "procesando"}
-        if necesita_documentos and not cache_valida and not en_cola:
-            documentos_pendientes_auto.append(lic_id)
         # No duplicar RAW ni PDF completos en las evaluaciones: conservar referencias y evidencias.
         firma = firma_fuente(datos)
         lote.append({"datos": datos, "resultado": resultado, "hash_fuente": firma,
@@ -128,8 +121,7 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
     for respuesta in respuestas:
         if isinstance(respuesta, BaseException):
             raise respuesta
-    return {"evaluadas": [e for r in respuestas for e in r.get("evaluadas", [])],
-            "documentos_pendientes_auto": documentos_pendientes_auto}
+    return {"evaluadas": [e for r in respuestas for e in r.get("evaluadas", [])]}
 
 
 class Lote(BaseModel):
@@ -145,6 +137,12 @@ class Revision(BaseModel):
     motivo: str = Field(min_length=5, max_length=1500)
 
 
+class SolicitudResumenIA(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    clasificacion: Literal["preseleccionada", "revision_manual"]
+    hash_fuente: str = Field(min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
+
+
 @router.get("/integracion/verificar", dependencies=[Depends(solo_cron)], include_in_schema=False)
 def verificar_integracion():
     # La función del segundo proyecto valida aquí la credencial privada existente.
@@ -152,7 +150,7 @@ def verificar_integracion():
 
 
 @router.get("", dependencies=[Depends(usuario_actual)])
-async def listar(response: Response, background: BackgroundTasks, clasificacion: str = Query(default="", max_length=30),
+async def listar(response: Response, clasificacion: str = Query(default="", max_length=30),
                  q: str = Query(default="", max_length=150), limite: int = Query(default=25, ge=1, le=100),
                  offset: int = Query(default=0, ge=0), db: Session = Depends(get_db),
                  cierre_desde: date | None = None, cierre_hasta: date | None = None,
@@ -186,13 +184,6 @@ async def listar(response: Response, background: BackgroundTasks, clasificacion:
     filas_vistas = respuesta.get("filas", [])
     ids_vistos = [int(f["id"]) for f in filas_vistas]
     entradas_actuales = cargar_entradas(db, ids_vistos)
-    controles_vistos = {lic_id: (raw_id, control) for lic_id, raw_id, control in db.execute(
-        select(Licitacion.id, Licitacion.raw_id, Licitacion.ingesta_documental)
-        .where(Licitacion.id.in_(ids_vistos))).all()} if ids_vistos else {}
-    hallazgos_legacy = documentos_origen.hallazgos_persistidos(db, ids_vistos) if ids_vistos else {}
-    ahora = datetime.now(timezone.utc)
-    from ..services.ingesta_documental import ANALISIS_DOCUMENTAL_VERSION
-    documentos_a_encolar = []
     for fila in filas_vistas:
         entrada = entradas_actuales.get(str(fila["id"]), {})
         fila.update({campo: entrada.get(campo) for campo in (
@@ -201,61 +192,19 @@ async def listar(response: Response, background: BackgroundTasks, clasificacion:
             "region_comprador", "comuna_comprador",
         )})
         fila["clientes_importantes"] = identificar_clientes_importantes(entrada)
-        raw_actual, control = controles_vistos.get(int(fila["id"]), (None, {}))
-        control = control or {}
-        cache_valida = False
-        try:
-            vence = datetime.fromisoformat(control["analisis_documental_expira_en"])
-            if vence.tzinfo is None:
-                vence = vence.replace(tzinfo=timezone.utc)
-            cache_valida = (str(raw_actual) == str(control.get("analisis_documental_raw_id")) and
-                            control.get("analisis_documental_version") == ANALISIS_DOCUMENTAL_VERSION and
-                            vence > ahora)
-            if cache_valida:
-                fila["hallazgos_documentales"] = control.get("hallazgos_documentales", [])
-        except (KeyError, TypeError, ValueError):
-            pass
-        if not fila.get("hallazgos_documentales"):
-            fila["hallazgos_documentales"] = hallazgos_legacy.get(int(fila["id"]), [])
-        incidencia = control.get("incidencia_documental") or {}
-        incidencia_antigua = (incidencia.get("codigo") == "sin_descarga_publica" or
-            (incidencia.get("codigo") == "sin_documentos" and not (
-                control.get("documentos_adjuntos_detectados") or control.get("documentos_adjuntos_url"))))
-        lista_no_verificada_expirada = (incidencia.get("codigo") == "lista_adjuntos_no_detectada" and
-                                        not cache_valida)
-        en_cola = control.get("analisis_documental_estado") in {"pendiente", "procesando"}
-        motor_antiguo = (control.get("analisis_documental_estado") in
-            {"completado", "sin_documentos", "error_temporal", "captcha"} and
-            control.get("analisis_documental_version") != ANALISIS_DOCUMENTAL_VERSION)
-        estado_candidato = fila.get("estado_seleccion")
-        if (settings.documentos_automaticos and not en_cola and
-                ((estado_candidato == "preseleccionada" and not cache_valida) or
-                 incidencia_antigua or lista_no_verificada_expirada or
-                 (estado_candidato == "revision_manual" and motor_antiguo))):
-            documentos_a_encolar.append(int(fila["id"]))
         if (actuales.get(fila["id"]) != fila.get("fuente_raw_id") or
                 fila.get("hash_fuente") != firma_fuente(entradas_actuales.get(str(fila["id"]), {}))):
             fila.update(estado_seleccion="pendiente_evaluacion", motivo_seleccion="La fuente cambió; actualiza la preselección.")
-    if documentos_a_encolar:
-        from ..services.ingesta_documental import encolar_analisis_documental, procesar_cola_analisis_documental
-        await encolar_analisis_documental(documentos_a_encolar)
-        background.add_task(procesar_cola_analisis_documental, 3)
     respuesta["ids_fuente"] = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
     response.headers["Cache-Control"] = "no-store"
     return respuesta
 
 
 @router.post("/evaluar")
-async def evaluar(entrada: Lote, background: BackgroundTasks,
+async def evaluar(entrada: Lote,
                   usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
     actor = str(UUID(usuario["id"]))
     resultado = await evaluar_lote(db, entrada.ids, actor)
-    candidatos = resultado.pop("documentos_pendientes_auto", [])
-    if candidatos and settings.documentos_automaticos:
-        from ..services.ingesta_documental import encolar_analisis_documental, procesar_cola_analisis_documental
-        await encolar_analisis_documental(candidatos)
-        background.add_task(procesar_cola_analisis_documental, 3, actor)
-    resultado["analisis_documental_programado"] = len(candidatos) if settings.documentos_automaticos else 0
     return resultado
 
 
@@ -279,8 +228,7 @@ async def plan(response: Response, db: Session = Depends(get_db)):
 
 @router.post("/documentos/obtener")
 async def obtener_documentos(usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
-    from ..services.ingesta_documental import procesar_documentos
-    return await procesar_documentos(db, str(UUID(usuario["id"])))
+    raise HTTPException(410, "LICING no descarga ni analiza bases. Abre la ficha oficial de Mercado Público para consultar los anexos.")
 
 
 @router.get("/pendientes-documentales", dependencies=[Depends(usuario_actual)])
@@ -335,45 +283,16 @@ async def exportar_excel(db: Session = Depends(get_db)):
 
 
 @router.get("/{licitacion_id}", dependencies=[Depends(usuario_actual)])
-async def detalle(licitacion_id: int, response: Response, background: BackgroundTasks,
-                  db: Session = Depends(get_db)):
+async def detalle(licitacion_id: int, response: Response, db: Session = Depends(get_db)):
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    control_actual = fila.ingesta_documental or {}
-    incidencia_actual = control_actual.get("incidencia_documental") or {}
-    from ..services.ingesta_documental import ANALISIS_DOCUMENTAL_VERSION
-    motor_antiguo = (control_actual.get("analisis_documental_estado") in
-        {"completado", "sin_documentos", "error_temporal", "captcha"} and
-        control_actual.get("analisis_documental_version") != ANALISIS_DOCUMENTAL_VERSION)
-    try:
-        vence_analisis = datetime.fromisoformat(control_actual.get("analisis_documental_expira_en", ""))
-        if vence_analisis.tzinfo is None:
-            vence_analisis = vence_analisis.replace(tzinfo=timezone.utc)
-        cache_analisis_activa = (str(control_actual.get("analisis_documental_raw_id")) == str(fila.raw_id) and
-            control_actual.get("analisis_documental_version") == ANALISIS_DOCUMENTAL_VERSION and
-            vence_analisis > datetime.now(timezone.utc))
-    except (TypeError, ValueError):
-        cache_analisis_activa = False
-    documentos_desactualizados = (incidencia_actual.get("codigo") == "sin_descarga_publica" or
-        (incidencia_actual.get("codigo") == "sin_documentos" and not (
-            control_actual.get("documentos_adjuntos_detectados") or control_actual.get("documentos_adjuntos_url"))) or motor_antiguo or
-        (incidencia_actual.get("codigo") == "lista_adjuntos_no_detectada" and not cache_analisis_activa))
-    from ..services.ingesta_documental import estado_seleccion_documental
-    estado_documental = (await estado_seleccion_documental(fila)
-        if settings.documentos_automaticos and documentos_desactualizados else None)
-    if (settings.documentos_automaticos and documentos_desactualizados and
-            estado_documental in {"preseleccionada", "revision_manual"} and
-            control_actual.get("analisis_documental_estado") not in {"pendiente", "procesando"}):
-        from ..services.ingesta_documental import encolar_analisis_documental, procesar_cola_analisis_documental
-        await encolar_analisis_documental([licitacion_id])
-        db.refresh(fila)
-        background.add_task(procesar_cola_analisis_documental, 1)
     try:
         resultado = await filtradas.operar("detalle", {"codigo": fila.codigo_externo})
     except filtradas.FiltradasNoDisponible:
         resultado = {"evaluacion": None, "criterios": [], "hash_fuente": None}
-    resultado["documentos"] = await documentos_origen.detalle(db, licitacion_id)
+    resultado["documentos"] = []
+    resultado["resumen_ia"] = fila.resumen_ia
     resultado["ingesta_documental"] = {k: v for k, v in fila.ingesta_documental.items() if k != "token"}
     resultado["incidencias_documentales"] = documentos_origen.incidencias(db, [licitacion_id])[licitacion_id]
     resultado["fuente_actualizada"] = resultado.get("hash_fuente") == firma_fuente(cargar_entradas(db, [licitacion_id])[str(licitacion_id)])
@@ -381,20 +300,42 @@ async def detalle(licitacion_id: int, response: Response, background: Background
     return resultado
 
 
-@router.post("/{licitacion_id}/documentos/analizar")
-async def analizar_documentos_licitacion(licitacion_id: int, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
+@router.post("/{licitacion_id}/resumen-ia")
+async def resumen_ia_licitacion(licitacion_id: int, solicitud: SolicitudResumenIA,
+                                db: Session = Depends(get_db),
+                                usuario=Depends(usuario_actual)):
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    from ..services.ingesta_documental import analizar_documentos_temporal
-    resultado = await analizar_documentos_temporal(db, licitacion_id, str(UUID(usuario["id"])))
-    if resultado.get("motivo") in {"clasificacion_no_verificada", "fuera_de_alcance"}:
-        motivo = ("No se pudo confirmar la clasificación actual; no se consultaron documentos."
-                  if resultado["motivo"] == "clasificacion_no_verificada" else
-                  "El análisis de documentos se limita a posibles oportunidades y revisiones necesarias.")
-        raise HTTPException(409, motivo)
-    resultado["detalle"] = await documentos_origen.detalle(db, licitacion_id)
-    return resultado
+    clasificacion = solicitud.clasificacion
+    if clasificacion not in {"preseleccionada", "revision_manual"}:
+        raise HTTPException(409, "La lectura asistida está disponible para posibles oportunidades y revisiones vigentes.")
+    entrada = cargar_entradas(db, [licitacion_id])[str(licitacion_id)]
+    firma_actual = firma_fuente(entrada)
+    if solicitud.hash_fuente != firma_actual:
+        raise HTTPException(409, "La ficha cambió desde la última evaluación. Actualiza la preselección antes de generar el resumen.")
+    fuente = {"tipo": "licitacion", "codigo": fila.codigo_externo,
+        "clasificacion_actual": clasificacion, "nombre": fila.nombre,
+        "organismo": fila.nombre_organismo, "unidad": fila.nombre_unidad,
+        "descripcion": fila.descripcion, "region_comprador": fila.region_comprador,
+        "comuna_comprador": fila.comuna_comprador, "direccion_entrega": fila.direccion_entrega,
+        "monto": str(fila.monto_estimado) if fila.monto_estimado is not None else None,
+        "fecha_cierre": fila.fecha_cierre.isoformat() if fila.fecha_cierre else None,
+        "items": entrada.get("items", [])}
+    from ..services.resumen_gemini import generar, huella
+    firma = huella(fuente)
+    cache = fila.resumen_ia or {}
+    if cache.get("firma") == firma and cache.get("resumen"):
+        return {"resumen": cache["resumen"], "cache": True}
+    lectura = await generar(fuente)
+    fila.resumen_ia = {"firma": firma, "resumen": lectura}
+    db.commit()
+    return {"resumen": lectura, "cache": False}
+
+
+@router.post("/{licitacion_id}/documentos/analizar")
+async def analizar_documentos_licitacion(licitacion_id: int, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
+    raise HTTPException(410, "LICING no descarga ni analiza bases. Abre la ficha oficial de Mercado Público para consultar los anexos.")
 
 
 @router.post("/{licitacion_id}/revision")
@@ -402,7 +343,11 @@ async def revisar(licitacion_id: int, entrada: Revision, usuario=Depends(usuario
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    return await filtradas.operar("revision", {**entrada.model_dump(), "codigo": fila.codigo_externo,
+    nombre_usuario = " ".join(str(usuario.get("nombre") or "").split())
+    motivo_registro = entrada.motivo
+    if nombre_usuario and f"Registrado por {nombre_usuario}" not in motivo_registro:
+        motivo_registro = f"{motivo_registro} · Registrado por {nombre_usuario}"[:1500]
+    return await filtradas.operar("revision", {**entrada.model_dump(), "motivo": motivo_registro, "codigo": fila.codigo_externo,
                                               "raw_id": fila.raw_id, "hash_fuente": firma_fuente(cargar_entradas(db, [licitacion_id])[str(licitacion_id)]), "usuario": str(UUID(usuario["id"]))})
 
 
@@ -412,12 +357,12 @@ async def documento(licitacion_id: int, usuario=Depends(usuario_actual), db: Ses
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
     raise HTTPException(410,
-        "LICING ya no recibe documentos para guardarlos. Las bases públicas se analizan temporalmente desde Mercado Público.")
+        "LICING no descarga ni procesa bases. Abre la ficha oficial de Mercado Público para consultar los anexos.")
 
 
 @router.get("/{licitacion_id}/documentos/{documento_id}/texto")
 async def texto_documento(licitacion_id: int, documento_id: int, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
-    raise HTTPException(410, "El texto se consulta en la revisión temporal; LICING ya no lo sirve desde su Storage.")
+    raise HTTPException(410, "LICING no procesa ni sirve texto de bases. Consulta el documento en la ficha oficial de Mercado Público.")
 
 
 @router.delete("/{licitacion_id}/documentos/{documento_id}")

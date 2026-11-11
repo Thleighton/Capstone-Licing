@@ -101,6 +101,7 @@ class CompraAgilDetalle(CompraAgilResumen):
     normalizacion_version: str | None
     normalizado_en: datetime | None
     fuente_consultada_en: datetime | None = None
+    resumen_ia: dict | None = None
 
     @field_validator("fecha_ultimo_cambio", "fecha_cancelacion")
     @classmethod
@@ -267,3 +268,35 @@ def detalle_compra_agil(compra_agil_id: int, response: Response, db: Session = D
         update={"fuente_consultada_en": raw.verificado_en if raw else None},
     )
     return {"compra_agil": detalle, "items": [CompraAgilItemResumen.model_validate(i) for i in items]}
+
+
+@router.post("/compras-agiles/{compra_agil_id}/resumen-ia")
+async def resumen_ia_compra_agil(compra_agil_id: int, db: Session = Depends(get_db)):
+    fila = db.get(CompraAgil, compra_agil_id)
+    if fila is None:
+        raise HTTPException(404, "No se encontró la Compra Ágil.")
+    guardada = fila.preseleccion or {}
+    clasificacion = guardada.get("clasificacion")
+    if guardada.get("version") != version_preseleccion() or clasificacion not in {"preseleccionada", "revision_manual"}:
+        raise HTTPException(409, "La lectura asistida está disponible para posibles oportunidades y revisiones vigentes.")
+    from ..services.compra_agil_preseleccion import cargar_entradas as cargar_entradas_compra, firma as firma_compra
+    entrada = cargar_entradas_compra(db, [compra_agil_id]).get(compra_agil_id)
+    if not entrada or guardada.get("firma") != firma_compra(entrada):
+        raise HTTPException(409, "La Compra Ágil cambió desde la última evaluación. Actualiza la preselección antes de generar el resumen.")
+    fuente = {"tipo": "compra_agil", "codigo": fila.codigo_externo,
+        "clasificacion_actual": clasificacion, "nombre": fila.nombre,
+        "organismo": fila.nombre_organismo, "unidad": fila.nombre_unidad,
+        "descripcion": fila.descripcion, "region_comprador": fila.region_comprador,
+        "direccion_entrega": fila.direccion_entrega,
+        "monto": str(fila.monto_disponible) if fila.monto_disponible is not None else None,
+        "fecha_cierre": fila.fecha_cierre.isoformat() if fila.fecha_cierre else None,
+        "items": entrada.get("items", [])}
+    from ..services.resumen_gemini import generar, huella
+    firma = huella(fuente)
+    cache = fila.resumen_ia or {}
+    if cache.get("firma") == firma and cache.get("resumen"):
+        return {"resumen": cache["resumen"], "cache": True}
+    lectura = await generar(fuente)
+    fila.resumen_ia = {"firma": firma, "resumen": lectura}
+    db.commit()
+    return {"resumen": lectura, "cache": False}

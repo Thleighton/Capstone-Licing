@@ -94,6 +94,10 @@ MP_PAUSA_DETALLES_SEGUNDOS=5
 MAX_RAW_ITEMS=20
 # Opcional: habilita /api/cron/ingesta (paso 8).
 CRON_SECRET=SECRETO_LARGO_Y_ALEATORIO
+# Opcional: habilita la lectura asistida bajo demanda en fichas de oportunidad/revisión.
+GEMINI_API_KEY=CLAVE_PRIVADA_DE_GOOGLE_AI_STUDIO
+# Opcional; por defecto gemini-3.5-flash-lite.
+GEMINI_MODELO=gemini-3.5-flash-lite
 ```
 
 Usa el mismo REF y el host copiado de Supabase Connect. Codifica los caracteres especiales de la contraseña dentro de la URL. El nombre visible Usuarios/Licitaciones no reemplaza al host ni al nombre PostgreSQL `postgres`.
@@ -101,6 +105,8 @@ Usa el mismo REF y el host copiado de Supabase Connect. Codifica los caracteres 
 Configura al menos el entorno **Production**. Si vas a probar un Preview, configura también sus variables y recuerda que usar el mismo `DATABASE_URL` implica utilizar la misma base real. La configuración del archivo local no se sube automáticamente al panel de Vercel.
 
 Mantén habilitada la exposición de variables de sistema de Vercel para que el runtime reciba `VERCEL=1` y utilice el manejo de conexiones previsto para las funciones. [Variables de sistema](https://vercel.com/docs/environment-variables/system-environment-variables).
+
+La lectura Gemini se genera automáticamente al abrir una ficha, no corre en la ingesta ni en los listados. Solo recibe campos públicos de la ficha e ítems: LICING no descarga ni procesa las bases, que se abren desde el enlace oficial. El nivel gratuito puede usar los datos enviados para mejorar productos de Google; se conserva únicamente el resumen breve. Si se habilita la clave, aplica la migración Core antes del despliegue.
 
 ## 5. Desplegar
 
@@ -184,15 +190,14 @@ Cada 5 minutos son 288 ejecuciones diarias. Cada una consulta el listado de acti
 
 La misma llamada ejecuta en paralelo un lote de Compra Ágil de hasta 20 detalles, con su propio bloqueo, lo preselecciona en LicitacionesFiltradas y lo informa en `compras_agiles`. El lote (16 s) y la preselección (hasta 15 s) corren a la vez y también quedan sujetos al plazo del turno; la preselección confirma su avance cada 20 compras.
 
-Se recomienda separar las tres tareas en cronjobs propios. Así cada una tiene sus 30 segundos y su propia función, y no compiten entre sí. Configura `COMPRAS_AGILES_AUTOMATICAS=false` y `DOCUMENTOS_AUTOMATICOS=false` en Vercel, y crea en cron-job.org tres cronjobs con POST, la misma cabecera y minutos escalonados en **Personalizado**:
+Se recomienda separar ambas tareas en cronjobs propios. Así cada una tiene sus 30 segundos y su propia función, y no compiten entre sí. Configura `COMPRAS_AGILES_AUTOMATICAS=false` en Vercel, y crea en cron-job.org dos cronjobs con POST, la misma cabecera y minutos escalonados en **Personalizado**:
 
 | Cronjob | URL | Minutos |
 |---|---|---|
 | Licitaciones | `https://TU-DOMINIO/api/cron/ingesta?limite=1` | 0, 5, 10, … |
 | Compra Ágil | `https://TU-DOMINIO/api/cron/compras-agiles?limite=20` | 2, 7, 12, … |
-| Documentos | `https://TU-DOMINIO/api/cron/documentos` | 4, 9, 14, … |
 
-El de documentos solo trabaja con `MP_DESCARGA_PORTAL_HABILITADA=true`. Se desactiva con `COMPRAS_AGILES_AUTOMATICAS=false`. Para programarlo aparte, crea otro cronjob con la URL `https://TU-DOMINIO/api/cron/compras-agiles` y la misma cabecera; si ambos coinciden, uno responde `omitida: true`. Aplica la migración de Compra Ágil antes de desplegar esta versión. Detalles en [DATOS_NORMALIZADOS.md](DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
+La ruta documental ya no se programa: devuelve HTTP 410 porque esta versión no intenta descargar anexos. Para Compra Ágil usa el cronjob independiente con la misma cabecera; si ambos cronjobs coinciden, uno responde `omitida: true`. Aplica las migraciones Core antes de desplegar esta versión. Detalles en [DATOS_NORMALIZADOS.md](DATOS_NORMALIZADOS.md#ingesta-de-compra-ágil).
 
 ## Papel de Docker
 

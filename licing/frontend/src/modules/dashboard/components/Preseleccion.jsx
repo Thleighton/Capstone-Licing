@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { apiJson } from "../../../core/api/client";
 import Icon from "../../../core/ui/Icon";
 import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
@@ -59,7 +59,6 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   const [errorCarga, setErrorCarga] = useState("");
   const [cargando, setCargando] = useState(true); const [ocupado, setOcupado] = useState("");
   const [seleccion, setSeleccion] = useState(null); const [detalle, setDetalle] = useState(null);
-  const [motivo, setMotivo] = useState(""); const [categoria, setCategoria] = useState("otro");
   const [errorRevision, setErrorRevision] = useState("");
   const [resumen, setResumen] = useState("");
   const secuencia = useRef(0);
@@ -84,7 +83,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   const actualizar = () => setVersion(v => v + 1);
   async function abrir(fila) {
     const turno = ++secuencia.current;
-    setSeleccion(fila); setDetalle(null); setMotivo(""); setCategoria("otro"); setErrorRevision("");
+    setSeleccion(fila); setDetalle(null); setErrorRevision("");
     const [resultado, ficha] = await Promise.allSettled([
       apiJson(`${URL}/${fila.id}`), apiJson(`/api/licitaciones/${fila.id}`),
     ]);
@@ -96,15 +95,6 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       errorFicha: ficha.status === "rejected" ? ficha.reason.message : "",
     });
   }
-  const actualizarDetalleDocumental = useCallback(async () => {
-    if (!seleccion) return;
-    try {
-      const resultado = await apiJson(`${URL}/${seleccion.id}`);
-      setDetalle(prev => prev && seleccion?.id === prev.licitacion?.id
-        ? { ...prev, ...resultado, licitacion: prev.licitacion, items: prev.items }
-        : prev);
-    } catch { /* Un fallo temporal de refresco no cambia la clasificación. */ }
-  }, [seleccion]);
   function cerrarResultado() { secuencia.current++; setSeleccion(null); setDetalle(null); setErrorRevision(""); }
   async function evaluar() {
     let huboCambios = false;
@@ -124,11 +114,10 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       setOcupado("");
     }
   }
-  async function revisar(accion) {
-    if (motivo.trim().length < 5) { setErrorRevision("Escribe un motivo de al menos 5 caracteres."); return; }
+  async function revisar(accion, motivoAnalisis) {
     setOcupado("Guardando revisión…"); setErrorRevision("");
     try {
-      await apiJson(`${URL}/${seleccion.id}/revision`, { method: "POST", body: { evaluacion_id: detalle.evaluacion.id, accion, categoria_motivo: categoria, motivo: motivo.trim() } });
+      await apiJson(`${URL}/${seleccion.id}/revision`, { method: "POST", body: { evaluacion_id: detalle.evaluacion.id, accion, categoria_motivo: "otro", motivo: motivoAnalisis || "Decisión registrada por el usuario." } });
       setSeleccion(null); setDetalle(null); actualizar();
       await onActualizada?.();
     } catch (e) { setErrorRevision(e.message); }
@@ -172,11 +161,6 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
         </div>
           {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
           <TituloLicitacion licitacion={fila} />
-          {!!fila.hallazgos_documentales?.length && <div className="pre-hallazgos-compactos">{fila.hallazgos_documentales.slice(0, 2).map((h, i) => <div key={i}>
-            {h.ubicacion?.fuera_zona_rm && <span className="pre-hallazgo-alerta">Fuera de zona objetivo RM · {h.ubicacion.region}</span>}
-            {h.participantes?.resumen && <span className="pre-hallazgo-dato">{h.participantes.resumen}</span>}
-            {h.ubicacion?.resumen && <span className="pre-hallazgo-dato">{h.ubicacion.resumen}</span>}
-          </div>)}</div>}
           {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
           {fila.estado_seleccion === "descartada" && <p className="pre-regla-aplicada"><strong>Regla automática{fila.pilar_decisivo ? ` · ${nombrePilar[fila.pilar_decisivo] || fila.pilar_decisivo}` : " aplicada"}:</strong> {fila.motivo_seleccion || "No se recibió el detalle de la regla."}</p>}
           {fila.estado_seleccion !== "descartada" && <p>{fila.motivo_seleccion}</p>}
@@ -187,9 +171,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
         <span>{offset + 1}–{Math.min(offset + 25, datos.total)}</span><button disabled={offset + 25 >= datos.total || !!ocupado} onClick={() => setOffset(v => v + 25)}>Siguiente</button></nav>}
     </>}
     <ResultadoPreseleccion fila={seleccion} detalle={detalle} pilares={pilares} etiquetas={etiquetas} tonos={tonos}
-      ocupado={ocupado} motivo={motivo} categoria={categoria} errorRevision={errorRevision}
-      onActualizarDocumentos={actualizarDetalleDocumental}
-      onCerrar={cerrarResultado} onReintentar={() => abrir(seleccion)} onMotivo={setMotivo} onCategoria={setCategoria} onRevisar={revisar} />
+      ocupado={ocupado} errorRevision={errorRevision}
+      onCerrar={cerrarResultado} onReintentar={() => abrir(seleccion)} onRevisar={revisar} />
     </div>
     {mostrarModalidades && <div className="pre-modalidad-panel" id={`${id}-panel-compras-agiles`} role="tabpanel"
       aria-labelledby={`${id}-tab-compras-agiles`} hidden={modalidad !== "compras-agiles"} tabIndex={0}>

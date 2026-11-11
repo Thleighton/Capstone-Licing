@@ -58,3 +58,4 @@ class CompraAgil(Base):
     # Última evaluación guardada en LicitacionesFiltradas: firma, versión del motor y propuesta.
     # NULL al cambiar el RAW: la compra vuelve a quedar pendiente de preselección.
     preseleccion: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    resumen_ia: Mapped[dict | None] = mapped_column(JSONB)

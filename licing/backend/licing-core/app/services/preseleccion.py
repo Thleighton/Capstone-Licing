@@ -14,7 +14,7 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-47"
+VERSION_MOTOR = "reglas-hotel-50"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -595,6 +595,38 @@ def _codigo_producto(item):
     return ""
 
 
+_ITEM_BIEN_FISICO = re.compile(
+    r"\b(?:"
+    r"(?:materiales?|insumos?|articulos?)\s+(?:de|para)\s+"
+    r"(?:ferreteria|construccion|oficina|papeleria|aseo|limpieza|"
+    r"seguridad|electricidad|laboratorio|computacion|informatica)|"
+    r"ferreteria|abarrotes|mercaderias|viveres|hardware|papeleria|"
+    r"pernos?|tuercas?|golillas?|tornillos?|electrodos?|pletinas?|"
+    r"angulos?\s+(?:laminados?\s+)?de?\s*acero|perfiles?\s+(?:de\s+)?acero|"
+    r"acero\s+(?:laminado|inoxidable)|maderas?|pino\s+(?:verde|cepillado)|"
+    r"terciado|policarbonato|zinc|plancha(?:s)?\s+(?:de\s+)?(?:zinc|madera|policarbonato)|"
+    r"pinturas?|protector(?:es)?\s+de\s+madera|arnes(?:es)?|cabo\s+de\s+vida|"
+    r"herramientas?|materiales?\s+de\s+construccion|cementos?|ladrillos?|"
+    r"cables?\s+electricos?|conductores?\s+electricos?|"
+    r"detergentes?|desinfectantes?|quimicos?\s+(?:de\s+)?(?:aseo|limpieza)|"
+    r"productos?\s+(?:de\s+)?(?:aseo|limpieza)|"
+    r"medicamentos?|farmacos|insumos?\s+(?:medicos?|clinicos?)|"
+    r"computadores?|notebooks?|impresoras?|monitores?|"
+    r"sabanas?|toallas?|frazadas?|uniformes?|vestuario|"
+    r"mobiliario|sillas?|escritorios?|mesas?\s+(?:de\s+)?(?:oficina|trabajo)|"
+    r"alimentos?\s+(?:no\s+)?perecibles?|productos?\s+alimenticios"
+    r")\b"
+)
+_ITEM_SERVICIO_CONTRATADO = re.compile(
+    r"\b(?:mantencion|mantenimiento|reparacion|"
+    r"instalacion|arriendo|arrendamiento|alquiler|contratacion\s+de\s+personal|"
+    r"personal\s+(?:auxiliar|de\s+servicio)|concesion(?:ario)?\s+de\s+casino|"
+    r"catering|banqueteria|coffee\s*break|cof+e+e?\s*break|"
+    r"salones?\s+para\s+eventos?|capacitaciones?|cursos?|talleres?|"
+    r"asesorias?|consultorias?|produccion\s+(?:de|para)\s+eventos?)\b"
+)
+
+
 def _objeto_ajeno_item(item):
     catalogo = cargar_catalogo()
     codigo = _codigo_producto(item)
@@ -603,9 +635,20 @@ def _objeto_ajeno_item(item):
     if codigo in catalogo.get("codigos_producto_ajenos", {}):
         return catalogo["codigos_producto_ajenos"][codigo]
     if re.fullmatch(r"\d{8}", codigo):
-        return catalogo.get("familias_producto_ajenas", {}).get(
+        ajeno_por_codigo = catalogo.get("familias_producto_ajenas", {}).get(
             codigo[:4]
         ) or catalogo.get("segmentos_producto_ajenos", {}).get(codigo[:2])
+        if ajeno_por_codigo:
+            return ajeno_por_codigo
+
+    # Algunos ítems de Mercado Público llegan con un código UNSPSC incorrecto
+    # o demasiado amplio. Recuperamos el objeto físico por su descripción, sin
+    # tomar palabras ambiguas como "alimentación", "sala" o "materiales" solas.
+    nombre = item.get("nombre_producto") or item.get("nombre") or ""
+    descripcion = item.get("descripcion") or ""
+    texto = normalizar_texto(f"{nombre} {descripcion}")
+    if _ITEM_BIEN_FISICO.search(texto) and not _ITEM_SERVICIO_CONTRATADO.search(texto):
+        return "bienes o materiales físicos ajenos a los servicios del hotel"
     return None
 
 
@@ -764,9 +807,15 @@ _ESPACIO_SALONES = re.compile(
     r"\bespacios?(?:\s+fisicos?)?\b|"
     r"\bcentros?\s+de\s+(?:eventos?|convenciones?)\b"
 )
+_ESPACIOS_PUBLICOS = re.compile(
+    r"\b(?:espacios?|areas?)\s+publicos?\b|\bplazas?\s+(?:publicas?|civicas?|de armas)\b|"
+    r"\b(?:parques?|calles?|"
+    r"veredas?|costaneras?|paseos?\s+peatonales?|bandejones?)\b"
+)
 _EVENTO_SALONES = re.compile(
     r"\b(?:eventos?|seminarios?|congresos?|jornadas?|reunion(?:es)?|"
-    r"conferencias?|capacitacion(?:es)?|taller(?:es)?|ceremonias?|"
+    r"conferencias?|conciertos?|recitales?|espectaculos?|presentaciones?|"
+    r"capacitacion(?:es)?|taller(?:es)?|ceremonias?|"
     r"convencion(?:es)?|encuentros?|actividades?|celebraciones?|"
     r"conmemoraciones?|festivales?|galas?|aniversarios?|ferias?)\b"
 )
@@ -978,6 +1027,7 @@ def _evaluar_perfil_hotel(datos, campos, base):
     comidas, comidas_directas = [], []
     clinicas, obligaciones, producciones = [], [], []
     alimentacion_pacientes = []
+    lugares_publicos = []
     hay_evento = False
     estados = {e.get("fuente"): e.get("estado") for e in base.get("evaluacion_items", [])}
 
@@ -987,6 +1037,17 @@ def _evaluar_perfil_hotel(datos, campos, base):
         normal, mapa = _texto_con_mapa(texto)
         producto_generico = fuente.endswith("nombre_producto")
         if not producto_generico:
+            for lugar_publico in _ESPACIOS_PUBLICOS.finditer(normal):
+                clausula_publica = _clausula_local(normal, lugar_publico.start())
+                if (
+                    _EVENTO_SALONES.search(clausula_publica)
+                    and not _mencion_negada(normal, lugar_publico.start())
+                ):
+                    lugares_publicos.append(_evidencia_perfil(
+                        fuente, texto, normal, mapa, lugar_publico,
+                        "evento_en_espacio_publico",
+                        "La actividad se realizará en un espacio público, no en un salón del hotel.",
+                    ))
             alimentacion_paciente = _ALIMENTACION_PACIENTES.search(normal)
             if alimentacion_paciente and not _mencion_negada(normal, alimentacion_paciente.start()):
                 alimentacion_pacientes.append(_evidencia_perfil(
@@ -1098,6 +1159,8 @@ def _evaluar_perfil_hotel(datos, campos, base):
                 motivo = "Se solicita recuperar, reparar o habilitar una sala; no contratar su arriendo para un evento."
             elif _NO_ESPACIO_EVENTO.search(clausula) or _USO_CLINICO.search(normal[m.end():m.end() + 200]):
                 motivo = "El espacio se solicita para un uso clínico o especializado, no para un evento en el hotel."
+            elif _ESPACIOS_PUBLICOS.search(clausula) and not _SALON_CONTRATADO.search(clausula):
+                motivo = "La actividad se realizará en un espacio público; no se solicita el arriendo de un salón del hotel."
             elif _BIENES_SALONES.search(clausula) and not _SALON_CONTRATADO.search(clausula):
                 motivo = "La referencia al salón es el destino de bienes, no la contratación de ese espacio."
             elif _sede_fijada_salones(clausula, hotel):
@@ -1208,6 +1271,14 @@ def _evaluar_perfil_hotel(datos, campos, base):
                 "de alimentación para eventos."
             )
             evidencias = evidencias_items[:30]
+    elif lugares_publicos and not validas:
+        resultado, codigo = "no_cumple", "evento_en_espacio_publico"
+        motivo = "La licitación contrata una actividad en espacios públicos y no solicita el arriendo de un salón del hotel."
+        evidencias = lugares_publicos
+    elif lugares_publicos and validas:
+        codigo = "espacio_publico_y_salon_por_confirmar"
+        motivo = "La ficha menciona una actividad en un espacio público y también un salón; confirmar si realmente se contratará el salón del hotel."
+        evidencias = lugares_publicos + validas
     elif validas:
         if fijas and not libres:
             resultado, codigo = "no_cumple", "sede_tercero"

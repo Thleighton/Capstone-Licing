@@ -125,5 +125,42 @@ try {
  await assert.rejects(()=>db.query("INSERT INTO public.revision_manual(evaluacion_id,accion,categoria_motivo,motivo,revisado_por) VALUES($1,'enviar_a_llm','otro','prueba',$2)",[nueva,user]),/check/);
  await rpc('sincronizar_fuente',{codigos:[],observado_en:new Date(Date.now()+60000).toISOString(),modalidad:'compra_agil'});
  assert.equal((await rpc('listar',{codigos:[despues.codigo_externo]})).total,0,'lf_eliminar funciona sin analisis_llm');
- console.log('OK: persistencia, revisión, caducidad, documentos solo en origen, Compra Ágil por modalidad y retiro del LLM.');
+ const lecturas=(await readdir(migrations)).find(x=>x.endsWith('_optimizar_lecturas_preseleccion.sql'));
+ // Un snapshot grande debe conservar filtros, paginación y detección de RAW obsoletos.
+ await db.exec(`INSERT INTO public.oportunidad(origen,codigo_externo,modalidad,origen_licitacion_id,nombre,fecha_cierre,datos_fuente,hash_fuente)
+  SELECT 'mercado_publico','TEST-'||n||'-LE26','licitacion',n,'Salón '||n,'2099-01-01'::timestamptz,
+   jsonb_build_object('raw_id',n),repeat('a',64) FROM generate_series(1,305) n`);
+ const codigos=Array.from({length:305},(_,i)=>`TEST-${i+1}-LE26`);
+ const fuentes=Object.fromEntries(codigos.map((c,i)=>[c,i+1]));
+ const snapshot={codigos,fuentes};
+ const paginaAnterior=await rpc('listar',{...snapshot,limite:25,offset:25});
+ await db.exec(await readFile(new URL(lecturas,migrations),'utf8'));
+ assert.deepEqual(await rpc('listar',{...snapshot,limite:25,offset:25}),paginaAnterior,
+  'la optimización conserva exactamente filas, motivos y total del listado anterior');
+ const normales=await rpc('listar',{...snapshot,limite:500});
+ assert.equal(normales.total,305);
+ assert.equal(normales.filas.length,100,'el listado normal conserva el máximo de cien');
+ assert.deepEqual((await rpc('listar',{...snapshot,limite:25,offset:25})).filas.map(f=>f.id),
+  Array.from({length:25},(_,i)=>i+26),'paginación estable');
+ const firmas=await rpc('listar',{...snapshot,solo_firmas:true});
+ assert.equal(firmas.filas.length,305,'el plan recibe todas las firmas en una consulta');
+ assert.equal(firmas.total,305);
+ assert.deepEqual(Object.keys(firmas.filas[0]).sort(),['codigo_externo','estado_seleccion','hash_fuente','id']);
+ assert.equal((await rpc('listar',{...snapshot,q:'Salón 305'})).filas[0].id,305);
+ assert.equal((await rpc('listar',{...snapshot,clasificacion:'preseleccionada'})).total,0);
+ const vigente={...lote,datos:{...lote.datos,id:1,codigo_externo:codigos[0],raw_id:1}};
+ await rpc('guardar',{...payload,lote:[vigente]});
+ const activa=await rpc('listar',{...snapshot,clasificacion:'preseleccionada'});
+ assert.equal(activa.total,1);
+ const desactualizada=await rpc('listar',{codigos:[codigos[0],codigos[0]],fuentes:{[codigos[0]]:999}});
+ assert.equal(desactualizada.total,1,'códigos repetidos no duplican resultados');
+ assert.equal(desactualizada.filas[0].estado_seleccion,'pendiente_evaluacion');
+ assert.equal((await rpc('listar',{codigos:[codigos[0]]})).filas[0].estado_seleccion,'preseleccionada','sin snapshot conserva la evaluación');
+ assert.deepEqual(await rpc('listar',{codigos:[],solo_firmas:true}),{filas:[],total:0});
+ await db.exec('SET ROLE service_role');
+ assert.equal((await rpc('listar',{...snapshot,solo_firmas:true})).filas.length,305);
+ await db.exec('RESET ROLE; SET ROLE authenticated');
+ await assert.rejects(()=>rpc('listar',snapshot),/permission denied/,'no abre acceso a clientes');
+ await db.exec('RESET ROLE');
+ console.log('OK: persistencia, revisión, caducidad, documentos en origen, Compra Ágil, retiro del LLM y lecturas masivas.');
 } catch (e) { console.error(e.message, e.where, e.internalQuery); process.exitCode=1; } finally { await db.close(); }

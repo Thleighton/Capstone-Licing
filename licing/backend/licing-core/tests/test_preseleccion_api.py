@@ -169,6 +169,33 @@ def test_plan_incluye_fuentes_aun_no_evaluadas(client, fila, monkeypatch):
     assert r.json()['ids'] == [fila.id]
 
 
+def test_plan_grande_consulta_firmas_una_vez_y_detecta_fuentes_pendientes(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    from fastapi import Response
+    from app.api import preseleccion
+    entradas = {str(i): {'id': i, 'codigo_externo': f'PLAN-{i}-LE26', 'raw_id': i + 1000}
+        for i in range(1, 206)}
+    monkeypatch.setattr(preseleccion, 'cargar_entradas', lambda db, ids: entradas)
+    db = SimpleNamespace(scalars=lambda consulta: [int(i) for i in entradas])
+    firmas = [{'id': d['id'], 'hash_fuente': firma_fuente(d),
+        'estado_seleccion': 'revision_manual'} for d in list(entradas.values())[:-1]]
+    firmas[101]['hash_fuente'] = 'firma-anterior'
+    firmas[150]['estado_seleccion'] = 'pendiente_evaluacion'
+    operar = AsyncMock(return_value={'filas': firmas, 'total': len(firmas)})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    respuesta = Response()
+    resultado = asyncio.run(preseleccion.plan(respuesta, db))
+    assert resultado['ids'] == [102, 151, 205]
+    assert resultado['total'] == 205
+    assert respuesta.headers['cache-control'] == 'no-store'
+    operar.assert_awaited_once()
+    operacion, datos = operar.call_args.args
+    assert operacion == 'listar' and datos['solo_firmas'] is True
+    assert set(datos['codigos']) == {d['codigo_externo'] for d in entradas.values()}
+    assert datos['fuentes'] == {d['codigo_externo']: d['raw_id'] for d in entradas.values()}
+
+
 def test_lote_grande_carga_raw_en_una_consulta_y_guarda_en_partes_acotadas(client, fila, monkeypatch, integration_db):
     import asyncio
     from sqlalchemy import event

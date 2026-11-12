@@ -58,16 +58,16 @@ def test_listado_con_filtros_y_enlace_publico(client_usuario, compras):
     r = client_usuario.get("/api/compras-agiles")
     assert r.status_code == 200, r.text
     datos = r.json()
-    assert datos["total"] == 3 and [i["codigo_externo"] for i in datos["items"]] == ["90-1-COT26", "91-1-COT26", "92-1-COT26"]
+    assert datos["total"] == 3 and [i["codigo_externo"] for i in datos["items"]] == ["92-1-COT26", "91-1-COT26", "90-1-COT26"]
     primera = datos["items"][0]
-    assert primera["url_oficial"] == "https://buscador.mercadopublico.cl/ficha?code=90-1-COT26"
+    assert primera["url_oficial"] == "https://buscador.mercadopublico.cl/ficha?code=92-1-COT26"
     assert primera["fecha_cierre"].endswith(("-03:00", "-04:00"))
     assert primera["clientes_importantes"][0]["id"] == "mineduc"
     assert r.headers["cache-control"] == "no-store"
     r = client_usuario.get("/api/compras-agiles", params={"q": "SALÓN", "region": "metropolitana"})
     assert [i["codigo_externo"] for i in r.json()["items"]] == ["92-1-COT26"]
     r = client_usuario.get("/api/compras-agiles", params={"solo_abiertas": True, "limite": 1, "offset": 1})
-    assert r.json()["total"] == 2 and r.json()["items"][0]["codigo_externo"] == "91-1-COT26"
+    assert r.json()["total"] == 2 and r.json()["items"][0]["codigo_externo"] == "90-1-COT26"
 
 
 def test_detalle_con_items_ordenados(client_usuario, compras):

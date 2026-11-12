@@ -49,7 +49,15 @@ try {
  await db.exec("UPDATE public.oportunidad SET fecha_cierre=now()-interval '1 second' WHERE codigo_externo='400-4-LE26'");
  const antes = (await db.query("SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado WHERE codigo_externo<>'400-4-LE26' ORDER BY id")).rows;
  assert.ok(await count('evaluacion_filtro') > 4);
- await db.exec(await readFile(new URL(ultima, root), 'utf8'));
+ const totalAntes = await count('evaluacion_filtro');
+ const mayorIdAntes = (await db.query('SELECT max(id)::int AS id FROM public.evaluacion_filtro')).rows[0].id;
+ const migracion = await readFile(new URL(ultima, root), 'utf8');
+ await assert.rejects(() => db.exec(migracion.replace('DO $verify$\nBEGIN',
+  "DO $verify$\nBEGIN\n RAISE EXCEPTION 'Fallo de comprobación simulado';")), /Fallo de comprobación simulado/);
+ await db.exec('ROLLBACK');
+ assert.equal(await count('evaluacion_filtro'), totalAntes, 'un fallo posterior a la reconstrucción revierte todas las filas');
+ assert.deepEqual((await db.query("SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado WHERE codigo_externo<>'400-4-LE26' ORDER BY id")).rows, antes);
+ await db.exec(migracion);
  const despues = (await db.query('SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado ORDER BY id')).rows;
  assert.deepEqual(despues, antes, 'la limpieza conserva las clasificaciones y la última decisión vigente');
  assert.equal(await count('oportunidad'), 3);
@@ -92,6 +100,7 @@ try {
  await assert.rejects(() => rpc('guardar', {actor: user, perfil, lote: [actual]}), /permission denied/);
  await assert.rejects(() => db.query('UPDATE public.evaluacion_filtro SET motivo=motivo'), /permission denied/);
  await db.exec('RESET ROLE');
+ assert.ok(await guardar(make('500-5-LE26', 9)) > mayorIdAntes, 'las secuencias continúan después de reconstruir las tablas');
  console.log('OK: una evaluación por oportunidad, referencias compactas, decisión actual, actualización idempotente, caducidad y permisos.');
 } catch (error) {
  console.error(error.message, error.detail || '', error.where || '');

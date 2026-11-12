@@ -6,7 +6,7 @@ SET LOCAL statement_timeout = '60s';
 SELECT pg_advisory_xact_lock(710263,1);
 SELECT public.lf_purgar_vencidas();
 LOCK TABLE public.oportunidad,public.evaluacion_filtro,public.resultado_criterio,
- public.revision_manual IN SHARE ROW EXCLUSIVE MODE;
+ public.revision_manual IN ACCESS EXCLUSIVE MODE;
 
 CREATE TEMP TABLE _lf_vista_antes ON COMMIT DROP AS
  SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente
@@ -18,21 +18,29 @@ CREATE TEMP TABLE _lf_conservar ON COMMIT DROP AS
  LEFT JOIN LATERAL (SELECT e.id FROM public.evaluacion_filtro e
   WHERE e.oportunidad_id=o.id ORDER BY e.evaluado_en DESC,e.id DESC LIMIT 1) ultima ON true;
 
-DELETE FROM public.revision_manual r
- WHERE NOT EXISTS(SELECT 1 FROM pg_temp._lf_vista_antes v WHERE v.revision_id=r.id);
-DELETE FROM public.revision_manual r USING public.revision_manual posterior
- WHERE r.evaluacion_id=posterior.evaluacion_id
- AND (r.revisado_en,r.id)<(posterior.revisado_en,posterior.id);
-DELETE FROM public.resultado_criterio c
- WHERE NOT EXISTS(SELECT 1 FROM pg_temp._lf_conservar k WHERE k.evaluacion_id=c.evaluacion_id);
-DELETE FROM public.evaluacion_filtro e
- WHERE NOT EXISTS(SELECT 1 FROM pg_temp._lf_conservar k WHERE k.evaluacion_id=e.id);
-
-UPDATE public.evaluacion_filtro e SET entrada_evaluada=jsonb_build_object(
+-- Solo las filas que se conservarán pasan a tablas temporales de esta transacción.
+-- Reconstruir las tres tablas evita comprobar cientos de miles de bajas fila a fila
+-- y devuelve su espacio físico al confirmar, sin un VACUUM FULL posterior.
+CREATE TEMP TABLE _lf_evaluaciones ON COMMIT DROP AS
+ SELECT e.* FROM public.evaluacion_filtro e
+ JOIN pg_temp._lf_conservar k ON k.evaluacion_id=e.id;
+UPDATE pg_temp._lf_evaluaciones e SET entrada_evaluada=jsonb_build_object(
  'codigo_externo',o.codigo_externo,
  'raw_id',coalesce(e.entrada_evaluada->'raw_id',e.entrada_evaluada#>'{datos,raw_id}',o.datos_fuente->'raw_id'),
  'documentos',coalesce(e.entrada_evaluada->'documentos','[]'::jsonb))
  FROM public.oportunidad o WHERE o.id=e.oportunidad_id;
+CREATE TEMP TABLE _lf_criterios ON COMMIT DROP AS
+ SELECT c.* FROM public.resultado_criterio c
+ JOIN pg_temp._lf_evaluaciones e ON e.id=c.evaluacion_id;
+CREATE TEMP TABLE _lf_decisiones ON COMMIT DROP AS
+ SELECT r.* FROM public.revision_manual r
+ JOIN pg_temp._lf_vista_antes v ON v.revision_id=r.id;
+
+TRUNCATE public.revision_manual,public.resultado_criterio,public.evaluacion_filtro
+ CONTINUE IDENTITY RESTRICT;
+INSERT INTO public.evaluacion_filtro OVERRIDING SYSTEM VALUE SELECT * FROM pg_temp._lf_evaluaciones;
+INSERT INTO public.resultado_criterio OVERRIDING SYSTEM VALUE SELECT * FROM pg_temp._lf_criterios;
+INSERT INTO public.revision_manual OVERRIDING SYSTEM VALUE SELECT * FROM pg_temp._lf_decisiones;
 DELETE FROM public.perfil_filtro_version p WHERE NOT p.activa
  AND NOT EXISTS(SELECT 1 FROM public.evaluacion_filtro e WHERE e.perfil_version_id=p.id);
 
@@ -132,6 +140,11 @@ COMMENT ON TABLE public.revision_manual IS 'Última decisión del usuario sobre 
 
 DO $verify$
 BEGIN
+ IF (SELECT count(*) FROM public.evaluacion_filtro)<>(SELECT count(*) FROM pg_temp._lf_evaluaciones)
+ OR (SELECT count(*) FROM public.resultado_criterio)<>(SELECT count(*) FROM pg_temp._lf_criterios)
+ OR (SELECT count(*) FROM public.revision_manual)<>(SELECT count(*) FROM pg_temp._lf_decisiones) THEN
+  RAISE EXCEPTION 'La reconstrucción no conservó todos los registros vigentes';
+ END IF;
  IF EXISTS(SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM pg_temp._lf_vista_antes
   EXCEPT SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado) THEN
   RAISE EXCEPTION 'La limpieza alteró una clasificación o decisión vigente';

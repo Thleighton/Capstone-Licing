@@ -1,5 +1,4 @@
 import asyncio
-from fastapi import BackgroundTasks
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -91,7 +90,7 @@ def test_enriquece_revision_guardada_sin_reevaluar_o_escribir(monkeypatch):
     monkeypatch.setattr(preseleccion, "cargar_entradas", lambda db, ids: {"1": datos})
     operar = AsyncMock(return_value={"filas": [fila], "total": 1})
     monkeypatch.setattr(filtradas, "operar", operar)
-    r = asyncio.run(preseleccion.listar(Response(), BackgroundTasks(), clasificacion="revision_manual", q="", limite=25, offset=0, codigo="", region="", db=db))
+    r = asyncio.run(preseleccion.listar(Response(), clasificacion="revision_manual", q="", limite=25, offset=0, codigo="", region="", db=db))
     assert r["filas"][0]["clientes_importantes"][0]["id"] == "junji"
     assert r["filas"][0]["estado_seleccion"] == "revision_manual"
     assert r["filas"][0]["nombre_organismo"] == "JUNJI"

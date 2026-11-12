@@ -176,7 +176,6 @@ def test_lote_en_curso_responde_409(admin, monkeypatch):
 @pytest.fixture
 def cron_falso(client, monkeypatch):
     monkeypatch.setattr(settings, "cron_secret", SECRETO)
-    monkeypatch.setattr(settings, "documentos_automaticos", False)
     # La preselección posterior al lote tiene sus propias pruebas.
     monkeypatch.setattr(settings, "filtradas_url", "")
     app.dependency_overrides[get_db] = lambda: Mock()
@@ -213,7 +212,6 @@ def test_cron_de_ingesta_suma_compras_agiles_en_paralelo(client, cron_falso, mon
 
 def test_falla_de_compras_agiles_no_interrumpe_licitaciones(monkeypatch):
     async def escenario():
-        monkeypatch.setattr(settings, "documentos_automaticos", False)
         monkeypatch.setattr(settings, "compras_agiles_automaticas", True)
         monkeypatch.setattr(cron, "SessionLocal", lambda: Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock()))
         monkeypatch.setattr(cron, "correr_lote", AsyncMock(return_value={"procesados": 1}))

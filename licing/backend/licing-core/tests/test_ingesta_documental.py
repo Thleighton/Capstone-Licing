@@ -156,21 +156,16 @@ def test_sin_documentos_utilizables_registra_el_motivo(monkeypatch):
     servicio.portal.listar_anexos.assert_not_awaited()
 
 
-def test_cron_espera_documentos_en_paralelo_sin_frenar_ingesta(monkeypatch):
-    async def escenario():
-        iniciada = asyncio.Event()
-        async def documentos(_limite=1):
-            iniciada.set()
-            return {'pendiente': True, 'motivo': 'sin_descarga_publica'}
-        async def ingesta(**_):
-            await iniciada.wait()
-            return {'procesados': 1}
-        monkeypatch.setattr(settings, 'documentos_automaticos', True)
-        monkeypatch.setattr(cron, 'procesar_cola_analisis_documental', documentos)
-        monkeypatch.setattr(cron, 'correr_lote', ingesta)
-        return await asyncio.wait_for(cron.ingesta_programada(limite=1, db=Mock()), 1)
-    r = asyncio.run(escenario())
-    assert r['procesados'] == 1 and r['analisis_documental']['pendiente']
+def test_cron_documental_retirado_no_procesa_anexos(client, monkeypatch):
+    monkeypatch.setattr(settings, 'cron_secret', 'secreto-documental-prueba')
+    procesar = AsyncMock()
+    monkeypatch.setattr(servicio, 'procesar_documentos', procesar)
+    respuesta = client.post('/api/cron/documentos', headers={
+        'Authorization': 'Bearer secreto-documental-prueba',
+    })
+    assert respuesta.status_code == 410
+    assert 'no descarga ni analiza bases' in respuesta.text
+    procesar.assert_not_awaited()
 
 
 def test_documentos_privados(client):

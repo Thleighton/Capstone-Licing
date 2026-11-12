@@ -156,7 +156,8 @@ def test_plan_omite_resultados_vigentes_y_detecta_reglas_nuevas(client, fila, mo
     assert r.status_code == 200, r.text
     assert r.json()['ids'] == []
     assert r.headers['cache-control'] == 'no-store'
-    monkeypatch.setattr(preseleccion, 'VERSION_MOTOR', 'reglas-nuevas')
+    from app.services import preseleccion as motor
+    monkeypatch.setattr(motor, 'VERSION_MOTOR', 'reglas-nuevas')
     r = client.get('/api/preseleccion/plan')
     assert r.json()['ids'] == [fila.id]
     assert all(c.args[0] == 'listar' for c in operar.call_args_list)

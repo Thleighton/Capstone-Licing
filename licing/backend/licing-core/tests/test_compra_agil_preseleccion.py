@@ -303,7 +303,11 @@ def test_plan_solo_lee_y_no_guarda_evaluaciones(usuario, db, monkeypatch):
     monkeypatch.setattr(filtradas, "operar", operar)
     respuesta = usuario.get("/api/compras-agiles/preseleccion/plan")
     assert respuesta.status_code == 200, respuesta.text
-    assert respuesta.json() == {"ids": [compra.id], "pendientes": 1}
+    datos = respuesta.json()
+    assert datos["ids"] == [compra.id] and datos["pendientes"] == 1
+    from app.services.compra_agil_preseleccion import version_preseleccion
+    assert datos["version_filtro"] == version_preseleccion()
+    assert datos["nombre_perfil"]
     assert respuesta.headers["cache-control"] == "no-store"
     operar.assert_not_called()
     db.expire_all()

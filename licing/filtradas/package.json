@@ -1,1 +1,1 @@
-{"name":"licing-filtradas-tests","private":true,"type":"module","scripts":{"test":"node tests/integracion.mjs"},"devDependencies":{"@electric-sql/pglite":"0.5.11"}}
+{"name":"licing-filtradas-tests","private":true,"type":"module","scripts":{"test":"node tests/integracion.mjs && node tests/evaluacion-unica.mjs"},"devDependencies":{"@electric-sql/pglite":"0.5.11"}}

@@ -62,12 +62,16 @@ def test_purga_completa_preserva_vigentes_y_es_idempotente(integration_db):
     codigo_vigente = "VIGENTE-" + uuid4().hex[:8]
     r_vigente = raw(db, codigo_vigente, detalle(codigo_vigente))
     vigente_id = procesar_detalle_guardado(db, r_vigente)["licitacion_id"]
-    db.get(Licitacion, lic_id).fecha_cierre = datetime(2000, 1, 1)
+    vencida = db.get(Licitacion, lic_id)
+    vencida.resumen_ia = {"firma": "vencida", "resumen": {"sintesis": "Análisis que debe eliminarse"}}
+    vencida.fecha_cierre = datetime(2000, 1, 1)
+    db.get(Licitacion, vigente_id).resumen_ia = {"firma": "vigente", "resumen": {"sintesis": "Análisis actual"}}
     db.flush()
     assert eliminar_no_disponibles(db) == {"licitaciones": 1, "items": 1, "raw": 2}
     db.expire_all()
     assert db.get(Licitacion, lic_id) is None
     assert db.get(Licitacion, vigente_id) is not None
+    assert db.get(Licitacion, vigente_id).resumen_ia["firma"] == "vigente"
     assert eliminar_no_disponibles(db) == {"licitaciones": 0, "items": 0, "raw": 0}
 
 

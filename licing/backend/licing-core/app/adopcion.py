@@ -60,6 +60,8 @@ def verificar_esquema(connection, *, legado=False, sin_compra_agil=False) -> lis
             return False
         if sin_compra_agil and tabla is not None and tabla.name == "ejecucion_ingesta" and nombre == "fuente":
             return False
+        if sin_compra_agil and tabla is not None and tabla.name == "licitacion" and nombre == "resumen_ia":
+            return False  # El caché se incorporó después de Compra Ágil.
         if legado and tabla is not None:
             if tipo == "column" and nombre in COLUMNAS_NUEVAS.get(tabla.name, set()):
                 return False
@@ -124,7 +126,7 @@ def registrar_esquema(connection):
         return
     columnas_licitacion = {c["name"] for c in inspector.get_columns("licitacion", schema="public")} if inspector.has_table("licitacion", schema="public") else set()
     legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (
-        not versiones and not COLUMNAS_NUEVAS["licitacion"] <= columnas_licitacion
+        not versiones and not (COLUMNAS_NUEVAS["licitacion"] - {"resumen_ia"}) <= columnas_licitacion
     )
     # Una base manual sin las tablas de Compra Ágil se registra en la revisión anterior y se migra.
     sin_compra_agil = not versiones and not legado and not TABLAS_COMPRA_AGIL <= set(inspector.get_table_names(schema="public"))

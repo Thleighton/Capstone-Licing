@@ -59,7 +59,10 @@ try {
  const refs = (await db.query('SELECT entrada_evaluada FROM public.evaluacion_filtro WHERE id=$1', [eid])).rows[0].entrada_evaluada;
  assert.deepEqual(refs, {codigo_externo: '100-1-LE26', raw_id: 3, documentos: []});
  const stamp = (await db.query('SELECT evaluado_en,clave_ejecucion FROM public.evaluacion_filtro WHERE id=$1', [eid])).rows[0];
+ const itemsAntes = (await db.query('SELECT xmin::text FROM public.oportunidad_item ORDER BY id')).rows;
  assert.equal(await guardar(actual), eid);
+ assert.deepEqual((await db.query('SELECT xmin::text FROM public.oportunidad_item ORDER BY id')).rows, itemsAntes,
+  'una ficha idéntica tampoco reescribe sus ítems');
  assert.deepEqual((await db.query('SELECT evaluado_en,clave_ejecucion FROM public.evaluacion_filtro WHERE id=$1', [eid])).rows[0], stamp,
   'repetir la misma evaluación no vuelve a escribir ni crea otra ejecución');
  await revisar('confirmar_relevante');

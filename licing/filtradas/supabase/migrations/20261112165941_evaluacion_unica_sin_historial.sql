@@ -87,6 +87,20 @@ BEGIN
  fin:=strpos(f,E' ELSIF operacion=''sincronizar_fuente'' THEN');
  IF inicio=0 OR fin<=inicio THEN RAISE EXCEPTION 'Guardado de preselección inesperado'; END IF;
  f:=substr(f,1,inicio-1)||guardar||substr(f,fin);
+ -- Evita también nuevas versiones físicas de ítems que no cambiaron.
+ IF strpos(f,'adjudicacion_fuente=excluded.adjudicacion_fuente,vigente=true;')=0 THEN
+  RAISE EXCEPTION 'Guardado de ítems inesperado';
+ END IF;
+ f:=replace(f,'adjudicacion_fuente=excluded.adjudicacion_fuente,vigente=true;',
+  $items$adjudicacion_fuente=excluded.adjudicacion_fuente,vigente=true
+  WHERE (public.oportunidad_item.correlativo,public.oportunidad_item.codigo_producto,
+   public.oportunidad_item.nombre_producto,public.oportunidad_item.descripcion,
+   public.oportunidad_item.cantidad,public.oportunidad_item.unidad_medida,
+   public.oportunidad_item.codigo_categoria,public.oportunidad_item.categoria,
+   public.oportunidad_item.estado_fuente,public.oportunidad_item.adjudicacion_fuente,public.oportunidad_item.vigente)
+  IS DISTINCT FROM (excluded.correlativo,excluded.codigo_producto,excluded.nombre_producto,excluded.descripcion,
+   excluded.cantidad,excluded.unidad_medida,excluded.codigo_categoria,excluded.categoria,
+   excluded.estado_fuente,excluded.adjudicacion_fuente,true);$items$);
  IF strpos(f,E'   datos->>''categoria_motivo'',datos->>''motivo'',(datos->>''usuario'')::uuid);')=0 THEN
   RAISE EXCEPTION 'Guardado de decisión inesperado';
  END IF;

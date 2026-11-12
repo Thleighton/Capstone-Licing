@@ -19,7 +19,7 @@ CREATE TEMP TABLE _lf_conservar ON COMMIT DROP AS
   WHERE e.oportunidad_id=o.id ORDER BY e.evaluado_en DESC,e.id DESC LIMIT 1) ultima ON true;
 
 DELETE FROM public.revision_manual r
- WHERE NOT EXISTS(SELECT 1 FROM pg_temp._lf_conservar k WHERE k.evaluacion_id=r.evaluacion_id);
+ WHERE NOT EXISTS(SELECT 1 FROM pg_temp._lf_vista_antes v WHERE v.revision_id=r.id);
 DELETE FROM public.revision_manual r USING public.revision_manual posterior
  WHERE r.evaluacion_id=posterior.evaluacion_id
  AND (r.revisado_en,r.id)<(posterior.revisado_en,posterior.id);

@@ -10,7 +10,7 @@ try {
  const files = (await readdir(root)).sort();
  const ultima = files.find(f => f.endsWith('_evaluacion_unica_sin_historial.sql'));
  for (const file of files) {
-  if (file === ultima || file.includes('_almacenamiento_y_caducidad.sql')) continue;
+  if (file >= ultima || file.includes('_almacenamiento_y_caducidad.sql')) continue;
   await db.exec(await readFile(new URL(file, root), 'utf8'));
  }
  const rpc = async (op, datos) => (await db.query('SELECT public.lf_operar($1,$2) AS r', [op, datos])).rows[0].r;
@@ -58,6 +58,7 @@ try {
  assert.equal(await count('evaluacion_filtro'), totalAntes, 'un fallo posterior a la reconstrucción revierte todas las filas');
  assert.deepEqual((await db.query("SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado WHERE codigo_externo<>'400-4-LE26' ORDER BY id")).rows, antes);
  await db.exec(migracion);
+ for (const file of files.filter(f => f > ultima)) await db.exec(await readFile(new URL(file, root), 'utf8'));
  const despues = (await db.query('SELECT id,evaluacion_id,revision_id,estado_seleccion,hash_fuente FROM public.vw_oportunidades_estado ORDER BY id')).rows;
  assert.deepEqual(despues, antes, 'la limpieza conserva las clasificaciones y la última decisión vigente');
  assert.equal(await count('oportunidad'), 3);
@@ -79,17 +80,21 @@ try {
  await db.exec('SET ROLE service_role');
  const cambiada = make('100-1-LE26', 8, 'e');
  cambiada.resultado.clasificacion = 'revision_manual';
- assert.equal(await guardar(cambiada), eid, 'cambiar la fuente actualiza la misma evaluación');
+ const eidActual = await guardar(cambiada);
+ assert.notEqual(eidActual, eid, 'una evaluación modificada invalida el identificador de una pantalla anterior');
  assert.equal(await count('evaluacion_filtro'), 3);
  assert.equal(await count('resultado_criterio'), 9);
  assert.equal(await count('revision_manual'), 0, 'la decisión de una fuente anterior deja de estar vigente');
  await assert.rejects(() => revisar('descartar'), /evaluación cambió/, 'rechaza una revisión con el hash anterior');
+ await assert.rejects(() => rpc('revision', {codigo: '100-1-LE26', raw_id: 8, hash_fuente: 'e'.repeat(64),
+  evaluacion_id: eid, usuario: user, accion: 'descartar', categoria_motivo: 'otro', motivo: 'Pantalla anterior'}),
+ /evaluación cambió/, 'aunque el servidor aporte la fuente actual, un id de pantalla anterior no puede decidir sobre otra versión');
  const vieja = {...cambiada, resultado: {...cambiada.resultado, version_motor: 'reglas-hotel-50'}};
  assert.deepEqual((await rpc('guardar', {actor: user, perfil, lote: [vieja]})).evaluadas, [], 'conserva la protección de motores antiguos');
  assert.equal((await rpc('listar', {codigos: ['100-1-LE26']})).filas[0].estado_seleccion, 'revision_manual');
  await db.exec('RESET ROLE');
  await assert.rejects(() => db.query(`INSERT INTO public.evaluacion_filtro(oportunidad_id,perfil_version_id,version_datos,version_motor,cobertura,clasificacion,motivo,entrada_evaluada,metadatos)
-  SELECT oportunidad_id,perfil_version_id,version_datos,version_motor,cobertura,clasificacion,motivo,entrada_evaluada,metadatos FROM public.evaluacion_filtro WHERE id=$1`, [eid]), /unique|duplicate/,
+  SELECT oportunidad_id,perfil_version_id,version_datos,version_motor,cobertura,clasificacion,motivo,entrada_evaluada,metadatos FROM public.evaluacion_filtro WHERE id=$1`, [eidActual]), /unique|duplicate/,
   'la restricción impide duplicar una evaluación por escritura directa');
  await db.exec("UPDATE public.oportunidad SET fecha_cierre=now()-interval '1 second' WHERE codigo_externo='300-3-COT26'");
  assert.equal((await db.query('SELECT public.lf_purgar_vencidas() AS n')).rows[0].n, 1);

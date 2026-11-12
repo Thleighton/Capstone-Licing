@@ -8,6 +8,7 @@ import { abrirCompraAgil } from "../store";
 import { ETIQUETAS, TONOS } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import EstadoPlazo from "../../../core/ui/EstadoPlazo";
+import PaginacionResultados from "../../../core/ui/PaginacionResultados";
 import VistaTodas from "./VistaTodas";
 
 const LIMITE = 25;
@@ -16,31 +17,35 @@ const LIMITE = 25;
 export default function VistaPreseleccion({ q = "", version, actualizando = false }) {
   const [clasificacion, setClasificacion] = useState("preseleccionada");
   const [offset, setOffset] = useState(0);
-  const [desde, setDesde] = useState(""), [hasta, setHasta] = useState("");
+  const [busquedaId, setBusquedaId] = useState("");
+  const [ordenCierre, setOrdenCierre] = useState("proximo"), [ordenPublicacion, setOrdenPublicacion] = useState("ninguna");
   const [datos, setDatos] = useState({ filas: [], total: 0, pendientes: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, clasificacion, desde, hasta]);
+  useEffect(() => { setOffset(0); }, [q, busquedaId, clasificacion, ordenCierre, ordenPublicacion]);
   useEffect(() => {
     const control = new AbortController();
     if (!clasificacion) return () => control.abort();
     setCargando(true);
-    const parametros = new URLSearchParams({ clasificacion, q, limite: String(LIMITE), offset: String(offset) });
-    if (desde) parametros.set("cierre_desde", desde);
-    if (hasta) parametros.set("cierre_hasta", hasta);
+    const parametros = new URLSearchParams({ clasificacion, q, codigo: busquedaId.trim(), orden_cierre: ordenCierre, orden_publicacion: ordenPublicacion, limite: String(LIMITE), offset: String(offset) });
     apiJson("/api/compras-agiles/preseleccion?" + parametros, { signal: control.signal })
       .then(r => { setDatos(r); setError(""); })
       .catch(e => { if (!control.signal.aborted) setError(e.message); })
       .finally(() => { if (!control.signal.aborted) setCargando(false); });
     return () => control.abort();
-  }, [clasificacion, q, offset, version, desde, hasta]);
-  const vacio = clasificacion === "preseleccionada"
-    ? "No hay posibles oportunidades para estas fechas. Puedes consultar Revisión necesaria o Todas."
+  }, [clasificacion, q, busquedaId, ordenCierre, ordenPublicacion, offset, version]);
+  const vacio = busquedaId.trim()
+    ? `No hay Compras Ágiles para el ID «${busquedaId.trim()}» en esta clasificación.`
+    : clasificacion === "preseleccionada"
+    ? "No hay posibles oportunidades en esta carga. Puedes consultar Revisión necesaria o Todas."
     : "No hay Compras Ágiles en esta clasificación.";
   return <>
-    {clasificacion ? <PreseleccionControles clasificacion={clasificacion} desde={desde} hasta={hasta} total={datos.total}
-      onClasificacion={setClasificacion} onDesde={setDesde} onHasta={setHasta} /> : null}
-    {!clasificacion ? <VistaTodas q={q} version={version} desde={desde} hasta={hasta}
-      onDesde={setDesde} onHasta={setHasta} onClasificacion={setClasificacion} /> : <>
+    {clasificacion ? <PreseleccionControles clasificacion={clasificacion} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
+      onOrdenCierre={setOrdenCierre} onOrdenPublicacion={setOrdenPublicacion} total={datos.total}
+      onClasificacion={setClasificacion} entidad="Compras Ágiles" mostrarBusquedaId busquedaId={busquedaId}
+      onBusquedaId={setBusquedaId} textoBusquedaId="Ej. 1195-539-COT26" ariaBusquedaId="Buscar por ID de Compra Ágil" /> : null}
+    {!clasificacion ? <VistaTodas q={q} codigo={busquedaId} onCodigo={setBusquedaId} version={version} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
+      onOrdenCierre={setOrdenCierre} onOrdenPublicacion={setOrdenPublicacion}
+      onClasificacion={setClasificacion} /> : <>
     {datos.pendientes > 0 && <p className="sub" role="status">{actualizando ? "Actualizando evaluaciones…" : `${datos.pendientes} Compras Ágiles pendientes de evaluar.`}</p>}
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: 190 }} /><col style={{ width: 135 }} /><col style={{ width: 150 }} /></colgroup>
@@ -61,11 +66,8 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
     </table>
     {error ? <div className="msg err" role="alert">No se pudo consultar la preselección. {error}</div>
       : cargando || actualizando ? <p className="msg" role="status">{actualizando ? "Actualizando la preselección de Compras Ágiles…" : "Cargando preselección…"}</p> : !datos.filas.length ? <p className="msg">{vacio}</p> : null}</div>
-    {datos.total > LIMITE && <div className="card-head ca-paginas">
-      <span>{offset + 1}–{Math.min(offset + LIMITE, datos.total)} de {datos.total}</span>
-      <div><button disabled={cargando || offset === 0} onClick={() => setOffset(o => o - LIMITE)}>Anterior</button>{" "}
-        <button disabled={cargando || offset + LIMITE >= datos.total} onClick={() => setOffset(o => o + LIMITE)}>Siguiente</button></div>
-    </div>}
+    {datos.total > 0 && <PaginacionResultados total={datos.total} offset={offset}
+      limite={LIMITE} cargando={cargando || actualizando} onCambiar={setOffset} etiqueta="Páginas de Compras Ágiles" />}
     </>}
   </>;
 }

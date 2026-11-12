@@ -1,5 +1,4 @@
 import { useLicitaciones } from "../../core/data/LicitacionesProvider";
-import AsistenteIA from "./components/AsistenteIA";
 import ProximasACerrar from "./components/ProximasACerrar";
 import Preseleccion from "./components/Preseleccion";
 import Icon from "../../core/ui/Icon";
@@ -27,9 +26,6 @@ export default function DashboardPage({ soloDashboard = false }) {
           <ProximasACerrar rows={dashboard?.proximas || []} disponibles={dashboard?.proximas_disponibles !== false} estado={estado} abrirFicha={abrirFicha} mostrarFicha={!soloDashboard} /></section>
       </div>
 
-      <div className={"dashboard-workspace" + (soloDashboard ? " dashboard-only" : "")}>
-        {!soloDashboard && <AsistenteIA />}
-      </div>
     </div>
   );
 }

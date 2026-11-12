@@ -26,7 +26,6 @@
 [data-theme="dark"] .oportunidad-controles input { color-scheme: dark; }
 .oportunidades-page .preseleccion { margin-top: 0; padding: 24px; }
 .oportunidades-page .pre-heading-title { display: flex; align-items: center; gap: 12px; }
-.oportunidades-page .pre-heading-icon { display: none; }
 .oportunidades-page .pre-lista { display: grid; gap: 12px; }
 .oportunidades-page .pre-fila { padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--chart-muted); border-radius: 12px; }
 .oportunidades-page .pre-fila[data-estado="preseleccionada"] { border-left-color: var(--ok); }

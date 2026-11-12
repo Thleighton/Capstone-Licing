@@ -3,15 +3,23 @@ import hashlib
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Literal
 
 import httpx
 from fastapi import HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
 PROMPT_VERSION = "resumen-hotel-san-francisco-salones-v3"
 MAX_TEXTO = 14000
+
+
+class SolicitudResumenIA(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    clasificacion: Literal["preseleccionada", "revision_manual"]
+    hash_fuente: str = Field(min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
 
 ESQUEMA = {
     "type": "OBJECT",
@@ -32,6 +40,18 @@ def huella(fuente: dict) -> str:
     contenido = json.dumps({"v": PROMPT_VERSION, "fuente": fuente}, sort_keys=True,
                            ensure_ascii=False, default=str)
     return hashlib.sha256(contenido.encode("utf-8")).hexdigest()
+
+
+async def obtener_o_generar(db, fila, fuente: dict) -> dict:
+    """Usa el mismo hash, caché y guardado para licitaciones y Compras Ágiles."""
+    firma = huella(fuente)
+    cache = fila.resumen_ia or {}
+    if cache.get("firma") == firma and cache.get("resumen"):
+        return {"resumen": cache["resumen"], "cache": True}
+    lectura = await generar(fuente)
+    fila.resumen_ia = {"firma": firma, "resumen": lectura}
+    db.commit()
+    return {"resumen": lectura, "cache": False}
 
 
 def compactar_texto(fuente: dict) -> str:

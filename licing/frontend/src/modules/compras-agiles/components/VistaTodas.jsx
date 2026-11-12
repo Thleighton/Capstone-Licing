@@ -8,32 +8,33 @@ import { abrirCompraAgil } from "../store";
 import { ETIQUETAS, TONOS } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import EstadoPlazo from "../../../core/ui/EstadoPlazo";
+import PaginacionResultados from "../../../core/ui/PaginacionResultados";
 
 const LIMITE = 50;
 
 // Todas las Compras Ágiles guardadas por Core, con búsqueda y filtros en el servidor.
-export default function VistaTodas({ q, version, desde, hasta, onDesde, onHasta, onClasificacion }) {
+export default function VistaTodas({ q, codigo, onCodigo, version, ordenCierre, ordenPublicacion, onOrdenCierre, onOrdenPublicacion, onClasificacion }) {
   const [offset, setOffset] = useState(0);
   const [datos, setDatos] = useState({ items: [], total: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, desde, hasta]);
+  useEffect(() => { setOffset(0); }, [q, codigo, ordenCierre, ordenPublicacion]);
   useEffect(() => {
     const control = new AbortController();
     setCargando(true);
     const espera = setTimeout(() => {
-      const parametros = new URLSearchParams({ q, limite: String(LIMITE), offset: String(offset) });
-      if (desde) parametros.set("cierre_desde", desde);
-      if (hasta) parametros.set("cierre_hasta", hasta);
+      const parametros = new URLSearchParams({ q, codigo: (codigo || "").trim(), orden_cierre: ordenCierre, orden_publicacion: ordenPublicacion, limite: String(LIMITE), offset: String(offset) });
       apiJson("/api/compras-agiles?" + parametros, { signal: control.signal })
         .then(r => { setDatos(r); setError(""); })
         .catch(e => { if (!control.signal.aborted) setError(e.message); })
         .finally(() => { if (!control.signal.aborted) setCargando(false); });
     }, 250);
     return () => { clearTimeout(espera); control.abort(); };
-  }, [q, desde, hasta, offset, version]);
+  }, [q, codigo, ordenCierre, ordenPublicacion, offset, version]);
   return <>
-    <PreseleccionControles clasificacion="" desde={desde} hasta={hasta} total={datos.total}
-      onClasificacion={onClasificacion} onDesde={onDesde} onHasta={onHasta} />
+    <PreseleccionControles clasificacion="" ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
+      onOrdenCierre={onOrdenCierre} onOrdenPublicacion={onOrdenPublicacion} total={datos.total}
+      onClasificacion={onClasificacion} entidad="Compras Ágiles" mostrarBusquedaId busquedaId={codigo || ""}
+      onBusquedaId={onCodigo} textoBusquedaId="Ej. 1195-539-COT26" ariaBusquedaId="Buscar por ID de Compra Ágil" />
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: "22%" }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Institución</th><th>Presupuesto</th><th>Preselección</th></tr></thead>
@@ -54,10 +55,7 @@ export default function VistaTodas({ q, version, desde, hasta, onDesde, onHasta,
     </table>
     {error ? <div className="msg err" role="alert">No se pudieron cargar las Compras Ágiles. {error}</div>
       : cargando ? <p className="msg">Cargando Compras Ágiles…</p> : !datos.items.length ? <p className="msg">Sin Compras Ágiles para esta búsqueda.</p> : null}</div>
-    {datos.total > LIMITE && <div className="card-head ca-paginas">
-      <span>{offset + 1}–{Math.min(offset + LIMITE, datos.total)} de {datos.total}</span>
-      <div><button disabled={cargando || offset === 0} onClick={() => setOffset(o => o - LIMITE)}>Anterior</button>{" "}
-        <button disabled={cargando || offset + LIMITE >= datos.total} onClick={() => setOffset(o => o + LIMITE)}>Siguiente</button></div>
-    </div>}
+    {datos.total > 0 && <PaginacionResultados total={datos.total} offset={offset}
+      limite={LIMITE} cargando={cargando} onCambiar={setOffset} etiqueta="Páginas de Compras Ágiles" />}
   </>;
 }

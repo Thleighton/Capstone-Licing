@@ -285,6 +285,18 @@ def cargar_catalogo() -> dict:
     return json.loads(CATALOGO.read_text(encoding="utf-8"))
 
 
+def version_filtro() -> str:
+    """Identificador único compartido por licitaciones y Compras Ágiles."""
+    catalogo = cargar_catalogo()
+    return f"{VERSION_MOTOR}|{catalogo['version']}"
+
+
+def componentes_version_filtro() -> dict:
+    """Componentes estables usados por las firmas históricas de la fuente."""
+    catalogo = cargar_catalogo()
+    return {"version_motor": VERSION_MOTOR, "catalogo_version": catalogo["version"]}
+
+
 @cache
 def _patrones():
     c = cargar_catalogo()

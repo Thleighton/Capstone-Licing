@@ -67,7 +67,6 @@
 .dashboard-page .stat b { color: var(--tile-color); font-size: 38px; font-weight: 750; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
 .dashboard-page .stat small { max-width: none; min-height: 18px; padding: 0; font-size: 12px; color: var(--muted); }
 
-.dashboard-page .dashboard-workspace { gap: 20px; grid-template-columns: minmax(0, 1fr); }
 .dashboard-page .card { border-radius: 17px; }
 .dashboard-page .dashboard-panel { padding: 22px; border-top: 3px solid var(--panel-accent); }
 .dashboard-page .panel-blue { --panel-accent: var(--blue); }
@@ -113,21 +112,6 @@
 .dashboard-page .act .head span { font-size: 11px; }
 .dashboard-page .act p { line-height: 1.7; font-size: 12px; margin-top: 5px; }
 
-.dashboard-page .ai-home { background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--violet); padding: 20px; }
-.dashboard-page .ai-home .hero-kicker { color: var(--violet); font-size: 10px; }
-.dashboard-page .ai-home .section-help { font-size: 12px; line-height: 1.7; margin-bottom: 16px; }
-.dashboard-page .ai-home .recommendation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-height: 300px; padding: 2px 5px 4px 1px; }
-.dashboard-page .ai-home .ai-toolbar label { width: auto; }
-.dashboard-page .recommendation { background: var(--surface-soft); padding: 15px; border-radius: 12px; }
-.dashboard-page .recommendation h3 { font-size: 14px; line-height: 1.5; }
-.dashboard-page .recommendation .sub, .dashboard-page .recommendation ul { font-size: 12px; line-height: 1.7; }
-.dashboard-page .ai-home .priority { font-size: 12px; }
-.dashboard-page .ai-home .recommendation .badge { font-size: 11.5px; }
-.dashboard-page .ai-home .ai-toolbar select { font-size: 12px; padding: 9px; }
-.dashboard-page .recommendation .button { font-size: 12px; line-height: 1.6; }
-.dashboard-page .ai-home > .sub { line-height: 1.7; margin: 15px 0 10px; }
-.dashboard-page .ai-home > a { font-size: 12px; font-weight: 650; }
-
 .dashboard-page .preseleccion { margin: 0; padding: 24px; border-top: 4px solid var(--accent); box-shadow: 0 7px 24px #173c5c0d; }
 .dashboard-page .preseleccion > .pre-heading { margin: -24px -24px 0; padding: 22px 24px; background: var(--accent-bg); border-radius: 13px 13px 0 0; border-bottom: 1px solid var(--line); gap: 18px; }
 .dashboard-page .pre-heading-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
@@ -158,12 +142,6 @@
 .dashboard-page .msg.err { background: var(--err-bg); border: 1px solid var(--err); border-left-width: 4px; border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .dashboard-page .empty, .dashboard-page .pre-vacio { padding: 16px; background: var(--surface-soft); border-radius: 10px; line-height: 1.7; }
 
-@media (max-width: 1360px) {
-  .dashboard-page .dashboard-workspace { grid-template-columns: minmax(0, 1fr); }
-  .dashboard-page .dashboard-main .side-col { grid-template-columns: 1fr 1fr; }
-  .dashboard-page .ai-home .recommendation-grid { grid-template-columns: 1fr 1fr; }
-  .dashboard-page .ai-home .ai-toolbar label { width: auto; }
-}
 @media (max-width: 1100px) {
   .dashboard-page .dashboard-priorities { grid-template-columns: minmax(0, 1fr); }
   .dashboard-page .chart-grid { grid-template-columns: minmax(0, 1fr); }
@@ -183,7 +161,6 @@
   .app[data-module="dashboard"] .topbar button { padding: 7px 10px; }
   .app[data-module="dashboard"] .topbar .user-chip { gap: 7px; }
   .app[data-module="dashboard"] .topbar .user-avatar { width: 28px; height: 28px; }
-  .dashboard-page .dashboard-main .side-col, .dashboard-page .ai-home .recommendation-grid { grid-template-columns: minmax(0, 1fr); }
   .dashboard-page .dashboard-panel, .dashboard-page .preseleccion { padding: 18px; }
   .dashboard-page .preseleccion > .pre-heading { margin: -18px -18px 0; padding: 18px; }
   .dashboard-page .preseleccion > .section-title h2 { font-size: 20px; }
@@ -196,7 +173,6 @@
   .dashboard-page .pre-fila { padding: 14px; }
   .dashboard-page .preview-row { grid-template-columns: minmax(0, 1fr); }
   .dashboard-page .preview-row button { justify-self: start; }
-  .dashboard-page .ai-home .ai-toolbar label { width: 100%; }
 }
 @media (max-width: 520px) {
   .dashboard-page .stats { grid-template-columns: minmax(0, 1fr); gap: 12px; }

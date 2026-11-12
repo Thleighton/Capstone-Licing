@@ -15,7 +15,9 @@ export default function LicitacionesPage() {
       {dashboard && <Indicadores resumen={dashboard} />}
       <DescargarOportunidades />
     </div>
-    <Preseleccion mostrarInformacion onActualizada={cargarResumen} q={q} />
+    <div className="dashboard-page">
+      <Preseleccion mostrarInformacion onActualizada={cargarResumen} q={q} />
+    </div>
   </div>;
 }
 

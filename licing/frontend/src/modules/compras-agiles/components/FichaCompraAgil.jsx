@@ -37,10 +37,42 @@ export default function FichaCompraAgil() {
   const evaluacion = actual?.preseleccion?.evaluacion;
   const vigente = evaluacion && actual.preseleccion.fuente_actualizada;
   const estado = vigente ? evaluacion.clasificacion : "pendiente_evaluacion";
+  async function actualizarEvaluacion() {
+    await apiJson("/api/compras-agiles/preseleccion/evaluar", {
+      method: "POST", body: { ids: [id] },
+    });
+    setIntento(n => n + 1);
+  }
+  async function prepararResumenIA() {
+    // La ingesta puede refrescar una Compra Ágil mientras su ficha sigue abierta.
+    // Recargamos solo su ficha y evaluación, nunca la lista completa.
+    const cargarActual = () => Promise.all([
+      apiJson(`/api/compras-agiles/${id}`),
+      apiJson(`/api/compras-agiles/${id}/preseleccion`),
+    ]);
+    let [ficha, preseleccion] = await cargarActual();
+    if (!preseleccion.fuente_actualizada) {
+      await apiJson("/api/compras-agiles/preseleccion/evaluar", {
+        method: "POST", body: { ids: [id] },
+      });
+      [ficha, preseleccion] = await cargarActual();
+    }
+    if (!preseleccion.fuente_actualizada || !preseleccion.hash_fuente
+        || !["preseleccionada", "revision_manual"].includes(preseleccion.evaluacion?.clasificacion)) {
+      throw new Error("No se pudo confirmar la evaluación actual de esta Compra Ágil. Inténtalo nuevamente.");
+    }
+    setDetalle(actual => actual?.id === id ? {
+      ...actual, compra: ficha.compra_agil, items: ficha.items || [], preseleccion,
+    } : actual);
+    return {
+      hashFuente: preseleccion.hash_fuente,
+      clasificacion: preseleccion.evaluacion?.clasificacion,
+    };
+  }
   return <Dialog open={Boolean(id)} onClose={cerrarCompraAgil} className="pre-result-dialog" aria-labelledby={tituloId}>
     {id && <>
       <header className="pre-result-header">
-        <div><p className="pre-result-kicker">Compra Ágil · {c?.codigo_externo || "Cargando…"}</p>
+        <div><p className="pre-result-kicker">Resultado de preselección · {c?.codigo_externo || "Cargando…"}</p>
           {c ? <TituloLicitacion as="h2" id={tituloId} licitacion={c} /> : <h2 id={tituloId}>Detalle de la Compra Ágil</h2>}</div>
         <button type="button" onClick={cerrarCompraAgil} autoFocus>Cerrar</button>
       </header>
@@ -60,7 +92,9 @@ export default function FichaCompraAgil() {
             monto={c.monto_disponible == null ? "" : dinero(c.monto_disponible, c.moneda)}
             lugar={c.direccion_entrega} entidadTipo="compra_agil" entidadId={id}
             resumenIA={c.resumen_ia?.resumen} clasificacionActual={vigente ? estado : null}
-            fuenteActualizada={Boolean(vigente)} />
+            hashFuente={actual.preseleccion?.hash_fuente}
+            fuenteActualizada={Boolean(vigente)} onActualizarEvaluacion={actualizarEvaluacion}
+            prepararResumenIA={prepararResumenIA} />
           <section className="pre-result-section" aria-label="Información general">
             <h3>Información de la Compra Ágil</h3>
             <dl className="pre-result-facts">
@@ -94,7 +128,7 @@ export default function FichaCompraAgil() {
           </section>}
           {c.descripcion && <section className="pre-result-section"><h3>Descripción de la solicitud</h3><p className="pre-result-description">{c.descripcion}</p></section>}
           {!!actual.items.length && <details className="pre-result-section pre-result-items" open={actual.items.length <= 3}>
-            <summary>Productos solicitados ({actual.items.length})</summary>
+            <summary>Ítems solicitados ({actual.items.length})</summary>
             {actual.items.map(item => <article key={item.id}>
               <h4>{item.nombre_producto || `Producto ${item.posicion_fuente}`}</h4>
               {item.descripcion && item.descripcion !== c.descripcion && <p>{item.descripcion}</p>}

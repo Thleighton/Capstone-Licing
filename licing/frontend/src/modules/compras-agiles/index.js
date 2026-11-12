@@ -1,5 +1,5 @@
 // Módulo Compras Ágiles — Épicas E1 (obtención) y E2 (filtrado).
-import ComprasAgilesPage, { ObtenerComprasAgiles } from "./ComprasAgilesPage";
+import ComprasAgilesPage from "./ComprasAgilesPage";
 import FichaCompraAgil from "./components/FichaCompraAgil";
 
 export default {
@@ -11,6 +11,5 @@ export default {
   responsable: "Diego Sandoval",
   epicas: ["E1", "E2"],
   Page: ComprasAgilesPage,
-  HeaderExtra: ObtenerComprasAgiles,
   Global: FichaCompraAgil, // ficha que se abre desde la página o el dashboard con abrirCompraAgil(id)
 };

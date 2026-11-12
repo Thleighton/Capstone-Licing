@@ -1,5 +1,5 @@
 // Textos y cálculos compartidos por la página, la ficha y el apartado del dashboard.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiJson } from "../../core/api/client";
 
 export const ETIQUETAS = {
@@ -16,46 +16,78 @@ export const PILARES = [
 ];
 
 let actualizacionEnCurso;
-async function renovarEvaluaciones() {
+async function renovarEvaluaciones(onAvance, pendientesIniciales = 0) {
   let resultado;
+  let evaluadas = 0;
+  let pendientes = pendientesIniciales;
   do {
-    resultado = await apiJson("/api/compras-agiles/preseleccion/evaluar", { method: "POST" });
-  } while (resultado.pendientes > 0 && resultado.evaluadas?.length > 0 && !resultado.sin_guardar);
+    const control = new AbortController();
+    const limite = setTimeout(() => control.abort(), 60000);
+    try {
+      resultado = await apiJson("/api/compras-agiles/preseleccion/evaluar", {
+        method: "POST", signal: control.signal,
+      });
+    } catch (error) {
+      if (control.signal.aborted) {
+        throw new Error("La evaluación tardó más de un minuto en responder. Puedes reintentar; lo ya guardado se conserva.");
+      }
+      throw error;
+    } finally { clearTimeout(limite); }
+    const lote = resultado.evaluadas?.length || 0;
+    evaluadas += lote;
+    pendientes = resultado.pendientes ?? pendientes;
+    onAvance({ evaluadas, pendientes });
+    if (pendientes > 0 && (!lote || resultado.sin_guardar)) {
+      throw new Error("El lote no pudo guardar todas las evaluaciones. Lo ya procesado se conserva; vuelve a intentarlo.");
+    }
+  } while (pendientes > 0);
   return resultado;
 }
-function actualizarEvaluaciones() {
+function actualizarEvaluaciones(onAvance, pendientesIniciales) {
   if (!actualizacionEnCurso) {
-    actualizacionEnCurso = renovarEvaluaciones()
+    actualizacionEnCurso = renovarEvaluaciones(onAvance, pendientesIniciales)
       .finally(() => { actualizacionEnCurso = null; });
   }
   return actualizacionEnCurso;
 }
 
-/** Comprueba al entrar; guarda las evaluaciones desde Actualizar preselección. */
+/** Evalúa automáticamente solo registros nuevos o con reglas/datos desactualizados. */
 export function useActualizarComprasAgiles(version) {
   const [revision, setRevision] = useState(0);
   const [actualizando, setActualizando] = useState(false);
   const [pendientes, setPendientes] = useState(0);
+  const [avance, setAvance] = useState({ evaluadas: 0, pendientes: 0 });
+  const [filtroActivo, setFiltroActivo] = useState(null);
   const [errorActualizacion, setError] = useState("");
   const [solicitud, setSolicitud] = useState(0);
-  useEffect(() => {
-    const control = new AbortController();
-    apiJson("/api/compras-agiles/preseleccion/plan", { signal: control.signal })
-      .then(r => setPendientes(r.pendientes))
-      .catch(e => { if (!control.signal.aborted) setError(e.message); });
-    return () => control.abort();
-  }, [version, solicitud]);
-  async function actualizar() {
+  const actualizar = useCallback(async (pendientesIniciales = 0) => {
     setActualizando(true); setError("");
+    setAvance({ evaluadas: 0, pendientes: pendientesIniciales });
     try {
-      await actualizarEvaluaciones();
+      await actualizarEvaluaciones(progreso => {
+        setAvance(progreso);
+        setRevision(r => r + 1);
+      }, pendientesIniciales);
     } catch (e) { setError(e.message); }
     finally {
       setRevision(r => r + 1); setSolicitud(s => s + 1);
       setActualizando(false);
     }
-  }
-  return { versionDatos: `${version || ""}:${revision}`, actualizando, errorActualizacion, pendientes, actualizar };
+  }, []);
+  useEffect(() => {
+    const control = new AbortController();
+    apiJson("/api/compras-agiles/preseleccion/plan", { signal: control.signal })
+      .then(r => {
+        setPendientes(r.pendientes);
+        setFiltroActivo({ version: r.version_filtro, perfil: r.nombre_perfil });
+      })
+      .catch(e => { if (!control.signal.aborted) setError(e.message); });
+    return () => control.abort();
+  }, [version, solicitud, actualizar]);
+  return {
+    versionDatos: `${version || ""}:${revision}`, actualizando, errorActualizacion,
+    pendientes, avance, filtroActivo, actualizar: () => actualizar(pendientes),
+  };
 }
 
 // Las Compras Ágiles cierran en pocos días: el aviso se muestra desde 24 horas antes.

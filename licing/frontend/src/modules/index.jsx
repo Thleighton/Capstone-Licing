@@ -13,7 +13,6 @@ import clientes from "./clientes";
 import analisis from "./analisis";
 import seguimiento from "./seguimiento";
 import reportes from "./reportes";
-import configuracion from "./configuracion";
 import { moduloHabilitado } from "./habilitados";
 
 // Mostrar el menú completo de módulos habilitados.
@@ -29,7 +28,6 @@ export const TODOS_LOS_MODULOS = [
   analisis,
   seguimiento,
   reportes,
-  configuracion,
 ];
 
 // Las pantallas, las rutas y el menú incluyen solo los módulos habilitados.

@@ -33,7 +33,9 @@ export async function apiFetch(url, { headers = {}, body, method = "GET", reinte
   if (!res.ok) {
     let detail = "";
     try { detail = detalleRespuesta(await res.clone().json()); } catch (_) {}
-    throw new Error(mensajeHttp(res.status, detail));
+    const error = new Error(mensajeHttp(res.status, detail));
+    error.status = res.status;
+    throw error;
   }
   return res;
 }

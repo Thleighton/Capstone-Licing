@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi import HTTPException
 
-from app.api import ingesta
+from app.api import compras_agiles as api_compras, ingesta
 from app.auth import usuario_actual
 from app.config import settings
 from app.main import app
@@ -327,6 +327,35 @@ def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):
     monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=filtradas.FiltradasNoDisponible("x")))
     assert usuario.get(f"/api/compras-agiles/{compra.id}/preseleccion").json()["fuente_actualizada"] is False
     assert usuario.get("/api/compras-agiles/preseleccion").status_code == 503
+
+
+def test_resumen_ia_acepta_la_misma_huella_que_entrega_el_detalle(usuario, db, monkeypatch):
+    compra = guardar(db, "9030-1-COT26")
+    monkeypatch.setattr(filtradas, "operar", filtradas_falsa())
+    asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    db.expire_all()
+    compra = db.get(CompraAgil, compra.id)
+    firma = compra.preseleccion["firma"]
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(return_value={
+        "hash_fuente": firma, "criterios": [], "evaluacion": {"clasificacion": "preseleccionada"},
+    }))
+    monkeypatch.setattr(api_compras, "obtener_o_generar", AsyncMock(return_value={"resumen": {"sintesis": "ok"}}))
+
+    detalle = usuario.get(f"/api/compras-agiles/{compra.id}/preseleccion")
+    assert detalle.status_code == 200 and detalle.json()["fuente_actualizada"] is True
+    assert detalle.json()["hash_fuente"] == preseleccion.firma(
+        preseleccion.cargar_entradas(db, [compra.id])[str(compra.id)]
+    )
+    respuesta = usuario.post(f"/api/compras-agiles/{compra.id}/resumen-ia", json={
+        "clasificacion": "preseleccionada", "hash_fuente": detalle.json()["hash_fuente"],
+    })
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["resumen"]["sintesis"] == "ok"
+
+    obsoleta = usuario.post(f"/api/compras-agiles/{compra.id}/resumen-ia", json={
+        "clasificacion": "preseleccionada", "hash_fuente": "0" * 64,
+    })
+    assert obsoleta.status_code == 409
 
 
 def test_un_corte_conserva_los_grupos_ya_guardados(db, monkeypatch):

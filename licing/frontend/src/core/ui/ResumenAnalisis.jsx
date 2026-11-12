@@ -35,11 +35,15 @@ export default function ResumenAnalisis({
   hashFuente,
   fuenteActualizada = false,
   onDecidir,
+  onActualizarEvaluacion,
+  prepararResumenIA,
 }) {
   const [ia, setIa] = useState(resumenIA || null);
   const [cargandoIa, setCargandoIa] = useState(false);
   const [errorIa, setErrorIa] = useState("");
-  useEffect(() => { setIa(resumenIA || null); setErrorIa(""); }, [resumenIA, entidadId]);
+  const [estadoErrorIa, setEstadoErrorIa] = useState(null);
+  useEffect(() => { setIa(resumenIA || null); setErrorIa(""); setEstadoErrorIa(null); },
+    [resumenIA, entidadId, fuenteActualizada, clasificacionActual]);
   const datos = [
     ["Cierre de ofertas", fechaCierre && fechaCierre !== "-" ? fechaCierre : ""],
     ["Monto informado", monto && monto !== "-" ? monto : "No informado"],
@@ -61,25 +65,51 @@ export default function ResumenAnalisis({
     }));
 
   const claseIA = clasificacionActual || estado;
+  const nombreProceso = entidadTipo === "compra_agil" ? "Compra Ágil" : "licitación";
   const claseAptaIA = ["preseleccionada", "posible_oportunidad", "revision_manual", "revision_necesaria"].includes(claseIA);
   const puedeUsarIa = entidadTipo && entidadId && claseAptaIA && fuenteActualizada;
   const cargarLecturaIa = useCallback(async () => {
     setCargandoIa(true);
     setErrorIa("");
+    setEstadoErrorIa(null);
     try {
+      let fuenteActual = entidadTipo === "compra_agil" && prepararResumenIA
+        ? await prepararResumenIA()
+        : { hashFuente, clasificacion: claseIA };
       const path = entidadTipo === "compra_agil"
         ? `/api/compras-agiles/${entidadId}/resumen-ia`
         : `/api/preseleccion/${entidadId}/resumen-ia`;
-      const body = entidadTipo === "compra_agil" ? {} : { clasificacion: claseIA, hash_fuente: hashFuente };
-      const respuesta = await apiJson(path, { method: "POST", body });
+      const solicitarResumen = (hash, clasificacion) => apiJson(path, {
+        method: "POST", body: { clasificacion, hash_fuente: hash },
+      });
+      let respuesta;
+      try {
+        respuesta = await solicitarResumen(fuenteActual.hashFuente, fuenteActual.clasificacion || claseIA);
+      } catch (error) {
+        // Si la ingesta coincidió con el clic, refresca y reintenta una sola vez.
+        // La preparación de Compra Ágil consulta/reevalúa únicamente este ID.
+        if (entidadTipo !== "compra_agil" || !prepararResumenIA || error.status !== 409) throw error;
+        fuenteActual = await prepararResumenIA();
+        respuesta = await solicitarResumen(fuenteActual.hashFuente, fuenteActual.clasificacion || claseIA);
+      }
       setIa(respuesta.resumen);
     } catch (error) {
       setErrorIa(error.message || "No se pudo generar la lectura asistida.");
+      setEstadoErrorIa(error.status || null);
     } finally {
       setCargandoIa(false);
     }
-  }, [entidadTipo, entidadId, claseIA, hashFuente]);
-  const estadoLectura = ia ? "Análisis creado con IA" : errorIa ? "Gemini temporalmente no disponible" : puedeUsarIa ? "Análisis con IA opcional" : "Hallazgos del filtro";
+  }, [entidadTipo, entidadId, claseIA, hashFuente, prepararResumenIA]);
+  async function actualizarEvaluacion() {
+    if (!onActualizarEvaluacion) return cargarLecturaIa();
+    setCargandoIa(true);
+    setErrorIa(""); setEstadoErrorIa(null);
+    try { await onActualizarEvaluacion(); }
+    catch (error) { setErrorIa(error.message || "No se pudo actualizar la evaluación."); setEstadoErrorIa(error.status || null); }
+    finally { setCargandoIa(false); }
+  }
+  const conflictoEvaluacion = estadoErrorIa === 409;
+  const estadoLectura = ia ? "Análisis creado con IA" : conflictoEvaluacion ? "Evaluación desactualizada" : errorIa ? "Gemini temporalmente no disponible" : puedeUsarIa ? "Análisis con IA opcional" : "Hallazgos del filtro";
 
   return <section className={`resumen-analisis resumen-analisis--${estado || "pendiente"}`} aria-label="Lectura de LICING">
     <header className="resumen-analisis__header">
@@ -87,7 +117,7 @@ export default function ResumenAnalisis({
       <div><p>LECTURA DE LICING</p><h3>Resumen para decidir</h3></div>
       <small>{estadoLectura}</small>
     </header>
-    {ia?.sintesis && <div className="resumen-analisis__sintesis"><span>Qué solicita esta licitación</span><p>{ia.sintesis}</p></div>}
+    {ia?.sintesis && <div className="resumen-analisis__sintesis"><span>Qué solicita {entidadTipo === "compra_agil" ? "esta Compra Ágil" : "esta licitación"}</span><p>{ia.sintesis}</p></div>}
     {datos.length > 0 && <dl className="resumen-analisis__datos">{datos.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
     {motivo && !(errorIa && hallazgos.length) && <div className="resumen-analisis__conclusion"><strong>Por qué LICING la clasificó así</strong><p>{clean(motivo, 300)}</p></div>}
     {!!ia?.alertas?.length && <div className="resumen-analisis__ia-alertas"><strong>Alertas de la ficha</strong><ul>{ia.alertas.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
@@ -120,20 +150,28 @@ export default function ResumenAnalisis({
         </div>
       </> : errorIa ? <>
         <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
-        <div className="resumen-analisis__ia-mensaje"><strong>Gemini no está disponible temporalmente</strong>
-          <p>Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems.</p>
+        <div className="resumen-analisis__ia-mensaje"><strong>{conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
+          <p>{conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta Compra Ágil y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
         </div>
-        <button type="button" onClick={cargarLecturaIa} disabled={cargandoIa}>Intentar de nuevo</button>
+        <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={cargandoIa}>
+          {conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
+        </button>
       </> : <div className="resumen-analisis__ia-inicio">
         <div className="resumen-analisis__ia-mensaje"><strong>{ia ? "Análisis guardado" : "¿Quieres un análisis asistido?"}</strong>
-          <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : "Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta licitación."}</p>
+          <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : `Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta ${nombreProceso}.`}</p>
         </div>
         <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={cargandoIa}>
           <span aria-hidden="true">✦</span> {ia ? "Actualizar análisis con IA" : "Iniciar análisis con IA"}
         </button>
       </div>}
     </div>}
-    {claseAptaIA && !fuenteActualizada && <p className="resumen-analisis__nota">Actualiza la preselección para generar una lectura con datos vigentes.</p>}
+    {claseAptaIA && !fuenteActualizada && <div className="resumen-analisis__ia-panel has-error" role="status">
+      <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
+      <div className="resumen-analisis__ia-mensaje"><strong>La evaluación necesita actualizarse</strong>
+        <p>Los datos actuales de la ficha no coinciden con los usados por la última evaluación. Actualízala antes de pedir el análisis con IA.</p>
+      </div>
+      {onActualizarEvaluacion && <button type="button" onClick={actualizarEvaluacion} disabled={cargandoIa}>Actualizar evaluación</button>}
+    </div>}
     {ia && <small className="resumen-analisis__nota">Datos extraídos de la ficha e ítems disponibles. Los campos ausentes no se consideran confirmados; la lectura no cambia la clasificación.</small>}
     {!ia && !cargandoIa && errorIa && <small className="resumen-analisis__nota">El resumen inteligente es opcional. La clasificación y los hallazgos del filtro permanecen disponibles.</small>}
   </section>;

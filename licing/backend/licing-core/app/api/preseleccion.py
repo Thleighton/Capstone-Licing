@@ -20,9 +20,13 @@ from ..models.raw import RawMercadoPublico
 from ..models.licitacion_documento import LicitacionDocumento
 from ..services import filtradas, documentos_origen
 from ..services.enlaces import ficha_oficial
-from ..services.preseleccion import cargar_catalogo, evaluar_preseleccion, evaluar_vigencia, CHILE, VERSION_MOTOR
+from ..services.preseleccion import (
+    cargar_catalogo, componentes_version_filtro, evaluar_preseleccion,
+    evaluar_vigencia, CHILE, VERSION_MOTOR,
+)
 from ..services.clientes_importantes import identificar_clientes_importantes
 from ..services.fechas_consulta import filtrar_cierre
+from ..services.resumen_gemini import SolicitudResumenIA
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
 
@@ -60,7 +64,7 @@ def cargar_entradas(db, ids):
 
 def firma_fuente(datos):
     estables = {k: v for k, v in datos.items() if k not in {"fuente_verificada_en", "normalizado_en"}}
-    estables.update(version_motor=VERSION_MOTOR, catalogo_version=cargar_catalogo()["version"])
+    estables.update(componentes_version_filtro())
     return hashlib.sha256(json.dumps(estables, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -137,12 +141,6 @@ class Revision(BaseModel):
     motivo: str = Field(min_length=5, max_length=1500)
 
 
-class SolicitudResumenIA(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    clasificacion: Literal["preseleccionada", "revision_manual"]
-    hash_fuente: str = Field(min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
-
-
 @router.get("/integracion/verificar", dependencies=[Depends(solo_cron)], include_in_schema=False)
 def verificar_integracion():
     # La función del segundo proyecto valida aquí la credencial privada existente.
@@ -154,6 +152,8 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
                  q: str = Query(default="", max_length=150), limite: int = Query(default=25, ge=1, le=100),
                  offset: int = Query(default=0, ge=0), db: Session = Depends(get_db),
                  cierre_desde: date | None = None, cierre_hasta: date | None = None,
+                 orden_cierre: str = Query(default="proximo", pattern="^(proximo|lejano|ninguno)$"),
+                 orden_publicacion: str = Query(default="ninguna", pattern="^(ninguna|reciente|antigua)$"),
                  region: str = Query(default="", max_length=200), solo_abiertas: bool = False,
                  codigo: str = Query(default="", max_length=50)):
     consulta = filtrar_cierre(select(Licitacion.codigo_externo, Licitacion.raw_id),
@@ -179,7 +179,8 @@ async def listar(response: Response, clasificacion: str = Query(default="", max_
     fuentes = dict(db.execute(consulta).all())
     codigos = list(fuentes)
     respuesta = await filtradas.operar("listar", {"codigos": codigos, "fuentes": fuentes, "clasificacion": clasificacion,
-                                                   "q": "", "limite": limite, "offset": offset})
+                                                   "q": "", "orden_cierre": orden_cierre,
+                                                   "orden_publicacion": orden_publicacion, "limite": limite, "offset": offset})
     actuales = dict(db.execute(select(Licitacion.id, Licitacion.raw_id)).all())
     filas_vistas = respuesta.get("filas", [])
     ids_vistos = [int(f["id"]) for f in filas_vistas]
@@ -322,15 +323,8 @@ async def resumen_ia_licitacion(licitacion_id: int, solicitud: SolicitudResumenI
         "monto": str(fila.monto_estimado) if fila.monto_estimado is not None else None,
         "fecha_cierre": fila.fecha_cierre.isoformat() if fila.fecha_cierre else None,
         "items": entrada.get("items", [])}
-    from ..services.resumen_gemini import generar, huella
-    firma = huella(fuente)
-    cache = fila.resumen_ia or {}
-    if cache.get("firma") == firma and cache.get("resumen"):
-        return {"resumen": cache["resumen"], "cache": True}
-    lectura = await generar(fuente)
-    fila.resumen_ia = {"firma": firma, "resumen": lectura}
-    db.commit()
-    return {"resumen": lectura, "cache": False}
+    from ..services.resumen_gemini import obtener_o_generar
+    return await obtener_o_generar(db, fila, fuente)
 
 
 @router.post("/{licitacion_id}/documentos/analizar")

@@ -9,20 +9,24 @@ export function PilaresPreseleccion() {
   </>;
 }
 
-export default function PreseleccionControles({ clasificacion, desde, hasta, onClasificacion, onDesde, onHasta, total, disabled = false, mostrarFechas = true, mostrarBusquedaId = false, busquedaId = "", onBusquedaId }) {
+export default function PreseleccionControles({ clasificacion, ordenCierre = "proximo", ordenPublicacion = "ninguna", onOrdenCierre, onOrdenPublicacion, onClasificacion, total, disabled = false, mostrarOrden = true, mostrarBusquedaId = false, busquedaId = "", onBusquedaId, entidad = "licitaciones", textoBusquedaId = "Ej. 599-40-LP26", ariaBusquedaId = "Buscar por ID de licitación" }) {
   return <div className="oportunidad-controles">
-    {mostrarBusquedaId && <label>Buscar ID<input type="search" value={busquedaId} onChange={e => onBusquedaId?.(e.target.value)} placeholder="Ej. 599-40-LP26" aria-label="Buscar por ID de licitación" disabled={disabled} /></label>}
+    {mostrarBusquedaId && <label>Buscar ID<input type="search" value={busquedaId} onChange={e => onBusquedaId?.(e.target.value)} placeholder={textoBusquedaId} aria-label={ariaBusquedaId} disabled={disabled} /></label>}
+    {mostrarOrden && <>
+    <label>Orden de cierre <select value={ordenCierre} onChange={e => onOrdenCierre?.(e.target.value)} disabled={disabled}>
+      <option value="proximo">Más próximo</option><option value="lejano">Más lejano</option><option value="ninguno">Sin ordenar por cierre</option>
+    </select></label>
+    <label>Orden de publicación <select value={ordenPublicacion} onChange={e => onOrdenPublicacion?.(e.target.value)} disabled={disabled}>
+      <option value="ninguna">Sin ordenar por publicación</option><option value="reciente">Más reciente</option><option value="antigua">Más antigua</option>
+    </select></label>
+    </>}
     <label>Mostrar <select value={clasificacion} onChange={e => onClasificacion(e.target.value)} disabled={disabled}>
       <option value="preseleccionada">Posible oportunidad</option>
       <option value="revision_manual">Revisión necesaria</option>
-      <option value="descartada">Descartada por regla</option>
+      <option value="descartada">Descartadas (por regla o usuario)</option>
       <option value="pendiente_evaluacion">Sin evaluar</option>
       <option value="">Todas (auditoría)</option>
     </select></label>
-    {mostrarFechas && <>
-      <label>Cierre desde <input type="date" value={desde} max={hasta || undefined} onChange={e => onDesde(e.target.value)} disabled={disabled} /></label>
-      <label>Hasta <input type="date" value={hasta} min={desde || undefined} onChange={e => onHasta(e.target.value)} disabled={disabled} /></label>
-    </>}
-    <span className="sub" aria-live="polite">{total} {clasificacion === "" ? "licitaciones en auditoría" : total === 1 ? "resultado" : "resultados"}</span>
+    <span className="sub" aria-live="polite">{total} {clasificacion === "" ? `${entidad} en auditoría` : total === 1 ? "resultado" : "resultados"}</span>
   </div>;
 }

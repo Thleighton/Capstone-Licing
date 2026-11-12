@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from .enlaces import ficha_oficial
+from .enlaces import ficha_compra_agil, ficha_oficial
 
 
 HOJAS = {
@@ -15,13 +15,16 @@ HOJAS = {
 }
 
 
-def crear_excel(filas):
+def crear_excel(filas, modalidad="licitacion"):
+    compra_agil = modalidad == "compra_agil"
+    encabezado_id = "ID Compra Ágil" if compra_agil else "ID licitación"
+    ficha = ficha_compra_agil if compra_agil else ficha_oficial
     libro = Workbook()
     libro.remove(libro.active)
     filas = sorted(filas, key=lambda f: f["codigo_externo"])
     for estado, nombre in HOJAS.items():
         hoja = libro.create_sheet(nombre)
-        hoja.append(["ID licitación", "Organismo solicitante", "Link directo"])
+        hoja.append([encabezado_id, "Organismo solicitante", "Link directo"])
         for celda in hoja[1]:
             celda.font = Font(bold=True, color="FFFFFF")
             celda.fill = PatternFill("solid", fgColor="087D89")
@@ -30,7 +33,7 @@ def crear_excel(filas):
                 continue
             codigo = fila["codigo_externo"]
             valores = [codigo, fila.get("nombre_organismo") or fila.get("nombre_unidad") or "No informado",
-                       ficha_oficial(codigo) or ""]
+                       ficha(codigo) or ""]
             hoja.append([ILLEGAL_CHARACTERS_RE.sub("", str(v)) for v in valores])
             # Los nombres de la fuente son texto, nunca fórmulas de Excel.
             for celda in hoja[hoja.max_row]:

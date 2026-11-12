@@ -109,7 +109,8 @@ export default function ResumenAnalisis({
     finally { setCargandoIa(false); }
   }
   const conflictoEvaluacion = estadoErrorIa === 409;
-  const estadoLectura = ia ? "Análisis creado con IA" : conflictoEvaluacion ? "Evaluación desactualizada" : errorIa ? "Gemini temporalmente no disponible" : puedeUsarIa ? "Análisis con IA opcional" : "Hallazgos del filtro";
+  const analisisEnCurso = estadoErrorIa === 423;
+  const estadoLectura = ia ? "Análisis guardado" : analisisEnCurso ? "Análisis en preparación" : conflictoEvaluacion ? "Evaluación desactualizada" : errorIa ? "Gemini temporalmente no disponible" : puedeUsarIa ? "Análisis con IA opcional" : "Hallazgos del filtro";
 
   return <section className={`resumen-analisis resumen-analisis--${estado || "pendiente"}`} aria-label="Lectura de LICING">
     <header className="resumen-analisis__header">
@@ -150,18 +151,18 @@ export default function ResumenAnalisis({
         </div>
       </> : errorIa ? <>
         <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
-        <div className="resumen-analisis__ia-mensaje"><strong>{conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
-          <p>{conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta Compra Ágil y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
+        <div className="resumen-analisis__ia-mensaje"><strong>{analisisEnCurso ? "El análisis ya se está preparando" : conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
+          <p>{analisisEnCurso ? errorIa : conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta ${nombreProceso} y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
         </div>
         <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={cargandoIa}>
-          {conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
+          {analisisEnCurso ? "Consultar análisis" : conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
         </button>
       </> : <div className="resumen-analisis__ia-inicio">
         <div className="resumen-analisis__ia-mensaje"><strong>{ia ? "Análisis guardado" : "¿Quieres un análisis asistido?"}</strong>
           <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : `Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta ${nombreProceso}.`}</p>
         </div>
         <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={cargandoIa}>
-          <span aria-hidden="true">✦</span> {ia ? "Actualizar análisis con IA" : "Iniciar análisis con IA"}
+          <span aria-hidden="true">✦</span> {ia ? "Consultar análisis guardado" : "Iniciar análisis con IA"}
         </button>
       </div>}
     </div>}

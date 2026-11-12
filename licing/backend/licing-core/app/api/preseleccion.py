@@ -293,10 +293,13 @@ async def detalle(licitacion_id: int, response: Response, db: Session = Depends(
     except filtradas.FiltradasNoDisponible:
         resultado = {"evaluacion": None, "criterios": [], "hash_fuente": None}
     resultado["documentos"] = []
-    resultado["resumen_ia"] = fila.resumen_ia
+    from ..services.resumen_gemini import cache_actual, fuente_resumen
+    entrada_actual = cargar_entradas(db, [licitacion_id])[str(licitacion_id)]
+    resultado["resumen_ia"] = cache_actual(db, fila, entrada_actual,
+        fuente_resumen(fila, entrada_actual, 'licitacion', None))
     resultado["ingesta_documental"] = {k: v for k, v in fila.ingesta_documental.items() if k != "token"}
     resultado["incidencias_documentales"] = documentos_origen.incidencias(db, [licitacion_id])[licitacion_id]
-    resultado["fuente_actualizada"] = resultado.get("hash_fuente") == firma_fuente(cargar_entradas(db, [licitacion_id])[str(licitacion_id)])
+    resultado["fuente_actualizada"] = resultado.get("hash_fuente") == firma_fuente(entrada_actual)
     response.headers["Cache-Control"] = "no-store"
     return resultado
 
@@ -315,16 +318,10 @@ async def resumen_ia_licitacion(licitacion_id: int, solicitud: SolicitudResumenI
     firma_actual = firma_fuente(entrada)
     if solicitud.hash_fuente != firma_actual:
         raise HTTPException(409, "La ficha cambió desde la última evaluación. Actualiza la preselección antes de generar el resumen.")
-    fuente = {"tipo": "licitacion", "codigo": fila.codigo_externo,
-        "clasificacion_actual": clasificacion, "nombre": fila.nombre,
-        "organismo": fila.nombre_organismo, "unidad": fila.nombre_unidad,
-        "descripcion": fila.descripcion, "region_comprador": fila.region_comprador,
-        "comuna_comprador": fila.comuna_comprador, "direccion_entrega": fila.direccion_entrega,
-        "monto": str(fila.monto_estimado) if fila.monto_estimado is not None else None,
-        "fecha_cierre": fila.fecha_cierre.isoformat() if fila.fecha_cierre else None,
-        "items": entrada.get("items", [])}
-    from ..services.resumen_gemini import obtener_o_generar
-    return await obtener_o_generar(db, fila, fuente)
+    from ..services.resumen_gemini import obtener_o_generar, fuente_resumen
+    fuente = fuente_resumen(fila, entrada, 'licitacion', clasificacion)
+    return await obtener_o_generar(db, fila, fuente, entrada,
+        lambda: cargar_entradas(db, [licitacion_id]).get(str(licitacion_id)))
 
 
 @router.post("/{licitacion_id}/documentos/analizar")

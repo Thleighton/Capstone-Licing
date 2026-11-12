@@ -2,6 +2,16 @@
 
 > **Estado vigente del producto:** LICING no intenta descargar ni analizar bases o anexos; solo enlaza a la ficha oficial de Mercado Público. Los apartados siguientes describen el flujo documental histórico y no se ejecutan desde la aplicación actual. Las rutas de descarga y análisis están deshabilitadas.
 
+## Evaluación vigente y ahorro de espacio
+
+Se conserva **una evaluación por oportunidad**, tanto para licitaciones como para Compras Ágiles. La restricción `uq_evaluacion_oportunidad` impide crear otra fila para la misma oportunidad: una reevaluación reemplaza sus resultados y criterios. Una entrada idéntica conserva la evaluación sin volver a escribirla. `entrada_evaluada` contiene solo el código, el identificador del RAW y referencias documentales; no duplica la ficha y sus ítems. La última decisión manual reemplaza la anterior; si cambia lo evaluado, esa decisión deja de estar vigente. No se guarda un historial de evaluaciones o decisiones.
+
+El análisis de IA se guarda en `licitacion.resumen_ia` o `compra_agil.resumen_ia` en Core. Al abrir o consultar otra vez la ficha se recupera ese resultado. La firma considera los datos de negocio y los ítems; una verificación técnica, una nueva clasificación o una versión de las reglas no generan otro análisis. Si la información cambia, se oculta la lectura anterior y el siguiente análisis solicitado la reemplaza. Un bloqueo por ficha evita dos llamadas simultáneas a Gemini. Los resúmenes existentes compatibles se reutilizan y actualizan de formato sin consultar al proveedor.
+
+La limpieza de Supabase se ejecuta **cada minuto**: elimina oportunidades vencidas o cerradas y sus evaluaciones, criterios y decisiones. Core también elimina esas fichas y su análisis de IA. No depende de que alguien abra el dashboard. No se crean copias de las evaluaciones eliminadas.
+
+Antes de publicar Core, aplicar la migración `evaluacion_unica_sin_historial` de `supabase/migrations`. Retira las evaluaciones antiguas, conserva los identificadores de la evaluación y decisión vigentes, comprueba que no cambien las clasificaciones actuales y concede únicamente al servidor los permisos necesarios para actualizar. La migración es transaccional. Tras la limpieza inicial, compactar las tablas afectadas en una ventana sin escrituras para que el espacio libre vuelva al sistema de archivos; borrar filas por sí solo deja ese espacio disponible dentro de PostgreSQL.
+
 Usuarios/Licitaciones es la capa de entrada: conserva RAW, normalización y documentos originales en `licitacion_documento`, vinculados por `licitacion_id`. Los PDF están en el bucket privado `licitacion-bases` de **ese mismo proyecto**. El texto se conserva una sola vez, con índices que permiten reconstruir cada página; los filtros leen esa fuente.
 
 LicitacionesFiltradas guarda oportunidades evaluadas, ítems, criterios, revisiones y referencias `documento_id/version/hash` en `evaluacion_filtro.entrada_evaluada`. No almacena PDF ni su texto completo. La migración `documentos_solo_en_origen` retira la tabla documental vacía y el control de descargas equivocados de filtradas; se detiene si encuentra documentos para evitar pérdida de datos. El bucket anterior queda deshabilitado para PDF.

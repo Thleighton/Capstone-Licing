@@ -25,7 +25,7 @@ from ..services.compra_agil_preseleccion import (
 )
 from ..services.enlaces import ficha_compra_agil
 from ..services.fechas_consulta import filtrar_cierre
-from ..services.resumen_gemini import SolicitudResumenIA, obtener_o_generar
+from ..services.resumen_gemini import SolicitudResumenIA, obtener_o_generar, cache_actual, fuente_resumen
 
 CHILE = ZoneInfo("America/Santiago")
 router = APIRouter(prefix="/api", tags=["Compras Ágiles"], dependencies=[Depends(usuario_actual)])
@@ -344,6 +344,9 @@ def detalle_compra_agil(compra_agil_id: int, response: Response, db: Session = D
     detalle = CompraAgilDetalle.model_validate(fila).model_copy(
         update={"fuente_consultada_en": raw.verificado_en if raw else None},
     )
+    entrada_actual = cargar_entradas_compra(db, [compra_agil_id]).get(str(compra_agil_id))
+    detalle.resumen_ia = cache_actual(db, fila, entrada_actual,
+        fuente_resumen(fila, entrada_actual, 'compra_agil', None)) if entrada_actual else None
     return {"compra_agil": detalle, "items": [CompraAgilItemResumen.model_validate(i) for i in items]}
 
 
@@ -368,12 +371,6 @@ async def resumen_ia_compra_agil(compra_agil_id: int, solicitud: SolicitudResume
     # Filtradas; no debe bloquear un resumen cuando la fuente actual sí coincide.
     if not firma_actual or solicitud.hash_fuente != firma_actual:
         raise HTTPException(409, "La ficha de la Compra Ágil cambió desde que la abriste. Actualiza la ficha antes de generar el resumen.")
-    fuente = {"tipo": "compra_agil", "codigo": fila.codigo_externo,
-        "clasificacion_actual": clasificacion, "nombre": fila.nombre,
-        "organismo": fila.nombre_organismo, "unidad": fila.nombre_unidad,
-        "descripcion": fila.descripcion, "region_comprador": fila.region_comprador,
-        "direccion_entrega": fila.direccion_entrega,
-        "monto": str(fila.monto_disponible) if fila.monto_disponible is not None else None,
-        "fecha_cierre": fila.fecha_cierre.isoformat() if fila.fecha_cierre else None,
-        "items": entrada.get("items", [])}
-    return await obtener_o_generar(db, fila, fuente)
+    fuente = fuente_resumen(fila, entrada, 'compra_agil', clasificacion)
+    return await obtener_o_generar(db, fila, fuente, entrada,
+        lambda: cargar_entradas_compra(db, [compra_agil_id]).get(str(compra_agil_id)))

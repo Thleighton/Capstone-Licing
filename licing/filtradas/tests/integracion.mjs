@@ -157,6 +157,35 @@ try {
  assert.equal(desactualizada.filas[0].estado_seleccion,'pendiente_evaluacion');
  assert.equal((await rpc('listar',{codigos:[codigos[0]]})).filas[0].estado_seleccion,'preseleccionada','sin snapshot conserva la evaluación');
  assert.deepEqual(await rpc('listar',{codigos:[],solo_firmas:true}),{filas:[],total:0});
+ const guardia=(await readdir(migrations)).find(x=>x.endsWith('_proteger_version_preseleccion.sql'));
+ await db.exec(await readFile(new URL(guardia,migrations),'utf8'));
+ const compraVigente={...loteCompra,datos:{...compra,id:77,codigo_externo:'77-1-COT26',raw_id:77},
+  resultado:{...loteCompra.resultado,version_motor:'reglas-hotel-51+ca-2'},hash_fuente:'7'.repeat(64)};
+ const actual=(await rpc('guardar',{...payload,lote:[compraVigente]})).evaluadas[0].evaluacion_id;
+ await rpc('revision',{codigo:'77-1-COT26',raw_id:77,hash_fuente:'7'.repeat(64),evaluacion_id:actual,
+  usuario:user,accion:'confirmar_relevante',categoria_motivo:'otro',motivo:'Confirmada por el hotel'});
+ const antigua={...compraVigente,datos:{...compraVigente.datos,raw_id:78},
+  resultado:{...compraVigente.resultado,version_motor:'reglas-hotel-50',clasificacion:'descartada'},hash_fuente:'6'.repeat(64)};
+ const rechazo=await rpc('guardar',{...payload,lote:[antigua]});
+ assert.deepEqual(rechazo.evaluadas,[],'una instancia antigua no reemplaza el motor actualizado');
+ assert.deepEqual(rechazo.omitidas_version,['77-1-COT26']);
+ const preservada=(await rpc('listar',{codigos:['77-1-COT26']})).filas[0];
+ assert.equal(preservada.evaluacion_id,actual,'conserva la evaluación vigente');
+ assert.equal(preservada.fuente_raw_id,77,'ni siquiera adelanta el RAW con reglas antiguas');
+ assert.equal(preservada.hash_fuente,'7'.repeat(64));
+ assert.equal(preservada.estado_seleccion,'preseleccionada','conserva la decisión manual');
+ const caAntigua={...compraVigente,resultado:{...compraVigente.resultado,version_motor:'reglas-hotel-51+ca-1'}};
+ assert.deepEqual((await rpc('guardar',{...payload,lote:[caAntigua]})).evaluadas,[],
+  'también protege la versión específica de Compras Ágiles');
+ const nuevaCompra={...compraVigente,datos:{...compraVigente.datos,id:88,codigo_externo:'88-1-COT26'}};
+ const mixto=await rpc('guardar',{...payload,lote:[antigua,nuevaCompra]});
+ assert.deepEqual(mixto.evaluadas.map(e=>e.codigo),['88-1-COT26'],'no descarta la parte vigente de un lote mixto');
+ const perfil40={...payload.perfil,version:'hotel-2026-11-v40'};
+ await rpc('guardar',{...payload,perfil:perfil40,lote:[compraVigente]});
+ const perfilAntes=(await db.query('SELECT id FROM public.perfil_filtro_version WHERE activa')).rows[0].id;
+ assert.deepEqual((await rpc('guardar',{...payload,perfil:{...perfil40,version:'hotel-2026-11-v39'},lote:[compraVigente]})).evaluadas,[]);
+ assert.equal((await db.query('SELECT id FROM public.perfil_filtro_version WHERE activa')).rows[0].id,perfilAntes,
+  'un catálogo antiguo no reactiva otro perfil ni invalida evaluaciones');
  await db.exec('SET ROLE service_role');
  assert.equal((await rpc('listar',{...snapshot,solo_firmas:true})).filas.length,305);
  await db.exec('RESET ROLE; SET ROLE authenticated');

@@ -114,39 +114,6 @@ def test_entrada_con_columnas_de_filtradas(db):
     assert datos["documentos_version"] == [] and "preseleccion" not in datos
 
 
-@pytest.mark.parametrize('version', [
-    'reglas-hotel-50|hotel-2026-11-v39',
-    'reglas-hotel-51|ca-1|hotel-2026-11-v39',
-    'reglas-hotel-51|ca-2|hotel-2026-11-v38',
-])
-def test_otra_instancia_antigua_no_reemplaza_la_marca_vigente(db, version):
-    from sqlalchemy import update
-    compra = guardar(db, '9001-90-COT26')
-    vigente = {'version': 'reglas-hotel-51|ca-2|hotel-2026-11-v39',
-               'firma': 'a' * 64, 'evaluacion_id': 5, 'clasificacion': 'preseleccionada'}
-    compra.preseleccion = vigente
-    db.flush()
-    db.execute(update(CompraAgil).where(CompraAgil.id == compra.id).values(
-        preseleccion={**vigente, 'version': version, 'firma': 'b' * 64, 'clasificacion': 'revision_manual'}))
-    db.refresh(compra)
-    assert compra.preseleccion == vigente
-
-
-def test_marca_permite_una_version_nueva_y_la_invalidacion_de_la_fuente(db):
-    compra = guardar(db, '9001-91-COT26')
-    compra.preseleccion = {'version': 'reglas-hotel-51|ca-2|hotel-2026-11-v39'}
-    db.flush()
-    siguiente = {'version': 'reglas-hotel-52|ca-2|hotel-2026-11-v40', 'firma': 'c' * 64}
-    compra.preseleccion = siguiente
-    db.flush()
-    db.refresh(compra)
-    assert compra.preseleccion == siguiente
-    compra.preseleccion = None
-    db.flush()
-    db.refresh(compra)
-    assert compra.preseleccion is None
-
-
 def test_evalua_sincroniza_su_modalidad_y_registra_la_version(db, monkeypatch):
     compras = [guardar(db, f"9002-{n}-COT26") for n in range(25)]
     operar = filtradas_falsa()

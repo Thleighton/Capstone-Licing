@@ -75,3 +75,4 @@ La baja de una licitación elimina sus registros documentales por clave foránea
 ## Verificación
 
 `npm ci && npm test` prueba migraciones y persistencia de filtradas, incluido el retiro del almacenamiento erróneo y la conservación de referencias. Las pruebas de Core verifican texto por página sin duplicarlo, reservas, deduplicación, firmas y eliminación en cascada. Las pruebas Deno cubren autenticación, rutas, huellas, bucket de origen y limpieza por API. La CI usa PostgreSQL 17 y compila el frontend.
+El plan remoto de Compras Ágiles usa `solo_pendientes`: recibe únicamente los códigos que necesitan evaluación, incluyendo fichas ausentes, fuentes actualizadas o evaluaciones invalidadas. Cuando todo está al día, responde una lista vacía. Conserva el límite de cien y no descarga las fichas, criterios ni evidencias del catálogo en cada turno del cron.

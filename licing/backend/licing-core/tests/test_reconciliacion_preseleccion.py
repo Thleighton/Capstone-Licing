@@ -69,6 +69,23 @@ def test_no_confirma_fuente_modificada_durante_el_guardado(fila, integration_db,
     assert fila.id in cola.pendientes(db)
 
 
+@pytest.mark.parametrize('estado,codigo,cierre', [
+    ('Revocada', 15, datetime(2099, 1, 1)),
+    ('Publicada', 5, datetime(2020, 1, 1)),
+])
+def test_no_reintroduce_evaluaciones_cerradas_ni_vencidas(fila, integration_db, client, monkeypatch,
+                                                        estado, codigo, cierre):
+    fila.estado, fila.codigo_estado, fila.fecha_cierre = estado, codigo, cierre
+    integration_db.commit()
+    operar = AsyncMock(return_value={'filas': [], 'evaluadas': []})
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    assert fila.id not in cola.ids_disponibles(integration_db)
+    assert client.get('/api/preseleccion/plan').json()['ids'] == []
+    assert client.post('/api/preseleccion/evaluar', json={'ids': [fila.id]}).status_code == 409
+    operar.assert_not_awaited()
+    assert integration_db.get(type(fila), fila.id) is not None
+
+
 def test_preseleccion_avanza_aunque_el_turno_cancele_la_descarga(monkeypatch):
     async def escenario():
         monkeypatch.setattr(settings, 'cron_plazo_respuesta_segundos', 0.05)

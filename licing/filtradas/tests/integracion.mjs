@@ -186,9 +186,27 @@ try {
  assert.deepEqual((await rpc('guardar',{...payload,perfil:{...perfil40,version:'hotel-2026-11-v39'},lote:[compraVigente]})).evaluadas,[]);
  assert.equal((await db.query('SELECT id FROM public.perfil_filtro_version WHERE activa')).rows[0].id,perfilAntes,
   'un catálogo antiguo no reactiva otro perfil ni invalida evaluaciones');
+ const planRemoto=(await readdir(migrations)).find(x=>x.endsWith('_plan_pendientes_sin_descargar_catalogo.sql'));
+ const antesDelPlan=await rpc('listar',{...snapshot,limite:25,offset:25});
+ await db.exec(await readFile(new URL(planRemoto,migrations),'utf8'));
+ assert.deepEqual(await rpc('listar',{...snapshot,limite:25,offset:25}),antesDelPlan,
+  'el plan no altera el listado ni sus evaluaciones');
+ const consultaPlan={...snapshot,codigos:[...codigos,codigos[0],'AUSENTE-1-COT26'],solo_pendientes:true,limite:2};
+ const pendientes=await rpc('listar',consultaPlan);
+ assert.equal(pendientes.total,306,'incluye evaluaciones invalidadas y oportunidades que aún no existen');
+ assert.deepEqual(pendientes.codigos_pendientes,codigos.slice(0,2),'responde un lote acotado en el orden de la fuente');
+ assert.deepEqual(Object.keys(pendientes).sort(),['codigos_pendientes','total'],'no descarga fichas ni evidencias');
+ const compraAlDia={...consultaPlan,codigos:['77-1-COT26'],fuentes:{'77-1-COT26':77}};
+ assert.deepEqual(await rpc('listar',compraAlDia),{codigos_pendientes:[],total:0});
+ assert.deepEqual((await rpc('listar',{...compraAlDia,fuentes:{'77-1-COT26':78}})).codigos_pendientes,['77-1-COT26'],
+  'un RAW distinto vuelve a evaluarse');
+ assert.deepEqual((await rpc('listar',{...compraAlDia,codigos:['AUSENTE-1-COT26']})).codigos_pendientes,['AUSENTE-1-COT26']);
+ assert.deepEqual(await rpc('listar',{...compraAlDia,codigos:[]}),{codigos_pendientes:[],total:0});
  await db.exec('SET ROLE service_role');
+ assert.deepEqual(await rpc('listar',compraAlDia),{codigos_pendientes:[],total:0});
  assert.equal((await rpc('listar',{...snapshot,solo_firmas:true})).filas.length,305);
  await db.exec('RESET ROLE; SET ROLE authenticated');
+ await assert.rejects(()=>rpc('listar',compraAlDia),/permission denied/,'el plan mantiene los permisos privados');
  await assert.rejects(()=>rpc('listar',snapshot),/permission denied/,'no abre acceso a clientes');
  await db.exec('RESET ROLE');
  console.log('OK: persistencia, revisión, caducidad, documentos en origen, Compra Ágil, retiro del LLM y lecturas masivas.');

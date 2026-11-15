@@ -73,6 +73,10 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
     entradas = cargar_entradas(db, ids)
     if len(entradas) != len(set(ids)):
         raise HTTPException(404, "Alguna licitación ya no está disponible. Actualiza la lista.")
+    from ..services.licitacion_preseleccion import _disponibles
+    disponibles = set(db.scalars(select(Licitacion.id).where(Licitacion.id.in_(ids), *_disponibles())))
+    if disponibles != set(ids):
+        raise HTTPException(409, "Alguna licitación está cerrada, revocada o vencida y ya no se evalúa. Actualiza la lista.")
     documentos_persistidos = documentos_origen.cargar(db, ids)
     controles = dict(db.execute(select(Licitacion.id, Licitacion.ingesta_documental)
                                 .where(Licitacion.id.in_(ids))).all())
@@ -112,7 +116,7 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
                             for d in documentos_persistidos.get(i, [])] for i in ids):
         raise HTTPException(409, "Los documentos cambiaron durante la evaluación. Vuelve a intentarlo.")
     observado_en = datetime.now(timezone.utc).isoformat()
-    codigos_vigentes = list(db.scalars(select(Licitacion.codigo_externo)))
+    codigos_vigentes = list(db.scalars(select(Licitacion.codigo_externo).where(*_disponibles())))
     await filtradas.operar("sincronizar_fuente", {"codigos": codigos_vigentes, "observado_en": observado_en})
     # La persistencia admite 20 entradas. Se carga y comprueba la fuente una sola
     # vez y se mantienen como máximo dos peticiones de guardado en curso.
@@ -216,7 +220,8 @@ async def evaluar(entrada: Lote,
 @router.get("/plan", dependencies=[Depends(usuario_actual)])
 async def plan(response: Response, db: Session = Depends(get_db)):
     """Evalúa al cambiar la fuente o las reglas; conserva resultados y revisiones vigentes."""
-    ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
+    from ..services.licitacion_preseleccion import ids_disponibles
+    ids = ids_disponibles(db)
     entradas = cargar_entradas(db, ids)
     fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
     # Una sola lectura de firmas: paginar aquí repetía el cruce y el conteo de

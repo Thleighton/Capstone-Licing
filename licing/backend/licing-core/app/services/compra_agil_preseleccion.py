@@ -168,18 +168,16 @@ async def plan_pendientes(db: Session, limite: int = LIMITE_POR_LOTE) -> list[in
     ).order_by(CompraAgil.id)).all()
     fuentes = {f.codigo_externo: f.raw_id for f in filas}
     por_codigo = {f.codigo_externo: f.id for f in filas}
-    sin_vigencia = []
-    for offset in range(0, len(filas), 100):
-        pagina = filas[offset:offset + 100]
-        codigos = [f.codigo_externo for f in pagina]
-        guardadas = await filtradas.operar("listar", {"codigos": codigos,
-            "fuentes": {c: fuentes[c] for c in codigos}, "limite": 100, "offset": 0})
-        vigentes = {f["codigo_externo"] for f in guardadas.get("filas", [])
-                    if f.get("estado_seleccion") != "pendiente_evaluacion"}
-        sin_vigencia.extend(por_codigo[c] for c in codigos if c not in vigentes)
-        if len(sin_vigencia) >= limite:
-            break
-    return sin_vigencia[:limite]
+    if not filas:
+        return []
+    guardadas = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
+        "solo_pendientes": True, "solo_firmas": True, "limite": limite})
+    if "codigos_pendientes" in guardadas:
+        return [por_codigo[c] for c in guardadas["codigos_pendientes"] if c in por_codigo][:limite]
+    # Compatibilidad durante el despliegue: una sola lectura de firmas, sin fichas.
+    vigentes = {f["codigo_externo"] for f in guardadas.get("filas", [])
+                if f.get("estado_seleccion") != "pendiente_evaluacion"}
+    return [f.id for f in filas if f.codigo_externo not in vigentes][:limite]
 
 
 def _registrar(db: Session, parte: list[dict], respuesta: dict, version: str) -> list[dict]:

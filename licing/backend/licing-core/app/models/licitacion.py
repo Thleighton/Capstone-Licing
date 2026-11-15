@@ -76,3 +76,6 @@ class Licitacion(Base):
     ubicacion_servicio: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     ingesta_documental: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
     resumen_ia: Mapped[dict | None] = mapped_column(JSONB)
+    # Puntero a la evaluación vigente en Filtradas; permite reintentar por lotes.
+    # No contiene el informe ni sus criterios.
+    preseleccion: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))

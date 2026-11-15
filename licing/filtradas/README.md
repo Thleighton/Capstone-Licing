@@ -4,6 +4,12 @@
 
 ## Evaluación vigente y ahorro de espacio
 
+La publicación del motor `reglas-hotel-53` incorpora el catálogo activo `hotel-2026-11-v40` completo. El rechazo `omitidas_version` se informa como error 409; no se interpreta como una evaluación exitosa sin resultados. La protección contra versiones anteriores permanece activa.
+
+Antes de publicar este Core, aplicar su migración Alembic `3acd8ea0ce6f` en Usuarios/Licitaciones. Agrega `licitacion.preseleccion`, una marca compacta con firma, RAW, normalización, versión e identificador aceptado en Filtradas; no copia el informe. Solo se confirma después del guardado remoto y si la fuente sigue siendo la misma. La marca es técnica y no forma parte de la firma ni invalida el análisis de IA.
+
+Cada turno del cron avanza también la cola pendiente de licitaciones con una sesión propia, en paralelo a la descarga. Confirma cada grupo de veinte para continuar después de una cancelación. Los próximos cierres consultan solo oportunidades y revisiones, paginando sus resultados, en lugar de descargar también todos los descartes del catálogo.
+
 Se conserva **una evaluación por oportunidad**, tanto para licitaciones como para Compras Ágiles. La restricción `uq_evaluacion_oportunidad` impide crear otra fila para la misma oportunidad: una reevaluación reemplaza sus resultados y criterios. Una entrada idéntica conserva la evaluación sin volver a escribirla. `entrada_evaluada` contiene solo el código, el identificador del RAW y referencias documentales; no duplica la ficha y sus ítems. La última decisión manual reemplaza la anterior; si cambia lo evaluado, esa decisión deja de estar vigente. No se guarda un historial de evaluaciones o decisiones.
 
 La migración `proteger_revision_de_evaluacion_reemplazada` mantiene un identificador nuevo al reemplazar una evaluación modificada, retirando primero la evaluación y los criterios anteriores dentro de la misma transacción. Así, una pantalla abierta sobre la versión anterior no puede registrar una decisión sobre la nueva, incluso si el servidor ya dispone de la fuente actual. Sigue habiendo una sola evaluación por oportunidad; repetir una entrada idéntica conserva su identificador y decisión.

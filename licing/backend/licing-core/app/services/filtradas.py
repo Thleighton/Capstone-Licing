@@ -25,7 +25,12 @@ async def operar(operacion, datos=None):
             if r.status_code == 409:
                 raise HTTPException(409, "Los datos cambiaron o la operación requiere revisión. Actualiza y vuelve a intentarlo.")
             r.raise_for_status()
-            return r.json()
+            respuesta = r.json()
+            if operacion == 'guardar' and respuesta.get('omitidas_version'):
+                raise HTTPException(409,
+                    'La evaluación no se guardó porque el filtro de esta aplicación está desactualizado. '
+                    'Los resultados ya guardados se conservan; se requiere actualizar el filtro antes de reintentar.')
+            return respuesta
     except httpx.HTTPStatusError as exc:
         # La función privada devuelve mensajes genéricos y seguros para distinguir
         # autorización, RPC y disponibilidad sin registrar credenciales ni cuerpos completos.

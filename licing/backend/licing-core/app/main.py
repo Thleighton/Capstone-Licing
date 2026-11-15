@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -56,6 +56,8 @@ def docs():
 
 @app.get("/health", tags=["Core"])
 @app.get("/api/salud", tags=["Core"])
-def health():
+def health(response: Response):
+    from .services.preseleccion import version_filtro
+    response.headers['X-LICING-Filtro'] = version_filtro()
     return {"status": "ok"}
 

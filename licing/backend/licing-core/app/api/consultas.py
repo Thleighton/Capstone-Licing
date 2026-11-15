@@ -1,4 +1,5 @@
 """Consultas del frontend sobre las tablas existentes de Core."""
+import asyncio
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -160,15 +161,20 @@ async def _proximas_filtradas(db, candidatas):
     if not candidatas:
         return [], True
     fuentes = {f.codigo_externo: f.raw_id for f in candidatas}
-    seleccionadas = []
+    async def cargar_clase(clasificacion):
+        seleccionadas = []
+        offset = 0
+        while True:
+            pagina = await filtradas.operar('listar', {'codigos': list(fuentes), 'fuentes': fuentes,
+                'clasificacion': clasificacion, 'limite': 100, 'offset': offset})
+            seleccionadas.extend(f for f in pagina.get('filas', [])
+                if f.get('estado_seleccion') == clasificacion)
+            offset += 100
+            if offset >= pagina.get('total', len(pagina.get('filas', []))):
+                return seleccionadas
     try:
-        for offset in range(0, len(candidatas), 100):
-            pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
-                "limite": 100, "offset": offset})
-            for guardada in pagina.get("filas", []):
-                if guardada.get("estado_seleccion") not in {"preseleccionada", "revision_manual"}:
-                    continue
-                seleccionadas.append(guardada)
+        grupos = await asyncio.gather(cargar_clase('preseleccionada'), cargar_clase('revision_manual'))
+        seleccionadas = [f for grupo in grupos for f in grupo]
     except filtradas.FiltradasNoDisponible:
         # Nunca sustituir una clasificación no disponible por licitaciones sin filtrar.
         return [], False

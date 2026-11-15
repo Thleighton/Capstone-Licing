@@ -27,6 +27,15 @@ def ejecutar(candidatas):
     return asyncio.run(consultas._proximas_filtradas(None, candidatas))
 
 
+def listado_filtrado(monkeypatch, filas):
+    async def listar(op, datos):
+        elegidas = [f for f in filas if f['estado_seleccion'] == datos['clasificacion']]
+        return {'filas': elegidas[datos['offset']:datos['offset'] + datos['limite']], 'total': len(elegidas)}
+    operar = AsyncMock(side_effect=listar)
+    monkeypatch.setattr(filtradas, 'operar', operar)
+    return operar
+
+
 def test_solo_incluye_posibles_y_revisiones_conservando_el_orden_de_cierre(monkeypatch):
     candidatas, filas = preparar(monkeypatch, ["descartada", "revision_manual", "pendiente_evaluacion",
         "preseleccionada", "estado_desconocido"])
@@ -37,13 +46,13 @@ def test_solo_incluye_posibles_y_revisiones_conservando_el_orden_de_cierre(monke
 
 
 def test_incluye_todas_las_elegibles_sin_limite_de_cuatro_y_consulta_todas_las_paginas(monkeypatch):
-    candidatas, filas = preparar(monkeypatch, ["descartada"] * 100 + ["revision_manual"] * 7)
-    operar = AsyncMock(side_effect=[{"filas": filas[:100]}, {"filas": filas[100:]}])
-    monkeypatch.setattr(filtradas, "operar", operar)
+    candidatas, filas = preparar(monkeypatch, ["descartada"] * 1000 + ["revision_manual"] * 107)
+    operar = listado_filtrado(monkeypatch, filas)
     proximas, disponible = ejecutar(candidatas)
     assert disponible
-    assert [f.id for f, _ in proximas] == list(range(101, 108))
-    assert [call.args[1]["offset"] for call in operar.call_args_list] == [0, 100]
+    assert [f.id for f, _ in proximas] == list(range(1001, 1108))
+    assert [c.args[1]['offset'] for c in operar.call_args_list if c.args[1]['clasificacion']=='revision_manual'] == [0, 100]
+    assert operar.await_count == 3, 'los mil descartes no provocan diez lecturas adicionales'
 
 
 @pytest.mark.parametrize("cambio", [{"hash_fuente": "version_anterior"}, {"fuente_raw_id": 999},
@@ -83,7 +92,7 @@ def test_carga_fuentes_solo_para_oportunidades_y_revisiones(monkeypatch):
         consultas_fuente.append(set(ids))
         return {str(f.id): vars(f) for f in candidatas if f.id in ids}
     monkeypatch.setattr(consultas, "cargar_entradas", cargar)
-    monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=[{"filas": filas[:100]}, {"filas": filas[100:]}]))
+    listado_filtrado(monkeypatch, filas)
     proximas, disponible = ejecutar(candidatas)
     assert disponible
     assert consultas_fuente == [{101, 102}]

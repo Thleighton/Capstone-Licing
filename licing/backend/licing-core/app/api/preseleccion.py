@@ -49,7 +49,7 @@ def cargar_entradas(db, ids):
         .where(RawMercadoPublico.id.in_({f.raw_id for f in filas}))).all())
     for fila in filas:
         datos = {c.name: getattr(fila, c.name) for c in Licitacion.__table__.columns
-                 if c.name not in {"ingesta_documental", "resumen_ia"}}
+                 if c.name not in {"ingesta_documental", "resumen_ia", "preseleccion"}}
         datos.update(items=[], documentos_version=versiones[fila.id], url_oficial=ficha_oficial(fila.codigo_externo),
                      fuente_verificada_en=verificaciones.get(fila.raw_id))
         if fila.ingesta_documental.get("incidencia_documental"):
@@ -119,7 +119,11 @@ async def evaluar_lote(db, ids, actor=None, documentos_extra=None):
     semaforo = asyncio.Semaphore(2)
     async def guardar(parte):
         async with semaforo:
-            return await filtradas.operar("guardar", {"lote": parte, "perfil": cargar_catalogo(), "actor": actor})
+            respuesta = await filtradas.operar("guardar", {"lote": parte, "perfil": cargar_catalogo(), "actor": actor})
+            from ..services.licitacion_preseleccion import registrar
+            evaluadas = registrar(db, parte, respuesta)
+            db.commit()
+            return {"evaluadas": evaluadas}
     respuestas = await asyncio.gather(*(guardar(lote[i:i+20]) for i in range(0, len(lote), 20)),
                                      return_exceptions=True)
     for respuesta in respuestas:

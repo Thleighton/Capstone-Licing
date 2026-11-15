@@ -30,6 +30,10 @@ def pendientes(db, limite=LIMITE_POR_LOTE):
         .order_by(Licitacion.id).limit(limite)))
 
 
+def ids_disponibles(db):
+    return list(db.scalars(select(Licitacion.id).where(*_disponibles()).order_by(Licitacion.id)))
+
+
 def contar_pendientes(db):
     return db.scalar(select(func.count()).select_from(Licitacion).where(_pendientes(), *_disponibles()))
 

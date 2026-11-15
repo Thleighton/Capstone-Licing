@@ -14,7 +14,8 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-VERSION_MOTOR = "reglas-hotel-51"
+# Publicación reproducible del catálogo activo v40 y su reconciliación automática.
+VERSION_MOTOR = "reglas-hotel-53"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000

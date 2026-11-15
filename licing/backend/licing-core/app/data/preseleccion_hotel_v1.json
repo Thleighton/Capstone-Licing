@@ -1,5 +1,5 @@
 {
-  "version": "hotel-2026-11-v39",
+  "version": "hotel-2026-11-v40",
   "estado": "piloto",
   "alcance": "Salones para eventos y servicios de alimentación asociados que el Hotel Plaza San Francisco pueda ofrecer. La ubicación y disponibilidad deben confirmarse.",
   "notas": [
@@ -13,6 +13,8 @@
     "Recintos clínicos, bienes para una sala y servicios en sedes fijadas de terceros no equivalen a contratar los servicios del hotel.",
     "Las palabras clave son evidencia auxiliar: el perfil comercial decide el alcance, no una palabra aislada.",
     "Una palabra a una edición de un término hotelero solo genera revisión cuando aparece en contexto pertinente; nunca es una coincidencia directa ni un descarte automático.",
+    "Ferias, talleres y capacitaciones describen actividades; no cuentan como contratación de salón o alimentación sin una línea explícita.",
+    "Mantención, instalación, energía, electricidad, informática e impresión se excluyen cuando describen el objeto contratado y no hay una línea hotelera explícita.",
     "Capacitación y temática médica no excluyen un salón para un evento por sí solas.",
     "Información realmente insuficiente se conserva como duda; no se inventa ubicación ni prestación.",
     "La decisión de postular corresponde al hotel; la preselección no certifica disponibilidad ni cumplimiento de bases."
@@ -640,12 +642,12 @@
     {
       "id": "bienes_oficina_papeleria",
       "patron": "\\b(?:fundas? plasticas?|fundas? de etiquetas|articulos? (?:de |para )?(?:papeleria|oficina)|materiales? (?:de |para )?oficina|insumos? (?:de |para )?oficina|utiles? (?:de |para )?oficina|papel turno matic|plumones?|plumon|saca\\s*corchetes?|separadores? de oficio|sobres? (?:de )?oficio|pegamentos? en barra|carpetas? plasticas?|carpetas? para archivos|cuchillos? cartoneros?|cintas? (?:de |para )?(?:embalaje|empaquetar)|pilas? alcalinas?|pila cr[- ]?2032)\\b",
-    "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alimentación para eventos."
+      "motivo": "Se solicitan bienes de oficina, papelería o consumibles, no el arriendo o uso de salones ni servicios de alimentación para eventos."
     },
     {
       "id": "insumos_equipos_medicos",
       "patron": "\\b(?:insumos?|equipos?|dispositivos?|mangas?|medias?)\\b[^.;\\n]{0,220}\\b(?:compresion(?:\\s+neumatica)?|vascular|anti\\s*embolic[oa]s?|tromboembolic[oa]s?|quirurgic[oa]s?|medic[oa]s?|clinic[oa]s?|hospitalari[oa]s?)\\b",
-    "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicitan salones ni servicios de alimentación para eventos."
+      "motivo": "El objeto explícito es suministrar insumos o equipos médicos, incluyendo modalidades de comodato, instalación y mantención; no se solicitan salones ni servicios de alimentación para eventos."
     },
     {
       "id": "nutricion_parenteral",
@@ -706,6 +708,26 @@
       "id": "materiales_demarcacion",
       "patron": "\\b(?:sum\\.?|suministro|adq\\.?|adquisicion|compra)\\s+(?:de\\s+)?pintura\\s+acrilica\\b|\\bmicroesferas(?:\\s+de\\s+vidrio)?\\b",
       "motivo": "Se solicitan materiales de pintura o demarcación, no servicios del hotel."
+    },
+    {
+      "id": "servicios_tecnicos_fuera_alcance",
+      "motivo": "Se solicita mantención, instalación o configuración de infraestructura o equipos técnicos; no se contrata un salón ni alimentación para eventos.",
+      "patron": "\\b(?:mantencion|mantenimiento|reparacion|instalacion|habilitacion|puesta en marcha|configuracion)\\b[^.;\\n]{0,180}\\b(?:servidores?|redes?|sistemas? (?:informaticos?|electricos?|de climatizacion|de seguridad)|equipos? (?:electricos?|informaticos?|industriales?|de climatizacion|de refrigeracion|de seguridad)|tableros? electricos?|ascensores?|calderas?|generadores?|paneles? (?:solares?|fotovoltaicos?)|camaras? de seguridad|cctv|alarmas?|impresoras?|computadores?|licencias? de software|software|hardware|maquinarias?|bombas?|motores?)\\b|\\b(?:servidores?|redes?|sistemas? (?:informaticos?|electricos?|de climatizacion|de seguridad)|equipos? (?:electricos?|informaticos?|industriales?|de climatizacion|de refrigeracion|de seguridad)|tableros? electricos?|ascensores?|calderas?|generadores?|paneles? (?:solares?|fotovoltaicos?)|camaras? de seguridad|cctv|alarmas?|impresoras?|computadores?|licencias? de software|software|hardware|maquinarias?|bombas?|motores?)\\b[^.;\\n]{0,180}\\b(?:mantencion|mantenimiento|reparacion|instalacion|habilitacion|puesta en marcha|configuracion)\\b"
+    },
+    {
+      "id": "suministros_electricos_y_energeticos",
+      "motivo": "El objeto es adquirir o suministrar materiales o equipos eléctricos y energéticos, no ofrecer servicios del hotel.",
+      "patron": "\\b(?:adquisicion|adq\\.?|compra|suministro|materiales?|insumos?)\\b[^.;\\n]{0,160}\\b(?:energia electrica|materiales? electricos?|equipos? electricos?|tableros? electricos?|cables? electricos?|luminarias?|generadores?|paneles? (?:solares?|fotovoltaicos?)|baterias? industriales?|transformadores?|interruptores? electricos?)\\b|\\b(?:energia electrica|materiales? electricos?|equipos? electricos?|tableros? electricos?|cables? electricos?|luminarias?|generadores?|paneles? (?:solares?|fotovoltaicos?)|baterias? industriales?|transformadores?|interruptores? electricos?)\\b[^.;\\n]{0,160}\\b(?:adquisicion|adq\\.?|compra|suministro|materiales?|insumos?)\\b"
+    },
+    {
+      "id": "impresion_y_publicaciones",
+      "motivo": "Se solicitan servicios de impresión o publicaciones; no se identifica arriendo de salón ni alimentación para eventos.",
+      "patron": "\\b(?:servicios? de )?(?:impresion|edicion|diagramacion|encuadernacion|publicacion)\\b[^.;\\n]{0,140}\\b(?:libros?|manuales?|catalogos?|revistas?|folletos?|afiches?|formularios?|material grafico|publicaciones? impresas?)\\b|\\b(?:adquisicion|adq\\.?|compra|suministro)\\b[^.;\\n]{0,140}\\b(?:libros?|manuales?|catalogos?|revistas?|folletos?|afiches?|formularios?|publicaciones? impresas?)\\b"
+    },
+    {
+      "id": "servicios_informaticos_ampliados",
+      "motivo": "Se contrata un servicio informático o digital, no un servicio para eventos del hotel.",
+      "patron": "\\b(?:servicios? de|contratacion de|mantencion de|soporte (?:a|de)|desarrollo de|implementacion de|administracion de)\\b[^.;\\n]{0,140}\\b(?:computacion|informatica|software|sistemas? informaticos?|servidores?|redes? de datos|plataformas? digitales?|sitios? web|licencias? de software|bases? de datos)\\b"
     }
   ],
   "exclusiones_evidentes": [

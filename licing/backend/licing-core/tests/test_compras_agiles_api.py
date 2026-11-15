@@ -213,6 +213,7 @@ def test_cron_de_ingesta_suma_compras_agiles_en_paralelo(client, cron_falso, mon
 def test_falla_de_compras_agiles_no_interrumpe_licitaciones(monkeypatch):
     async def escenario():
         monkeypatch.setattr(settings, "compras_agiles_automaticas", True)
+        monkeypatch.setattr(cron, 'preseleccionar_licitaciones_en_paralelo', AsyncMock(return_value=None))
         monkeypatch.setattr(cron, "SessionLocal", lambda: Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock()))
         monkeypatch.setattr(cron, "correr_lote", AsyncMock(return_value={"procesados": 1}))
         monkeypatch.setattr(cron, "correr_compras_agiles", AsyncMock(side_effect=RuntimeError("sin tablas")))
@@ -241,6 +242,7 @@ def test_adopta_base_manual_anterior_a_compra_agil(integration_db):
     c.execute(text("ALTER TABLE public.ejecucion_ingesta DROP COLUMN fuente"))
     # El esquema histórico anterior a Compra Ágil tampoco tenía el caché de IA.
     c.execute(text("ALTER TABLE public.licitacion DROP COLUMN resumen_ia"))
+    c.execute(text("ALTER TABLE public.licitacion DROP COLUMN preseleccion"))
     registrar_esquema(c)
     assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION_ACTUAL
     assert {"compra_agil", "compra_agil_pendiente"} <= set(inspect(c).get_table_names(schema="public"))

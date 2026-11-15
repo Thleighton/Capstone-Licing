@@ -7,7 +7,7 @@ from ..auth import solo_cron
 from ..database import SessionLocal, get_db
 from ..config import settings
 from ..services.ingesta_lote import EjecucionEnCursoError
-from .ingesta import correr_compras_agiles, correr_lote
+from .ingesta import correr_compras_agiles, correr_lote, preseleccionar_licitaciones_en_paralelo
 
 router = APIRouter(prefix="/api/cron", tags=["Cron"], dependencies=[Depends(solo_cron)])
 
@@ -50,9 +50,10 @@ async def ingesta_programada(
     # Un solo plazo para las tres tareas: cron-job.org no espera más de 30 s.
     plazo = asyncio.get_running_loop().time() + settings.cron_plazo_respuesta_segundos
     compras = asyncio.create_task(compras_agiles_en_paralelo()) if settings.compras_agiles_automaticas else None
+    evaluaciones = asyncio.create_task(preseleccionar_licitaciones_en_paralelo())
     try:
         async with asyncio.timeout_at(plazo):
-            resultado = await correr_lote(db=db, limite=limite)
+            resultado = await correr_lote(db=db, limite=limite, evaluar_al_final=False)
     except EjecucionEnCursoError as exc:
         # Otra ingesta sigue activa: se omite este turno sin contarlo como fallo.
         resultado = {"omitida": True, "motivo": str(exc)}
@@ -64,8 +65,11 @@ async def ingesta_programada(
         # No dejar tareas de fondo que Vercel pueda cortar al devolver la respuesta.
         if compras:
             compras_agiles = await esperar_hasta(compras, plazo)
+        preseleccion = await esperar_hasta(evaluaciones, plazo)
     if compras:
         resultado["compras_agiles"] = compras_agiles
+    if preseleccion is not None:
+        resultado['preseleccion_licitaciones'] = preseleccion
     return resultado
 
 

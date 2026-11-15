@@ -19,12 +19,13 @@ from .models import compra_agil, compra_agil_item, compra_agil_sincronizacion  #
 REVISION_BASE = "83c9bcf6857f"
 REVISION_RLS = "b7e29c41a806"
 REVISION_PREVIA_COMPRA_AGIL = "b5df9fcc5f0d"
-REVISION_ACTUAL = "a13c4d7e9f20"
+REVISION_PREVIA_PRESELECCION = "a13c4d7e9f20"
+REVISION_ACTUAL = "3acd8ea0ce6f"
 TABLAS_BASE = {"raw_mercado_publico", "licitacion", "licitacion_item", "ejecucion_ingesta"}
 TABLAS = set(Base.metadata.tables)
 TABLAS_COMPRA_AGIL = {"compra_agil", "compra_agil_item", "compra_agil_pendiente", "compra_agil_sincronizacion"}
 COLUMNAS_NUEVAS = {
-    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental", "resumen_ia"},
+    "licitacion": {"tipo", "codigo_tipo", "estimacion", "visibilidad_monto", "justificacion_monto", "direccion_comprador", "direccion_entrega", "direccion_visita", "fechas_fuente", "condiciones_fuente", "normalizacion_version", "normalizado_en", "ubicacion_servicio", "ingesta_documental", "resumen_ia", "preseleccion"},
     "licitacion_item": {"codigo_categoria", "categoria", "estado_fuente", "adjudicacion_fuente", "posicion_fuente"},
     "raw_mercado_publico": {"verificado_en"},
     "ejecucion_ingesta": {"fuente"},
@@ -39,7 +40,7 @@ def _solo_core(objeto, nombre, tipo, reflected, compare_to):
     return tabla is None or tabla.name in TABLAS
 
 
-def verificar_esquema(connection, *, legado=False, sin_compra_agil=False) -> list[str]:
+def verificar_esquema(connection, *, legado=False, sin_compra_agil=False, sin_preseleccion=False) -> list[str]:
     """Compara columnas, tipos, defaults, índices, relaciones y restricciones.
 
     sin_compra_agil verifica un esquema manual anterior a la ingesta de Compra Ágil.
@@ -60,7 +61,9 @@ def verificar_esquema(connection, *, legado=False, sin_compra_agil=False) -> lis
             return False
         if sin_compra_agil and tabla is not None and tabla.name == "ejecucion_ingesta" and nombre == "fuente":
             return False
-        if sin_compra_agil and tabla is not None and tabla.name == "licitacion" and nombre == "resumen_ia":
+        if sin_preseleccion and tabla is not None and tabla.name == 'licitacion' and nombre == 'preseleccion':
+            return False
+        if sin_compra_agil and tabla is not None and tabla.name == "licitacion" and nombre in {"resumen_ia", "preseleccion"}:
             return False  # El caché se incorporó después de Compra Ágil.
         if legado and tabla is not None:
             if tipo == "column" and nombre in COLUMNAS_NUEVAS.get(tabla.name, set()):
@@ -112,7 +115,7 @@ def registrar_esquema(connection):
     versiones = []
     if inspector.has_table("alembic_version", schema="public"):
         versiones = connection.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
-    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_PREVIA_COMPRA_AGIL, "e3a17c52d9b4", REVISION_ACTUAL}
+    conocidas = {REVISION_BASE, REVISION_RLS, "c4f8a19d620e", "968329dc86b0", "b9a70e6d4a93", "5c7bbdaa3adf", "c08ccd7a1466", "b8654f3a89fc", REVISION_PREVIA_COMPRA_AGIL, "e3a17c52d9b4", REVISION_PREVIA_PRESELECCION, REVISION_ACTUAL}
     if versiones and (len(versiones) != 1 or versiones[0] not in conocidas):
         raise ValueError("El historial de Alembic tiene otra versión. Revisa la migración antes de continuar.")
     config = Config(str(CORE_DIR / "alembic.ini"))
@@ -126,11 +129,13 @@ def registrar_esquema(connection):
         return
     columnas_licitacion = {c["name"] for c in inspector.get_columns("licitacion", schema="public")} if inspector.has_table("licitacion", schema="public") else set()
     legado = versiones in ([REVISION_BASE], [REVISION_RLS]) or (
-        not versiones and not (COLUMNAS_NUEVAS["licitacion"] - {"resumen_ia"}) <= columnas_licitacion
+        not versiones and not (COLUMNAS_NUEVAS["licitacion"] - {"resumen_ia", "preseleccion"}) <= columnas_licitacion
     )
     # Una base manual sin las tablas de Compra Ágil se registra en la revisión anterior y se migra.
     sin_compra_agil = not versiones and not legado and not TABLAS_COMPRA_AGIL <= set(inspector.get_table_names(schema="public"))
-    errores = verificar_esquema(connection, legado=legado, sin_compra_agil=sin_compra_agil)
+    sin_preseleccion = 'preseleccion' not in columnas_licitacion
+    errores = verificar_esquema(connection, legado=legado, sin_compra_agil=sin_compra_agil,
+        sin_preseleccion=sin_preseleccion)
     if errores:
         raise ValueError("El esquema no coincide con Core:\n" + "\n".join(errores))
 
@@ -141,7 +146,9 @@ def registrar_esquema(connection):
             if not sin_compra_agil:
                 if connection.execute(text("SELECT to_regprocedure('public.purgar_compras_agiles_no_disponibles(text[],boolean)')")).scalar() is None:
                     raise ValueError("El esquema no coincide: falta la función de limpieza de Compra Ágil.")
-                command.stamp(config, REVISION_ACTUAL)
+                command.stamp(config, REVISION_PREVIA_PRESELECCION if sin_preseleccion else REVISION_ACTUAL)
+                if sin_preseleccion:
+                    command.upgrade(config, 'head')
                 return
             command.stamp(config, REVISION_PREVIA_COMPRA_AGIL)
             command.upgrade(config, "head")

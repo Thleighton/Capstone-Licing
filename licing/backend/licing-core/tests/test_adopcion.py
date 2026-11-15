@@ -12,6 +12,17 @@ def test_verificacion_sin_modificaciones(integration_db):
     assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == antes
 
 
+def test_actualiza_revision_anterior_sin_reemplazar_fichas(integration_db):
+    c = integration_db.connection()
+    antes = c.execute(text('SELECT count(*) FROM public.licitacion')).scalar_one()
+    c.execute(text('ALTER TABLE public.licitacion DROP COLUMN preseleccion'))
+    c.execute(text("UPDATE public.alembic_version SET version_num='a13c4d7e9f20'"))
+    registrar_esquema(c)
+    assert c.execute(text('SELECT count(*) FROM public.licitacion')).scalar_one() == antes
+    assert c.execute(text('SELECT version_num FROM public.alembic_version')).scalar_one() == REVISION_ACTUAL
+    assert verificar_esquema(c) == []
+
+
 def test_adopta_tablas_manuales_y_conserva_datos_y_usuarios(integration_db):
     connection = integration_db.connection()
     connection.execute(text("DROP TABLE public.alembic_version"))

@@ -346,7 +346,7 @@ async def ejecutar_lote(
         ) from exc
 
 
-async def correr_lote(db: Session, limite: int) -> dict:
+async def correr_lote(db: Session, limite: int, *, evaluar_al_final: bool = True) -> dict:
     """Lote compartido por el botón y el cron. Deja pasar EjecucionEnCursoError."""
     client = MercadoPublicoClient()
 
@@ -357,7 +357,7 @@ async def correr_lote(db: Session, limite: int) -> dict:
             limite_detalles=limite,
         )
         ids = [r["licitacion_id"] for r in resultado.get("resultados", []) if r.get("procesado")]
-        if ids and settings.cron_secret and settings.filtradas_url:
+        if evaluar_al_final and ids and settings.cron_secret and settings.filtradas_url:
             import asyncio
             from .preseleccion import evaluar_lote
             try:
@@ -404,6 +404,22 @@ async def correr_lote(db: Session, limite: int) -> dict:
 
     finally:
         await client.cerrar()
+
+
+async def preseleccionar_licitaciones_en_paralelo():
+    """Avanza el backlog ya guardado aunque la descarga del turno agote su plazo."""
+    if not (settings.cron_secret and settings.filtradas_url):
+        return None
+    from ..services.licitacion_preseleccion import evaluar_pendientes
+    with SessionLocal() as db:
+        try:
+            async with asyncio.timeout(15):
+                return await evaluar_pendientes(db)
+        except HTTPException as exc:
+            return {'pendiente': True, 'motivo': exc.detail}
+        except (filtradas.FiltradasNoDisponible, TimeoutError):
+            db.rollback()
+            return {'pendiente': True, 'motivo': 'La evaluación continuará desde el último grupo confirmado.'}
 
 
 @router.post("/compras-agiles/lote/ejecutar")

@@ -104,7 +104,7 @@ def test_listado_distingue_monto_ausente_de_cero(client, fila, integration_db, m
 
 
 def test_reevaluacion_guarda_evidencia_y_actor(client, fila, monkeypatch):
-    operar=AsyncMock(side_effect=[{}, {'evaluadas':[{'evaluacion_id':3}]}]); monkeypatch.setattr(filtradas,'operar',operar)
+    operar=AsyncMock(side_effect=[{}, {'evaluadas':[{'codigo': fila.codigo_externo, 'evaluacion_id':3}]}]); monkeypatch.setattr(filtradas,'operar',operar)
     response=client.post('/api/preseleccion/evaluar',json={'ids':[fila.id]})
     assert response.status_code==200,response.text
     operacion,payload=operar.call_args_list[1].args
@@ -215,7 +215,8 @@ def test_lote_grande_carga_raw_en_una_consulta_y_guarda_en_partes_acotadas(clien
         await asyncio.sleep(0)
         en_curso -= 1
         assert 1 <= len(datos['lote']) <= 20
-        return {'evaluadas': [{'codigo': e['datos']['codigo_externo']} for e in datos['lote']]}
+        return {'evaluadas': [{'codigo': e['datos']['codigo_externo'], 'evaluacion_id': e['datos']['id']}
+                             for e in datos['lote']]}
     operar = AsyncMock(side_effect=persistir)
     monkeypatch.setattr(filtradas, 'operar', operar)
     consultas = []

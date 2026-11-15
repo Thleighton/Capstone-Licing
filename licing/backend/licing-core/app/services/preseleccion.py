@@ -14,8 +14,8 @@ from .clientes_importantes import identificar_clientes_importantes
 
 CHILE = ZoneInfo("America/Santiago")
 CATALOGO = Path(__file__).resolve().parents[1] / "data" / "preseleccion_hotel_v1.json"
-# Publicación reproducible del catálogo activo v40 y su reconciliación automática.
-VERSION_MOTOR = "reglas-hotel-53"
+# Una mención genérica de espacio no acredita contratación de un salón.
+VERSION_MOTOR = "reglas-hotel-54"
 PILARES = ("vigencia", "ubicacion", "pertinencia")
 MAX_CAMPO = 30000
 MAX_ITEMS = 1000
@@ -829,7 +829,7 @@ _EVENTO_SALONES = re.compile(
     r"\b(?:eventos?|seminarios?|congresos?|jornadas?|reunion(?:es)?|"
     r"conferencias?|conciertos?|recitales?|espectaculos?|presentaciones?|lanzamientos?|"
     r"capacitacion(?:es)?|taller(?:es)?|ceremonias?|"
-    r"convencion(?:es)?|encuentros?|actividades?|celebraciones?|"
+    r"convencion(?:es)?|encuentros?|actividad(?:es)?|celebraciones?|"
     r"conmemoraciones?|festivales?|galas?|aniversarios?|ferias?)\b"
 )
 _SALA_EVENTO = re.compile(
@@ -855,12 +855,25 @@ _BIENES_SALONES = re.compile(
     r"\b(?:compra|adquisicion|suministro|adq\.?|sum\.?)\b[^.;\n]{0,100}"
     r"\b(?:mobiliario|sillas?|mesas?|muebles?|equipos?|equipamiento|"
     r"proyectores?|computadores?|hardware|discos?\s+duros?|ssd|pintura|"
-    r"microesferas|insumos?|utiles?)\b"
+    r"microesferas|insumos?|utiles?|letreros?|carteles?|senaletica)\b"
 )
 _SALON_CONTRATADO = re.compile(
     r"\b(?:arriendo|arrendamiento|alquiler|reserva|uso|contratacion)\s+(?:de\s+)?"
     r"(?:(?:un|una|el|la|los|las)\s+)?"
-    r"(?:salon(?:es)?|salas?|auditorios?|recintos?|espacios?)\b"
+    r"(?:salon(?:es)?|salas?|auditorios?|recintos?|espacios?(?:\s+fisicos?)?)\b"
+)
+_ESPACIO_SOLICITADO = re.compile(
+    r"\b(?:se\s+)?(?:requiere[n]?|solicita[n]?|necesita[n]?|contratar)\s+"
+    r"(?:(?:contar|disponer)\s+(?:con|de)\s+)?"
+    r"(?:(?:un|el)\s+)?"
+    r"(?:lugar\s+que\s+(?:disponga|cuente)\s+(?:de|con)\s+(?:(?:un|el)\s+)?)?"
+    r"(?:espacios?(?:\s+fisicos?)?|recintos?)\b|"
+    r"\b(?:proveedor\s+)?(?:debe|debera|deberan)\s+"
+    r"(?:ofrecer|proponer|proporcionar|incluir|disponer\s+de)\s+"
+    r"(?:(?:un|el)\s+)?(?:espacios?(?:\s+fisicos?)?|recintos?)\b|"
+    r"\bespacios?\s+fisicos?\s+para\s+(?:(?:un|una|el|la)\s+)?"
+    r"(?:eventos?|seminarios?|congresos?|jornadas?|reunion(?:es)?|"
+    r"conferencias?|capacitacion(?:es)?|taller(?:es)?)\b"
 )
 _NO_EVENTO_TERMINO = re.compile(
     r"\b(?:capacitacion|jornada|seminario|evento|reunion|conferencia|"
@@ -1091,9 +1104,7 @@ def _evaluar_perfil_hotel(datos, campos, base):
                         clausula_evento,
                     )
                 )
-                if not es_taller_mecanico and not (
-                    es_sala_reuniones and fuente.startswith("items[")
-                ):
+                if not es_taller_mecanico and not es_sala_reuniones:
                     hay_evento = True
             for patron, destino, codigo in (
                 (_COMIDA_SALONES, comidas, "alimentacion_sin_salon"),
@@ -1194,8 +1205,15 @@ def _evaluar_perfil_hotel(datos, campos, base):
             salon_alquilado = arriendo and bool(
                 re.match(r"salas?|salon(?:es)?|auditorios?", m.group())
             ) and not re.search(r"\bsalon(?:es)?\s+de\s+belleza\b", clausula)
-            espacio_para_evento = m.group().startswith("espacio") and evento
-            recinto_para_evento = m.group().startswith("recinto") and arriendo and evento
+            # La solicitud debe contratar este espacio, no solo mencionar
+            # espacios de encuentro, de trabajo o el nombre de una feria.
+            espacio_solicitado = any(
+                solicitud.start() <= m.start() and solicitud.end() >= m.end()
+                for patron in (_SALON_CONTRATADO, _ESPACIO_SOLICITADO)
+                for solicitud in patron.finditer(normal)
+            )
+            espacio_para_evento = m.group().startswith("espacio") and espacio_solicitado and evento
+            recinto_para_evento = m.group().startswith("recinto") and espacio_solicitado and evento
             if (
                 (
                     _SALA_EVENTO.search(clausula)
@@ -1260,7 +1278,6 @@ def _evaluar_perfil_hotel(datos, campos, base):
         and not comidas
         and not ficha_hotelera_explicita
         and len(items_ajenos) == len(items)
-        and not hay_evento
     )
     if items_suficientemente_ajenos:
         evidencias_items = [e.get("evidencia") for e in items_ajenos if e.get("evidencia")]
@@ -1346,10 +1363,7 @@ def _evaluar_perfil_hotel(datos, campos, base):
         ]
     elif fijas and (comidas or rechazadas):
         resultado, codigo, motivo, evidencias = "no_cumple", "servicio_en_tercero", "Se solicita prestar el servicio en una sede de tercero, sin contratación del salón del hotel.", fijas
-    elif rechazadas and not genericas_concretas and not any(
-        e.get("motivo", "").startswith("La referencia al salón es el destino de bienes")
-        for e in rechazadas
-    ):
+    elif rechazadas and not genericas_concretas:
         resultado, codigo, motivo, evidencias = "no_cumple", "espacio_no_eventos", rechazadas[0]["motivo"], rechazadas
     elif clinicas and not genericas_concretas and not hay_evento:
         resultado, codigo, motivo, evidencias = "no_cumple", "objeto_clinico", "El objeto es una prestación o infraestructura clínica, no hospedaje ni un servicio para eventos del hotel.", clinicas

@@ -4,7 +4,7 @@
 
 ## Evaluación vigente y ahorro de espacio
 
-La publicación del motor `reglas-hotel-53` incorpora el catálogo activo `hotel-2026-11-v40` completo. El rechazo `omitidas_version` se informa como error 409; no se interpreta como una evaluación exitosa sin resultados. La protección contra versiones anteriores permanece activa.
+El motor `reglas-hotel-54` usa el catálogo activo `hotel-2026-11-v40`. Las menciones genéricas de «espacio» junto a actividades no acreditan un salón: se exige una solicitud del recinto o un espacio físico destinado expresamente a un evento. Los ítems ajenos prevalecen si no hay una línea hotelera concreta; las compras de letreros para salas tampoco constituyen arriendo. Cambiar el motor vuelve a poner las evaluaciones anteriores en la cola automática de ambas modalidades. El rechazo `omitidas_version` se informa como error 409; no se interpreta como una evaluación exitosa sin resultados. La protección contra versiones anteriores permanece activa.
 
 Antes de publicar este Core, aplicar su migración Alembic `3acd8ea0ce6f` en Usuarios/Licitaciones. Agrega `licitacion.preseleccion`, una marca compacta con firma, RAW, normalización, versión e identificador aceptado en Filtradas; no copia el informe. Solo se confirma después del guardado remoto y si la fuente sigue siendo la misma. La marca es técnica y no forma parte de la firma ni invalida el análisis de IA.
 

@@ -18,33 +18,30 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
   const [clasificacion, setClasificacion] = useState("preseleccionada");
   const [offset, setOffset] = useState(0);
   const [busquedaId, setBusquedaId] = useState("");
-  const [ordenCierre, setOrdenCierre] = useState("proximo"), [ordenPublicacion, setOrdenPublicacion] = useState("ninguna");
   const [datos, setDatos] = useState({ filas: [], total: 0, pendientes: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, busquedaId, clasificacion, ordenCierre, ordenPublicacion]);
+  useEffect(() => { setOffset(0); }, [q, busquedaId, clasificacion]);
   useEffect(() => {
     const control = new AbortController();
     if (!clasificacion) return () => control.abort();
     setCargando(true);
-    const parametros = new URLSearchParams({ clasificacion, q, codigo: busquedaId.trim(), orden_cierre: ordenCierre, orden_publicacion: ordenPublicacion, limite: String(LIMITE), offset: String(offset) });
+    const parametros = new URLSearchParams({ clasificacion, q, codigo: busquedaId.trim(), limite: String(LIMITE), offset: String(offset) });
     apiJson("/api/compras-agiles/preseleccion?" + parametros, { signal: control.signal })
       .then(r => { setDatos(r); setError(""); })
       .catch(e => { if (!control.signal.aborted) setError(e.message); })
       .finally(() => { if (!control.signal.aborted) setCargando(false); });
     return () => control.abort();
-  }, [clasificacion, q, busquedaId, ordenCierre, ordenPublicacion, offset, version]);
+  }, [clasificacion, q, busquedaId, offset, version]);
   const vacio = busquedaId.trim()
     ? `No hay Compras Ágiles para el ID «${busquedaId.trim()}» en esta clasificación.`
     : clasificacion === "preseleccionada"
     ? "No hay posibles oportunidades en esta carga. Puedes consultar Revisión necesaria o Todas."
     : "No hay Compras Ágiles en esta clasificación.";
   return <>
-    {clasificacion ? <PreseleccionControles clasificacion={clasificacion} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
-      onOrdenCierre={setOrdenCierre} onOrdenPublicacion={setOrdenPublicacion} total={datos.total}
+    {clasificacion ? <PreseleccionControles clasificacion={clasificacion} mostrarOrden={false} total={datos.total}
       onClasificacion={setClasificacion} entidad="Compras Ágiles" mostrarBusquedaId busquedaId={busquedaId}
       onBusquedaId={setBusquedaId} textoBusquedaId="Ej. 1195-539-COT26" ariaBusquedaId="Buscar por ID de Compra Ágil" /> : null}
-    {!clasificacion ? <VistaTodas q={q} codigo={busquedaId} onCodigo={setBusquedaId} version={version} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
-      onOrdenCierre={setOrdenCierre} onOrdenPublicacion={setOrdenPublicacion}
+    {!clasificacion ? <VistaTodas q={q} codigo={busquedaId} onCodigo={setBusquedaId} version={version}
       onClasificacion={setClasificacion} /> : <>
     {datos.pendientes > 0 && <p className="sub" role="status">{actualizando ? "Actualizando evaluaciones…" : `${datos.pendientes} Compras Ágiles pendientes de evaluar.`}</p>}
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">

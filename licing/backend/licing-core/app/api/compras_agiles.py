@@ -210,17 +210,12 @@ def resumen_compras_agiles(response: Response, db: Session = Depends(get_db)):
 async def exportar_compras_agiles(db: Session = Depends(get_db)):
     """Excel separado por clasificación; datos desactualizados quedan en revisión."""
     from starlette.concurrency import run_in_threadpool
-    from ..services.exportacion_oportunidades import crear_excel, HOJAS
+    from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
 
     ids = list(db.scalars(select(CompraAgil.id).order_by(CompraAgil.id)))
     entradas = await run_in_threadpool(cargar_entradas_compra, db, ids)
     fuentes = {datos["codigo_externo"]: datos["raw_id"] for datos in entradas.values()}
-    guardadas = {}
-    for offset in range(0, len(ids), 100):
-        pagina = await filtradas.operar("listar", {
-            "codigos": list(fuentes), "fuentes": fuentes, "limite": 100, "offset": offset,
-        })
-        guardadas.update({str(fila["id"]): fila for fila in pagina.get("filas", [])})
+    guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
 
     compras = {compra.id: compra for compra in db.scalars(
         select(CompraAgil).where(CompraAgil.id.in_(ids))
@@ -231,7 +226,7 @@ async def exportar_compras_agiles(db: Session = Depends(get_db)):
         compra = compras.get(int(identificador))
         estado = guardada.get("estado_seleccion")
         if (estado not in HOJAS or not _evaluacion_vigente(
-            compra, guardada.get("hash_fuente"), guardada.get("fuente_raw_id"), firma_compra(datos)
+            compra, guardada.get("hash_fuente"), firma_actual=firma_compra(datos)
         )):
             estado = "revision_manual"
         filas.append({**datos, "estado_seleccion": estado})

@@ -13,26 +13,25 @@ import PaginacionResultados from "../../../core/ui/PaginacionResultados";
 const LIMITE = 50;
 
 // Todas las Compras Ágiles guardadas por Core, con búsqueda y filtros en el servidor.
-export default function VistaTodas({ q, codigo, onCodigo, version, ordenCierre, ordenPublicacion, onOrdenCierre, onOrdenPublicacion, onClasificacion }) {
+export default function VistaTodas({ q, codigo, onCodigo, version, onClasificacion }) {
   const [offset, setOffset] = useState(0);
   const [datos, setDatos] = useState({ items: [], total: 0 });
   const [cargando, setCargando] = useState(true), [error, setError] = useState("");
-  useEffect(() => { setOffset(0); }, [q, codigo, ordenCierre, ordenPublicacion]);
+  useEffect(() => { setOffset(0); }, [q, codigo]);
   useEffect(() => {
     const control = new AbortController();
     setCargando(true);
     const espera = setTimeout(() => {
-      const parametros = new URLSearchParams({ q, codigo: (codigo || "").trim(), orden_cierre: ordenCierre, orden_publicacion: ordenPublicacion, limite: String(LIMITE), offset: String(offset) });
+      const parametros = new URLSearchParams({ q, codigo: (codigo || "").trim(), limite: String(LIMITE), offset: String(offset) });
       apiJson("/api/compras-agiles?" + parametros, { signal: control.signal })
         .then(r => { setDatos(r); setError(""); })
         .catch(e => { if (!control.signal.aborted) setError(e.message); })
         .finally(() => { if (!control.signal.aborted) setCargando(false); });
     }, 250);
     return () => { clearTimeout(espera); control.abort(); };
-  }, [q, codigo, ordenCierre, ordenPublicacion, offset, version]);
+  }, [q, codigo, offset, version]);
   return <>
-    <PreseleccionControles clasificacion="" ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
-      onOrdenCierre={onOrdenCierre} onOrdenPublicacion={onOrdenPublicacion} total={datos.total}
+    <PreseleccionControles clasificacion="" mostrarOrden={false} total={datos.total}
       onClasificacion={onClasificacion} entidad="Compras Ágiles" mostrarBusquedaId busquedaId={codigo || ""}
       onBusquedaId={onCodigo} textoBusquedaId="Ej. 1195-539-COT26" ariaBusquedaId="Buscar por ID de Compra Ágil" />
     <div className="scroll" aria-busy={cargando}><table className="ca-tabla">

@@ -55,7 +55,6 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   const [datos, setDatos] = useState({ filas: [], total: 0, ids_fuente: [] });
   const [filtro, setFiltro] = useState("preseleccionada"); const [offset, setOffset] = useState(0);
   const [busquedaId, setBusquedaId] = useState("");
-  const [ordenCierre, setOrdenCierre] = useState("proximo"), [ordenPublicacion, setOrdenPublicacion] = useState("ninguna");
   const [version, setVersion] = useState(0); const [error, setError] = useState("");
   const [errorCarga, setErrorCarga] = useState("");
   const [cargando, setCargando] = useState(true); const [ocupado, setOcupado] = useState("");
@@ -67,13 +66,12 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     let vigente = true; setCargando(true);
     const control = new AbortController();
     const parametros = new URLSearchParams({ clasificacion: filtro, offset: String(offset), q, codigo: busquedaId.trim() });
-    parametros.set("orden_cierre", ordenCierre); parametros.set("orden_publicacion", ordenPublicacion);
     const consulta = `${URL}?${parametros}`;
     apiJson(consulta, { signal: control.signal }).then(r => {
       if (vigente) { setDatos(r); setErrorCarga(""); }
     }).catch(e => { if (vigente) setErrorCarga(e.message); }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; control.abort(); };
-  }, [filtro, offset, version, q, busquedaId, ordenCierre, ordenPublicacion]);
+  }, [filtro, offset, version, q, busquedaId]);
   useEffect(() => { setOffset(0); }, [q, busquedaId]);
   const actualizar = () => setVersion(v => v + 1);
   async function abrir(fila) {
@@ -139,9 +137,8 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       aria-labelledby={mostrarModalidades ? `${id}-tab-licitaciones` : undefined} hidden={modalidad !== "licitaciones"} tabIndex={mostrarModalidades ? 0 : undefined}>
     <UltimaBusqueda fuente="licitaciones" />
     <p className="pre-nota" role="note">Las licitaciones nuevas se evalúan durante la carga. “Actualizar preselección” reintenta las pendientes. La lista puede incluir procesos abiertos y cerrados; la etiqueta junto al código indica si todavía reciben ofertas.</p>
-    <PreseleccionControles clasificacion={filtro} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
-      onOrdenCierre={valor => { setOrdenCierre(valor); setOffset(0); }} onOrdenPublicacion={valor => { setOrdenPublicacion(valor); setOffset(0); }}
-      total={datos.total} disabled={!!ocupado} mostrarBusquedaId={mostrarInformacion}
+    <PreseleccionControles clasificacion={filtro} mostrarOrden={false}
+      total={datos.total} disabled={!!ocupado} mostrarBusquedaId
       busquedaId={busquedaId} onBusquedaId={setBusquedaId}
       onClasificacion={valor => { setFiltro(valor); setOffset(0); }} />
     {filtro === "" && <p className="pre-nota" role="note">Vista de auditoría: incluye posibles oportunidades, revisiones y descartes. Este total no representa oportunidades para el hotel.</p>}

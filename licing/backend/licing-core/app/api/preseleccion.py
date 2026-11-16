@@ -265,22 +265,17 @@ def pendientes_documentales(response: Response, limite: int = Query(default=25, 
 @router.get("/exportar.xlsx", dependencies=[Depends(usuario_actual)])
 async def exportar_excel(db: Session = Depends(get_db)):
     from starlette.concurrency import run_in_threadpool
-    from ..services.exportacion_oportunidades import crear_excel, HOJAS
+    from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
 
     ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
     entradas = await run_in_threadpool(cargar_entradas, db, ids)
     fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
-    guardadas = {}
-    for offset in range(0, len(ids), 100):
-        pagina = await filtradas.operar("listar", {"codigos": list(fuentes), "fuentes": fuentes,
-            "limite": 100, "offset": offset})
-        guardadas.update({str(f["id"]): f for f in pagina.get("filas", [])})
+    guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
     filas = []
     for identificador, datos in entradas.items():
         guardada = guardadas.get(identificador, {})
         estado = guardada.get("estado_seleccion")
-        if (estado not in HOJAS or guardada.get("fuente_raw_id") != datos["raw_id"]
-                or guardada.get("codigo_externo") != datos["codigo_externo"]
+        if (estado not in HOJAS or guardada.get("codigo_externo") != datos["codigo_externo"]
                 or guardada.get("hash_fuente") != firma_fuente(datos)):
             estado = "revision_manual"
         filas.append({**datos, "estado_seleccion": estado})

@@ -28,6 +28,37 @@
 .dashboard-export > div { flex: 1 1 240px; }
 .dashboard-export p { margin: 6px 0 0; }
 .dashboard-export > .msg { flex-basis: 100%; }
+.dashboard-export.is-downloading { border-color: var(--accent); }
+.dashboard-export .export-state {
+  display: flex; align-items: center; gap: 12px; flex: 1 1 100%;
+  padding: 13px 15px; border: 1px solid var(--line); border-radius: 11px;
+  background: var(--surface-soft); color: var(--heading);
+}
+.dashboard-export .export-state p { color: var(--muted); font-size: 12px; }
+.dashboard-export .export-state-loading { border-color: var(--accent); }
+.dashboard-export .export-state-ready { border-color: var(--ok); background: var(--ok-bg); }
+.dashboard-export .export-spinner, .dashboard-export .export-ready-icon {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; font-weight: 800;
+}
+.dashboard-export .export-spinner {
+  border: 3px solid var(--line); border-top-color: var(--accent);
+  animation: export-spin .8s linear infinite;
+}
+.dashboard-export .export-ready-icon { color: var(--ok); background: var(--card); }
+.dashboard-export .export-progress {
+  display: block; height: 5px; margin-top: 10px; overflow: hidden;
+  border-radius: 99px; background: var(--line);
+}
+.dashboard-export .export-progress span {
+  display: block; width: 38%; height: 100%; border-radius: inherit;
+  background: var(--accent); animation: export-progress 1.5s ease-in-out infinite;
+}
+@keyframes export-spin { to { transform: rotate(360deg); } }
+@keyframes export-progress {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(280%); }
+}
 .dashboard-page .panel-icon {
   width: 35px; height: 35px; border-radius: 10px; display: grid; place-items: center; flex: none;
 }

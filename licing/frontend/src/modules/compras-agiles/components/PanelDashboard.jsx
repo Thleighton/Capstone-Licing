@@ -22,19 +22,18 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
   const { resumen, error } = useResumenComprasAgiles(versionDatos);
   const [pestaña, setPestaña] = useState("preseleccionada");
   const [busquedaId, setBusquedaId] = useState("");
-  const [ordenCierre, setOrdenCierre] = useState("proximo"), [ordenPublicacion, setOrdenPublicacion] = useState("ninguna");
   const [offset, setOffset] = useState(0);
   const [lista, setLista] = useState({ filas: [], total: 0, cargando: true, error: "" });
   const id = useId();
   useEffect(() => {
     const control = new AbortController();
     setLista(l => ({ ...l, cargando: true }));
-    const parametros = new URLSearchParams({ clasificacion: pestaña, codigo: busquedaId.trim(), orden_cierre: ordenCierre, orden_publicacion: ordenPublicacion, limite: String(VISIBLES), offset: String(offset) });
+    const parametros = new URLSearchParams({ clasificacion: pestaña, codigo: busquedaId.trim(), limite: String(VISIBLES), offset: String(offset) });
     apiJson(`/api/compras-agiles/preseleccion?${parametros}`, { signal: control.signal })
       .then(r => setLista({ filas: r.filas, total: r.total, cargando: false, error: "" }))
       .catch(e => { if (!control.signal.aborted) setLista({ filas: [], total: 0, cargando: false, error: e.message }); });
     return () => control.abort();
-  }, [pestaña, busquedaId, ordenCierre, ordenPublicacion, versionDatos, offset]);
+  }, [pestaña, busquedaId, versionDatos, offset]);
   function cambiarPestaña(valor) { setPestaña(valor); setOffset(0); }
   const Contenedor = integrado ? "div" : "section";
   return <Contenedor className={integrado ? "ca-panel-content" : "card panel dashboard-panel panel-teal ca-panel"}
@@ -47,8 +46,7 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
     {error && <p className="msg err" role="alert">No se pudo cargar el resumen de Compras Ágiles. {error}</p>}
     {integrado && <><UltimaBusqueda fuente="compra_agil" /><p className="pre-nota" role="note">Se muestran procesos disponibles; revisa la etiqueta de estado y el plazo para saber si aún aceptan ofertas.</p></>}
     {resumen && !resumen.carga_inicial_completa && <p className="ca-aviso" role="status"><Icon name="clock" />Carga inicial en curso: las Compras Ágiles se incorporan de a poco en cada turno.</p>}
-    <PreseleccionControles clasificacion={pestaña} ordenCierre={ordenCierre} ordenPublicacion={ordenPublicacion}
-      onOrdenCierre={valor => { setOrdenCierre(valor); setOffset(0); }} onOrdenPublicacion={valor => { setOrdenPublicacion(valor); setOffset(0); }}
+    <PreseleccionControles clasificacion={pestaña} mostrarOrden={false}
       total={lista.total} onClasificacion={cambiarPestaña} entidad="Compras Ágiles" mostrarBusquedaId
       busquedaId={busquedaId} onBusquedaId={valor => { setBusquedaId(valor); setOffset(0); }}
       textoBusquedaId="Ej. 1195-539-COT26" ariaBusquedaId="Buscar por ID de Compra Ágil" />

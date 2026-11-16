@@ -169,5 +169,4 @@ Aplica las migraciones de Core antes del despliegue, desde un entorno conectado 
 | Datos normalizados | [docs/DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md) |
 | Auditoría Compra Ágil | [docs/AUDITORIA_COMPRA_AGIL_2026-10-28.md](docs/AUDITORIA_COMPRA_AGIL_2026-10-28.md) |
 | Despliegue en Vercel | [docs/VERCEL.md](docs/VERCEL.md) |
-| Pantallazos del sistema | [Pantallazos/](Pantallazos/) |
 | Pruebas automatizadas | `backend/licing-core/tests/` y `filtradas/tests/` (ver sección Pruebas) |

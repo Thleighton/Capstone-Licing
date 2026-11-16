@@ -425,9 +425,11 @@ Capstone-Licing/
 ├── .github/workflows/
 │   └── core-postgres.yml        # CI: pytest + PostgreSQL 17, filtradas y build del frontend
 ├── FASE 1/                      # Evidencias grupales e individuales de la Fase 1
-├── FINAL FASE 1/                # Entrega final de la Fase 1 y anexos
 ├── FASE 2/                      # Evidencias de la Fase 2
-├── Fase 3/                      # Evidencias de la Fase 3
+│   ├── EVIDENCIAS INDIVIDUALES/ # Diarios de reflexión
+│   ├── EVIDENCIAS GRUPALES/     # Guías y entregables del equipo
+│   └── EVIDENCIAS PROYECTO/     # Presentación, documentación y sistema (apuntan a licing/)
+├── FASE 3/                      # Evidencias individuales y grupales de la Fase 3
 └── licing/                      # 🚀 Aplicación
     ├── frontend/                # React + Vite
     │   └── src/
@@ -449,7 +451,7 @@ Capstone-Licing/
     ├── supabase/migrations/     # Usuarios y perfiles
     ├── docs/
     │   ├── modelo-datos/        # Modelo lógico, relacional y diccionario de datos
-    │   ├── sql/                 # Scripts SQL de Storage y mantenimiento
+    │   ├── sql/                 # Scripts SQL de Storage, mantenimiento y datos de ejemplo (seed)
     │   ├── VERCEL.md            # Guía de despliegue
     │   └── DATOS_NORMALIZADOS.md
     ├── docker-compose.yml       # React + Core + PostgreSQL en local

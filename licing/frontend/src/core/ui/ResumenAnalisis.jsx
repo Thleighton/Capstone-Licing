@@ -48,11 +48,11 @@ export default function ResumenAnalisis({
     ["Cierre de ofertas", fechaCierre && fechaCierre !== "-" ? fechaCierre : ""],
     ["Monto informado", monto && monto !== "-" ? monto : "No informado"],
     ["Dirección informada en ficha", lugar],
-    ...(ia ? [
-      ["Lugar del evento", ia.ubicacion_requerida],
-      ["Personas", ia.personas],
-      ["Fechas y horarios", ia.fechas_horarios],
-    ] : []),
+  ].filter(([, value]) => value).map(([label, value]) => ({ label, value: clean(value, 140) }));
+  const datosIA = [
+    ["Lugar del evento", ia?.ubicacion_requerida],
+    ["Personas", ia?.personas],
+    ["Fechas y horarios", ia?.fechas_horarios],
   ].filter(([, value]) => value).map(([label, value]) => ({ label, value: clean(value, 140) }));
   const hallazgos = criterios
     .filter(c => c?.motivo || c?.resultado)
@@ -118,11 +118,8 @@ export default function ResumenAnalisis({
       <div><p>LECTURA DE LICING</p><h3>Resumen para decidir</h3></div>
       <small>{estadoLectura}</small>
     </header>
-    {ia?.sintesis && <div className="resumen-analisis__sintesis"><span>Qué solicita {entidadTipo === "compra_agil" ? "esta Compra Ágil" : "esta licitación"}</span><p>{ia.sintesis}</p></div>}
     {datos.length > 0 && <dl className="resumen-analisis__datos">{datos.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
     {motivo && !(errorIa && hallazgos.length) && <div className="resumen-analisis__conclusion"><strong>Por qué LICING la clasificó así</strong><p>{clean(motivo, 300)}</p></div>}
-    {!!ia?.alertas?.length && <div className="resumen-analisis__ia-alertas"><strong>Alertas de la ficha</strong><ul>{ia.alertas.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
-    {ia?.siguiente_paso && <div className="resumen-analisis__accion"><strong>Siguiente paso</strong><p>{ia.siguiente_paso}</p></div>}
     {onDecidir && puedeUsarIa && <div className="resumen-analisis__decisiones" aria-label="Registrar decisión">
       <span>¿Qué hacemos con esta licitación?</span>
       <div>
@@ -142,38 +139,54 @@ export default function ResumenAnalisis({
           {h.motivo && <p>{h.motivo}</p>}</div>
       </li>)}</ul>
     </div>}
-    {puedeUsarIa && <div className={`resumen-analisis__ia-panel ${errorIa ? "has-error" : ""}`} aria-live="polite">
-      {cargandoIa ? <>
-        <span className="resumen-analisis__spinner resumen-analisis__spinner--large" aria-hidden="true" />
-        <div className="resumen-analisis__ia-mensaje"><strong>Preparando resumen inteligente</strong>
-          <p>LICING está organizando la información de la ficha y sus ítems. La evaluación del filtro sigue disponible mientras se prepara.</p>
-          <div className="resumen-analisis__skeleton" aria-hidden="true"><i /><i /><i /></div>
-        </div>
-      </> : errorIa ? <>
-        <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
-        <div className="resumen-analisis__ia-mensaje"><strong>{analisisEnCurso ? "El análisis ya se está preparando" : conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
-          <p>{analisisEnCurso ? errorIa : conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta ${nombreProceso} y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
-        </div>
-        <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={cargandoIa}>
-          {analisisEnCurso ? "Consultar análisis" : conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
-        </button>
-      </> : <div className="resumen-analisis__ia-inicio">
-        <div className="resumen-analisis__ia-mensaje"><strong>{ia ? "Análisis guardado" : "¿Quieres un análisis asistido?"}</strong>
-          <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : `Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta ${nombreProceso}.`}</p>
-        </div>
-        <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={cargandoIa}>
-          <span aria-hidden="true">✦</span> {ia ? "Consultar análisis guardado" : "Iniciar análisis con IA"}
-        </button>
+    {(ia || puedeUsarIa || (claseAptaIA && !fuenteActualizada)) && <section className="resumen-analisis__ia" aria-label="Análisis con IA">
+      <header className="resumen-analisis__ia-header">
+        <h4>Análisis con IA</h4>
+        <span className="resumen-analisis__ia-distintivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />
+            <path d="M20 2v4M18 4h4" />
+          </svg>
+          {ia ? "Generado con IA" : "Inteligencia artificial"}
+        </span>
+      </header>
+      {ia?.sintesis && <div className="resumen-analisis__sintesis"><span>Qué solicita {entidadTipo === "compra_agil" ? "esta Compra Ágil" : "esta licitación"}</span><p>{ia.sintesis}</p></div>}
+      {datosIA.length > 0 && <dl className="resumen-analisis__datos">{datosIA.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
+      {!!ia?.alertas?.length && <div className="resumen-analisis__ia-alertas"><strong>Alertas de la ficha</strong><ul>{ia.alertas.map((x, i) => <li key={i}>{x}</li>)}</ul></div>}
+      {ia?.siguiente_paso && <div className="resumen-analisis__accion"><strong>Siguiente paso</strong><p>{ia.siguiente_paso}</p></div>}
+      {puedeUsarIa && <div className={`resumen-analisis__ia-panel ${errorIa ? "has-error" : ""}`} aria-live="polite">
+        {cargandoIa ? <>
+          <span className="resumen-analisis__spinner resumen-analisis__spinner--large" aria-hidden="true" />
+          <div className="resumen-analisis__ia-mensaje"><strong>Preparando resumen inteligente</strong>
+            <p>LICING está organizando la información de la ficha y sus ítems. La evaluación del filtro sigue disponible mientras se prepara.</p>
+            <div className="resumen-analisis__skeleton" aria-hidden="true"><i /><i /><i /></div>
+          </div>
+        </> : errorIa ? <>
+          <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
+          <div className="resumen-analisis__ia-mensaje"><strong>{analisisEnCurso ? "El análisis ya se está preparando" : conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
+            <p>{analisisEnCurso ? errorIa : conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta ${nombreProceso} y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
+          </div>
+          <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={cargandoIa}>
+            {analisisEnCurso ? "Consultar análisis" : conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
+          </button>
+        </> : <div className="resumen-analisis__ia-inicio">
+          <div className="resumen-analisis__ia-mensaje"><strong>{ia ? "Análisis guardado" : "¿Quieres un análisis asistido?"}</strong>
+            <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : `Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta ${nombreProceso}.`}</p>
+          </div>
+          <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={cargandoIa}>
+            <span aria-hidden="true">✦</span> {ia ? "Consultar análisis guardado" : "Iniciar análisis con IA"}
+          </button>
+        </div>}
       </div>}
-    </div>}
-    {claseAptaIA && !fuenteActualizada && <div className="resumen-analisis__ia-panel has-error" role="status">
-      <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
-      <div className="resumen-analisis__ia-mensaje"><strong>La evaluación necesita actualizarse</strong>
-        <p>Los datos actuales de la ficha no coinciden con los usados por la última evaluación. Actualízala antes de pedir el análisis con IA.</p>
-      </div>
-      {onActualizarEvaluacion && <button type="button" onClick={actualizarEvaluacion} disabled={cargandoIa}>Actualizar evaluación</button>}
-    </div>}
-    {ia && <small className="resumen-analisis__nota">Datos extraídos de la ficha e ítems disponibles. Los campos ausentes no se consideran confirmados; la lectura no cambia la clasificación.</small>}
-    {!ia && !cargandoIa && errorIa && <small className="resumen-analisis__nota">El resumen inteligente es opcional. La clasificación y los hallazgos del filtro permanecen disponibles.</small>}
+      {claseAptaIA && !fuenteActualizada && <div className="resumen-analisis__ia-panel has-error" role="status">
+        <span className="resumen-analisis__ia-fallback-icon" aria-hidden="true">i</span>
+        <div className="resumen-analisis__ia-mensaje"><strong>La evaluación necesita actualizarse</strong>
+          <p>Los datos actuales de la ficha no coinciden con los usados por la última evaluación. Actualízala antes de pedir el análisis con IA.</p>
+        </div>
+        {onActualizarEvaluacion && <button type="button" onClick={actualizarEvaluacion} disabled={cargandoIa}>Actualizar evaluación</button>}
+      </div>}
+      {ia && <small className="resumen-analisis__nota">Datos extraídos de la ficha e ítems disponibles. Los campos ausentes no se consideran confirmados; la lectura no cambia la clasificación.</small>}
+      {!ia && !cargandoIa && errorIa && <small className="resumen-analisis__nota">El resumen inteligente es opcional. La clasificación y los hallazgos del filtro permanecen disponibles.</small>}
+    </section>}
   </section>;
 }

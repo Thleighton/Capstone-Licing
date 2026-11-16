@@ -245,6 +245,52 @@
 .resumen-analisis__hallazgos li.resultado-no_cumple .resumen-analisis__hallazgo-titulo span { color: var(--warn); }
 .resumen-analisis__hallazgos li p { margin: 3px 0 0; color: var(--text); font-size: 12px; line-height: 1.5; }
 
+.resumen-analisis__ia {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  border-top: 3px solid var(--accent);
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, var(--raised)), var(--raised));
+}
+
+.resumen-analisis__ia-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+}
+
+.resumen-analisis__ia-header h4 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.resumen-analisis__ia-distintivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.resumen-analisis__ia-distintivo svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.resumen-analisis__ia .resumen-analisis__sintesis { margin-top: 0; padding: 0; border: 0; background: none; }
+.resumen-analisis__ia-header + .resumen-analisis__ia-panel { margin-top: 0; }
+
 .resumen-analisis__ia-panel {
   display: flex;
   align-items: flex-start;
@@ -290,9 +336,11 @@
   .resumen-analisis__icono { width: 32px; height: 32px; }
   .resumen-analisis__header > small { grid-column: 2; text-align: left; }
   .resumen-analisis__datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .resumen-analisis__ia { padding: 14px; }
   .resumen-analisis__ia-panel { flex-wrap: wrap; }
   .resumen-analisis__ia-panel button { margin-left: 36px; }
   .resumen-analisis__iniciar-ia { width: 100%; justify-content: center; }
+  .resumen-analisis__ia-inicio .resumen-analisis__iniciar-ia { margin-left: 0; }
   .resumen-analisis__decisiones { align-items: stretch; }
   .resumen-analisis__decisiones > div { width: 100%; }
   .resumen-analisis__decisiones button { flex: 1 1 100%; }

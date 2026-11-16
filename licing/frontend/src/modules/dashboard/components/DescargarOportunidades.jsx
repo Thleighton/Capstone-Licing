@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { apiFetch } from "../../../core/api/client";
+import { detalleRespuesta } from "../../../core/api/httpErrors";
+
+const TIPO_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const TIEMPO_MAXIMO_MS = 90_000;
 
 export default function DescargarOportunidades({
   endpoint = "/api/preseleccion/exportar.xlsx",
@@ -10,10 +14,18 @@ export default function DescargarOportunidades({
   const [descargaLista, setDescargaLista] = useState(false);
   const [error, setError] = useState("");
   async function descargar() {
+    const control = new AbortController();
+    const temporizador = setTimeout(() => control.abort(), TIEMPO_MAXIMO_MS);
     setDescargando(true); setDescargaLista(false); setError("");
     try {
-      const respuesta = await apiFetch(endpoint);
+      const respuesta = await apiFetch(endpoint, { signal: control.signal });
+      const tipo = respuesta.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase();
+      if (tipo !== TIPO_EXCEL) {
+        const cuerpo = await respuesta.clone().json().catch(() => ({}));
+        throw new Error(detalleRespuesta(cuerpo) || "El servidor no entregó un Excel válido. No se descargó ningún archivo.");
+      }
       const archivo = await respuesta.blob();
+      if (!archivo.size) throw new Error("El Excel llegó vacío. Inténtalo nuevamente.");
       const url = URL.createObjectURL(archivo);
       const enlace = document.createElement("a");
       enlace.href = url;
@@ -23,8 +35,14 @@ export default function DescargarOportunidades({
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDescargaLista(true);
       setTimeout(() => setDescargaLista(false), 7000);
-    } catch (e) { setError(e.message || "No se pudo descargar el Excel."); }
-    finally { setDescargando(false); }
+    } catch (e) {
+      setError(control.signal.aborted
+        ? "La preparación del Excel tardó demasiado. Inténtalo nuevamente."
+        : e.message || "No se pudo descargar el Excel.");
+    } finally {
+      clearTimeout(temporizador);
+      setDescargando(false);
+    }
   }
   return <section className={`card dashboard-export${descargando ? " is-downloading" : ""}`}
     aria-label={`Exportar ${entidad}`} aria-busy={descargando}>

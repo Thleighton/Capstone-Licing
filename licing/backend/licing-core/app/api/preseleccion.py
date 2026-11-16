@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -10,6 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from ..auth import solo_cron, usuario_actual
@@ -29,6 +31,7 @@ from ..services.fechas_consulta import filtrar_cierre
 from ..services.resumen_gemini import SolicitudResumenIA
 
 router = APIRouter(prefix="/api/preseleccion", tags=["Preselección"])
+logger = logging.getLogger(__name__)
 
 
 def serializable(valor):
@@ -267,24 +270,36 @@ async def exportar_excel(db: Session = Depends(get_db)):
     from starlette.concurrency import run_in_threadpool
     from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
 
-    ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
-    entradas = await run_in_threadpool(cargar_entradas, db, ids)
-    fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
-    guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
-    filas = []
-    for identificador, datos in entradas.items():
-        guardada = guardadas.get(identificador, {})
-        estado = guardada.get("estado_seleccion")
-        if (estado not in HOJAS or guardada.get("codigo_externo") != datos["codigo_externo"]
-                or guardada.get("hash_fuente") != firma_fuente(datos)):
-            estado = "revision_manual"
-        filas.append({**datos, "estado_seleccion": estado})
-    contenido = await run_in_threadpool(crear_excel, filas)
-    fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
-    return Response(contenido,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="LICING-oportunidades-{fecha}.xlsx"',
-                 "Cache-Control": "no-store"})
+    try:
+        ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
+        entradas = await run_in_threadpool(cargar_entradas, db, ids)
+        fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
+        guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
+        filas = []
+        for identificador, datos in entradas.items():
+            guardada = guardadas.get(identificador, {})
+            estado = guardada.get("estado_seleccion")
+            if (estado not in HOJAS or guardada.get("codigo_externo") != datos["codigo_externo"]
+                    or guardada.get("hash_fuente") != firma_fuente(datos)):
+                estado = "revision_manual"
+            filas.append({**datos, "estado_seleccion": estado})
+        contenido = await run_in_threadpool(crear_excel, filas)
+        fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
+        return Response(contenido,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="LICING-oportunidades-{fecha}.xlsx"',
+                     "Cache-Control": "no-store"})
+    except HTTPException:
+        raise
+    except filtradas.FiltradasNoDisponible:
+        logger.warning("No se pudo consultar LicitacionesFiltradas al exportar licitaciones")
+        raise HTTPException(503, "No se pudo consultar la clasificación para preparar el Excel. Inténtalo nuevamente.") from None
+    except SQLAlchemyError:
+        logger.exception("Error de base de datos al preparar Excel de licitaciones")
+        raise HTTPException(503, "No se pudo consultar la base para preparar el Excel. Inténtalo nuevamente.") from None
+    except Exception:
+        logger.exception("Error inesperado al preparar Excel de licitaciones")
+        raise HTTPException(500, "No se pudo preparar el Excel de licitaciones. Inténtalo nuevamente.") from None
 
 
 @router.get("/{licitacion_id}", dependencies=[Depends(usuario_actual)])

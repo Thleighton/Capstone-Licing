@@ -2,11 +2,13 @@ from io import BytesIO
 from unittest.mock import AsyncMock, Mock
 
 from openpyxl import load_workbook
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import preseleccion
+from app.api import compras_agiles, preseleccion
 from app.database import get_db
 from app.main import app
 from app.services import filtradas
+from app.services import exportacion_oportunidades
 from app.services.exportacion_oportunidades import crear_excel
 
 
@@ -73,7 +75,52 @@ def test_excel_vacio_conserva_las_tres_pestanas(client_usuario, monkeypatch):
 def test_fallo_no_entrega_excel_incompleto(client_usuario, monkeypatch):
     preparar(monkeypatch)
     monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=filtradas.FiltradasNoDisponible("No disponible")))
-    assert client_usuario.get("/api/preseleccion/exportar.xlsx").status_code == 503
+    respuesta = client_usuario.get("/api/preseleccion/exportar.xlsx")
+    assert respuesta.status_code == 503
+    assert respuesta.json()["error"] == "No se pudo consultar la clasificación para preparar el Excel. Inténtalo nuevamente."
+
+
+def test_error_al_generar_excel_de_licitaciones_se_maneja_sin_detalles_internos(client_usuario, monkeypatch):
+    preparar(monkeypatch, 1)
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(return_value={"filas": [], "total": 0}))
+    monkeypatch.setattr(exportacion_oportunidades, "crear_excel",
+                        Mock(side_effect=RuntimeError("credencial-interna")))
+
+    respuesta = client_usuario.get("/api/preseleccion/exportar.xlsx")
+
+    assert respuesta.status_code == 500
+    assert respuesta.json() == {"error": "No se pudo preparar el Excel de licitaciones. Inténtalo nuevamente."}
+    assert "credencial-interna" not in respuesta.text
+
+
+def test_error_al_generar_excel_de_compra_agil_se_maneja_sin_detalles_internos(client_usuario, monkeypatch):
+    entrada = {"1": {"id": 1, "raw_id": 10, "codigo_externo": "123-1-COT26",
+                      "nombre_organismo": "Organismo de prueba"}}
+    db = Mock()
+    db.scalars.side_effect = [[1], []]
+    app.dependency_overrides[get_db] = lambda: db
+    monkeypatch.setattr(compras_agiles, "cargar_entradas_compra", lambda _db, _ids: entrada)
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(return_value={"filas": [], "total": 0}))
+    monkeypatch.setattr(exportacion_oportunidades, "crear_excel",
+                        Mock(side_effect=RuntimeError("detalle-interno")))
+
+    respuesta = client_usuario.get("/api/compras-agiles/exportar.xlsx")
+
+    assert respuesta.status_code == 500
+    assert respuesta.json() == {"error": "No se pudo preparar el Excel de Compras Ágiles. Inténtalo nuevamente."}
+    assert "detalle-interno" not in respuesta.text
+
+
+def test_error_de_base_en_exportacion_se_maneja_como_disponibilidad(client_usuario, monkeypatch):
+    db = Mock()
+    db.scalars.side_effect = SQLAlchemyError("detalle-interno")
+    app.dependency_overrides[get_db] = lambda: db
+
+    respuesta = client_usuario.get("/api/preseleccion/exportar.xlsx")
+
+    assert respuesta.status_code == 503
+    assert respuesta.json() == {"error": "No se pudo consultar la base para preparar el Excel. Inténtalo nuevamente."}
+    assert "detalle-interno" not in respuesta.text
 
 
 def test_exportacion_exige_sesion(client):

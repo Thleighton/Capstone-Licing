@@ -1,4 +1,5 @@
 """Consultas del frontend sobre las Compras Ágiles guardadas por Core."""
+import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
@@ -8,6 +9,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from ..auth import usuario_actual
@@ -29,6 +31,7 @@ from ..services.resumen_gemini import SolicitudResumenIA, obtener_o_generar, cac
 
 CHILE = ZoneInfo("America/Santiago")
 router = APIRouter(prefix="/api", tags=["Compras Ágiles"], dependencies=[Depends(usuario_actual)])
+logger = logging.getLogger(__name__)
 
 
 def _orden_compra_agil(orden_cierre: str, orden_publicacion: str):
@@ -212,31 +215,43 @@ async def exportar_compras_agiles(db: Session = Depends(get_db)):
     from starlette.concurrency import run_in_threadpool
     from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
 
-    ids = list(db.scalars(select(CompraAgil.id).order_by(CompraAgil.id)))
-    entradas = await run_in_threadpool(cargar_entradas_compra, db, ids)
-    fuentes = {datos["codigo_externo"]: datos["raw_id"] for datos in entradas.values()}
-    guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
+    try:
+        ids = list(db.scalars(select(CompraAgil.id).order_by(CompraAgil.id)))
+        entradas = await run_in_threadpool(cargar_entradas_compra, db, ids)
+        fuentes = {datos["codigo_externo"]: datos["raw_id"] for datos in entradas.values()}
+        guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
 
-    compras = {compra.id: compra for compra in db.scalars(
-        select(CompraAgil).where(CompraAgil.id.in_(ids))
-    )} if ids else {}
-    filas = []
-    for identificador, datos in entradas.items():
-        guardada = guardadas.get(identificador, {})
-        compra = compras.get(int(identificador))
-        estado = guardada.get("estado_seleccion")
-        if (estado not in HOJAS or not _evaluacion_vigente(
-            compra, guardada.get("hash_fuente"), firma_actual=firma_compra(datos)
-        )):
-            estado = "revision_manual"
-        filas.append({**datos, "estado_seleccion": estado})
+        compras = {compra.id: compra for compra in db.scalars(
+            select(CompraAgil).where(CompraAgil.id.in_(ids))
+        )} if ids else {}
+        filas = []
+        for identificador, datos in entradas.items():
+            guardada = guardadas.get(identificador, {})
+            compra = compras.get(int(identificador))
+            estado = guardada.get("estado_seleccion")
+            if (estado not in HOJAS or not _evaluacion_vigente(
+                compra, guardada.get("hash_fuente"), firma_actual=firma_compra(datos)
+            )):
+                estado = "revision_manual"
+            filas.append({**datos, "estado_seleccion": estado})
 
-    contenido = await run_in_threadpool(crear_excel, filas, "compra_agil")
-    fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
-    return Response(contenido,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="LICING-compras-agiles-{fecha}.xlsx"',
-                 "Cache-Control": "no-store"})
+        contenido = await run_in_threadpool(crear_excel, filas, "compra_agil")
+        fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
+        return Response(contenido,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="LICING-compras-agiles-{fecha}.xlsx"',
+                     "Cache-Control": "no-store"})
+    except HTTPException:
+        raise
+    except filtradas.FiltradasNoDisponible:
+        logger.warning("No se pudo consultar LicitacionesFiltradas al exportar Compras Ágiles")
+        raise HTTPException(503, "No se pudo consultar la clasificación para preparar el Excel. Inténtalo nuevamente.") from None
+    except SQLAlchemyError:
+        logger.exception("Error de base de datos al preparar Excel de Compras Ágiles")
+        raise HTTPException(503, "No se pudo consultar la base para preparar el Excel. Inténtalo nuevamente.") from None
+    except Exception:
+        logger.exception("Error inesperado al preparar Excel de Compras Ágiles")
+        raise HTTPException(500, "No se pudo preparar el Excel de Compras Ágiles. Inténtalo nuevamente.") from None
 
 
 @router.get("/compras-agiles/preseleccion")

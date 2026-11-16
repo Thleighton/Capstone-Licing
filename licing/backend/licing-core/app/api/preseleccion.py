@@ -287,7 +287,7 @@ async def exportar_excel(db: Session = Depends(get_db)):
         fecha = datetime.now(CHILE).strftime("%Y-%m-%d")
         return Response(contenido,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="LICING-oportunidades-{fecha}.xlsx"',
+            headers={"Content-Disposition": f'attachment; filename="LICING-licitaciones-{fecha}.xlsx"',
                      "Cache-Control": "no-store"})
     except HTTPException:
         raise

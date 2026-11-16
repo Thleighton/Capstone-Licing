@@ -13,7 +13,7 @@ export default function LicitacionesPage() {
       {dashboardError && <div className="msg err" role="alert">{dashboardError}{dashboard && " Se muestra el último resumen disponible."}</div>}
       {!dashboard && dashboardCargando && <p role="status">Cargando indicadores de licitaciones…</p>}
       {dashboard && <Indicadores resumen={dashboard} />}
-      <DescargarOportunidades />
+      <DescargarOportunidades nombreFallback="LICING-licitaciones.xlsx" />
     </div>
     <div className="dashboard-page">
       <Preseleccion mostrarInformacion onActualizada={cargarResumen} q={q} />

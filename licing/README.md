@@ -156,3 +156,18 @@ La guía principal está en **[docs/VERCEL.md](docs/VERCEL.md)**. En el proyecto
 
 Aplica las migraciones de Core antes del despliegue, desde un entorno conectado a esa base. Mantén los lotes pequeños para respetar el límite de ejecución de la función. Vercel no inicia el PostgreSQL local de Docker.
 
+
+## Documentación del proyecto
+
+| Documento | Ubicación |
+| --- | --- |
+| Diccionario de datos | [docs/modelo-datos/Diccionario de datos.xlsx](docs/modelo-datos/Diccionario%20de%20datos.xlsx) |
+| Modelo lógico | [docs/modelo-datos/Modelo_logico.jpg](docs/modelo-datos/Modelo_logico.jpg) |
+| Modelo relacional | [docs/modelo-datos/Modelo Relacional.png](docs/modelo-datos/Modelo%20Relacional.png) |
+| Scripts SQL | [docs/sql/](docs/sql/) y `supabase/migrations/` |
+| Datos de ejemplo (seed) | [docs/sql/seed_datos_ejemplo.sql](docs/sql/seed_datos_ejemplo.sql): licitaciones y compras ágiles ficticias, re-ejecutable |
+| Datos normalizados | [docs/DATOS_NORMALIZADOS.md](docs/DATOS_NORMALIZADOS.md) |
+| Auditoría Compra Ágil | [docs/AUDITORIA_COMPRA_AGIL_2026-10-28.md](docs/AUDITORIA_COMPRA_AGIL_2026-10-28.md) |
+| Despliegue en Vercel | [docs/VERCEL.md](docs/VERCEL.md) |
+| Pantallazos del sistema | [Pantallazos/](Pantallazos/) |
+| Pruebas automatizadas | `backend/licing-core/tests/` y `filtradas/tests/` (ver sección Pruebas) |

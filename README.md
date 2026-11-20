@@ -2,7 +2,7 @@
 
 **Asistente inteligente de Mercado Público para el Hotel Plaza San Francisco.**
 
-> Encuentra a tiempo las licitaciones y Compras Ágiles de alojamiento, salones y alimentación que le sirven al hotel. LICING las descarga, las ordena, descarta las que no corresponden y deja al equipo comercial lo único que le toca hacer: decidir si postula.
+> Encuentra a tiempo las licitaciones y Compras Ágiles de salones para eventos y alimentación asociada que le sirven al hotel. LICING las descarga, las ordena, descarta las que no corresponden y deja al equipo comercial lo único que le toca hacer: decidir si postula.
 
 [![React](https://img.shields.io/badge/React-18.3-61DAFB.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF.svg)](https://vite.dev/)
@@ -56,15 +56,15 @@ LICING **no postula ni decide por el hotel**. Ordena y explica la información p
 <a id="objetivos" name="objetivos"></a>
 ## 🎯 Objetivos
 
-**Objetivo general:** desarrollar una aplicación web que obtenga y analice automáticamente oportunidades de Mercado Público y Compra Ágil según los criterios del Hotel Plaza San Francisco, para apoyar al Encargado de Licitaciones en su evaluación y seguimiento comercial.
+**Objetivo general:** desarrollar una aplicación web que obtenga y preseleccione automáticamente oportunidades de Mercado Público y Compra Ágil según los criterios del Hotel Plaza San Francisco, para apoyar al Encargado de Licitaciones en su evaluación.
 
 **Objetivos específicos:**
 
 1. Definir y mantener los requisitos, casos de uso y criterios de aceptación, con trazabilidad entre la necesidad del hotel y la solución.
 2. Integrar la obtención automática de oportunidades desde Mercado Público y Compra Ágil.
 3. Implementar el filtrado y la selección de oportunidades según los parámetros del hotel.
-4. Extraer de las bases y TDR los servicios, fechas críticas, presupuesto y requisitos administrativos.
-5. Implementar la revisión de admisibilidad, la evaluación presupuestaria, el seguimiento por estados, el tablero de control y los informes de gestión.
+4. Ofrecer una lectura asistida con IA (Gemini) de la ficha y los ítems de cada oportunidad elegible, sin analizar bases ni anexos.
+5. Permitir registrar la decisión de relevancia de cada licitación, consultar un tablero de preselección con próximos cierres y exportar los listados a Excel. La admisibilidad, la evaluación presupuestaria, el seguimiento por estados y los informes de gestión quedaron fuera de esta entrega.
 6. Verificar los requisitos funcionales y no funcionales con pruebas documentadas y entregar el sistema con documentación técnica y de uso.
 
 ---
@@ -76,9 +76,9 @@ Proyecto desarrollado para el **Hotel Plaza San Francisco** en la asignatura **C
 
 | Integrante | Responsabilidades en el proyecto |
 | :--- | :--- |
-| **Diego Sandoval** | Estudio de mercado; frontend de Oportunidades y Configuración; autenticación y plataforma (Vercel, Supabase, CI); API de consultas e ingesta de datos |
-| **Miguel Mancilla** | Perfil del hotel y análisis documental: criterios, requisitos y endpoints de análisis de bases en Core |
-| **Thomas Leighton** | Dashboard, seguimiento, reportes, disponibilidad de salones y clientes, incluidas sus futuras escrituras comerciales en Core |
+| **Diego Sandoval** | Estudio de mercado; frontend de Oportunidades; autenticación y plataforma (Vercel, Supabase, CI); API de consultas e ingesta de datos |
+| **Miguel Mancilla** | Análisis documental inicial (retirado del MVP), criterios de preselección y exportación a Excel |
+| **Thomas Leighton** | Dashboard, evaluación única con caché de la lectura asistida, clientes importantes y mantención de la rama principal |
 
 ---
 
@@ -93,11 +93,11 @@ El proyecto sigue un enfoque **ágil, iterativo e incremental**, organizado con 
 | A2 · Diseño y decisiones técnicas | Stack, arquitectura, modelo de datos, casos de uso y prototipos | S4–S6 |
 | A3 · Obtención de oportunidades | Conexión con la API de Mercado Público y Compra Ágil | S6–S7 |
 | A4 · Filtrado | Parámetros del hotel y selección de oportunidades relevantes | S8 |
-| A5 · Interfaz de consulta | Vista de oportunidades y configuración de búsqueda | S9 |
-| A6 · Análisis documental | Lectura de bases y TDR, extracción de datos clave | S9–S12 |
-| A7 · Tablero de control | Embudo, totales por estado e indicadores | S11–S14 |
-| A8 · Presupuesto y seguimiento | Umbrales, alertas, admisibilidad y estados comerciales | S12–S14 |
-| A9 · Integración y reportería | Integración de módulos e informes de gestión | S14–S16 |
+| A5 · Interfaz de consulta | Vista de licitaciones y Compras Ágiles con rango de fechas; la configuración de búsqueda quedó fuera | S9 |
+| A6 · Análisis documental | Lectura asistida de ficha e ítems con IA; el análisis de bases se retiró | S9–S12 |
+| A7 · Tablero de control | Tablero de preselección e indicadores, sin embudo comercial | S11–S14 |
+| A8 · Presupuesto y seguimiento | Alertas de próximos cierres y decisión de relevancia; admisibilidad, presupuesto y estados comerciales quedaron fuera | S12–S14 |
+| A9 · Integración y reportería | Integración de módulos y exportación a Excel | S14–S16 |
 | A10 · Pruebas y ajustes | QA, registro de incidencias y correcciones | S15–S16 |
 | A11 · Documentación | README, manual de usuario y documentación final | S15–S17 |
 
@@ -189,7 +189,9 @@ El modelo de datos completo (lógico, relacional y diccionario de datos) está e
 - Alta y baja de clientes demo, con validación de campos obligatorios, formato de correo y nombres duplicados.
 - Distintivo de **cliente importante** en las licitaciones de organismos destacados.
 
-### 📄 Documentos de Origen
+### 📄 Documentos de Origen *(retirado del MVP)*
+> El análisis y la carga de documentos responden HTTP 410 en esta versión. Se conserva el lector y sus pruebas de regresión; las bases se consultan en la ficha oficial.
+
 - Registro de bases y anexos en PDF, Word (`.docx`) y Excel (`.xlsx`) en un bucket privado.
 - Extracción de texto por página (hasta 120 páginas y 300.000 caracteres) en un proceso aislado; los archivos ilegibles pasan a revisión manual.
 - Deduplicación por huella del archivo y control de versiones.
@@ -229,13 +231,13 @@ El motor de preselección clasifica cada licitación y Compra Ágil con **tres p
 | :--- | :--- | :--- |
 | 1. **Vigencia** | ¿El proceso sigue abierto? | Fecha de cierre vencida |
 | 2. **Lugar de prestación** | ¿El servicio se presta en la Región Metropolitana? | Evento en otra región, aunque el comprador tenga domicilio en Santiago |
-| 3. **Servicio solicitado** | ¿Pide alojamiento, salones, alimentación o una combinación? | Compra de mobiliario o material eléctrico |
+| 3. **Servicio solicitado** | ¿Pide salones para eventos, alimentación asociada o una combinación? | Compra de mobiliario o material eléctrico |
 
 - **Resultado**: si cumple los tres pilares, el proceso es una **posible oportunidad**. Un incumplimiento explícito lo **descarta**, y se muestra el primero según la jerarquía. Si falta un dato esencial, queda **pendiente de revisión manual**.
 - **Trazabilidad**: cada pilar guarda su motivo y la evidencia que lo respalda (texto de la descripción, ítems o documentos).
 - **Reglas explícitas**: no confunde el domicilio del comprador con el lugar del servicio ni una categoría genérica de producto con una contratación concreta. El catálogo de reglas está versionado en `app/data/preseleccion_hotel_v1.json`.
 - **Recálculo**: cambiar la versión del motor o del catálogo invalida las evaluaciones anteriores. Las licitaciones se actualizan al abrir su página; en Compras Ágiles se comprueban las pendientes y se guardan con **Actualizar preselección**.
-- **IA**: el filtrado semántico y el análisis con modelos de lenguaje se retiraron de esta versión y quedan como trabajo futuro. La preselección actual es determinista y explicable.
+- **IA**: Gemini genera una lectura breve de la ficha y los ítems de cada licitación o Compra Ágil elegible, con caché por versión de la ficha. No analiza bases ni anexos y no modifica la clasificación. El filtrado semántico se retiró: la preselección es determinista y explicable.
 
 ---
 
@@ -266,7 +268,7 @@ Documentación interactiva en `/api/docs` (Swagger) cuando el backend está en e
 | `GET /api/compras-agiles` | Listado de Compras Ágiles con su clasificación | Usuario activo |
 | `GET /api/compras-agiles/resumen` | Indicadores de Compra Ágil | Usuario activo |
 | `GET /api/compras-agiles/{id}` | Detalle y productos solicitados | Usuario activo |
-| `/api/preseleccion/...` | Clasificación, evaluación y pendientes documentales | Usuario activo |
+| `/api/preseleccion/...` | Clasificación, evaluación, revisión manual, exportación y lectura asistida | Usuario activo |
 | `GET /api/ingestas` | Últimas ejecuciones | Usuario activo |
 | `/api/ingesta/licitaciones/...` | Descarga y procesamiento de licitaciones | Administrador |
 | `/api/ingesta/compras-agiles/...` | Lote, estado y descarga por código | Administrador |
@@ -409,6 +411,7 @@ Guía paso a paso, incluida la preparación de Supabase y la ingesta cada 5 minu
 | **Autenticación** | Supabase Auth, perfiles con RLS en `public.usuario` |
 | **Almacenamiento de Archivos** | Supabase Storage (bucket privado `licitacion-bases`) |
 | **Funciones Serverless** | Supabase Edge Functions (Deno/TypeScript) |
+| **IA** | Gemini (lectura asistida de ficha e ítems) |
 | **Procesamiento de Documentos** | pypdf, pypdfium2, lectura de `.docx`/`.xlsx` |
 | **Hosting** | Vercel (sitio estático + función Python) |
 | **Desarrollo Local** | Docker Compose |

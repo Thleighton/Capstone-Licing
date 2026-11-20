@@ -4,7 +4,7 @@
 
 Toda implementación de backend se hace en `backend/licing-core/app/`. Se mantienen los modelos, servicios de persistencia y migraciones de Core. El backend anterior de LICING se retiró.
 
-- Diego: frontend de oportunidades/configuración, autenticación y plataforma; API de consultas y obtención de datos.
+- Diego: frontend de licitaciones y Compras Ágiles, autenticación y plataforma; API de consultas y obtención de datos.
 - Miguel: perfil del hotel y análisis documental. Los nuevos endpoints de criterios, requisitos e IA se agregan a Core.
 - Thomas: dashboard, seguimiento, reportes, disponibilidad y clientes. Las futuras escrituras comerciales también se implementan en Core.
 

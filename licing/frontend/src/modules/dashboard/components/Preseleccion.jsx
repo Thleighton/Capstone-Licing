@@ -59,7 +59,6 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   const [errorCarga, setErrorCarga] = useState("");
   const [cargando, setCargando] = useState(true); const [ocupado, setOcupado] = useState("");
   const [seleccion, setSeleccion] = useState(null); const [detalle, setDetalle] = useState(null);
-  const [errorRevision, setErrorRevision] = useState("");
   const [resumen, setResumen] = useState("");
   const secuencia = useRef(0);
   useEffect(() => {
@@ -76,7 +75,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
   const actualizar = () => setVersion(v => v + 1);
   async function abrir(fila) {
     const turno = ++secuencia.current;
-    setSeleccion(fila); setDetalle(null); setErrorRevision("");
+    setSeleccion(fila); setDetalle(null);
     const [resultado, ficha] = await Promise.allSettled([
       apiJson(`${URL}/${fila.id}`), apiJson(`/api/licitaciones/${fila.id}`),
     ]);
@@ -88,7 +87,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
       errorFicha: ficha.status === "rejected" ? ficha.reason.message : "",
     });
   }
-  function cerrarResultado() { secuencia.current++; setSeleccion(null); setDetalle(null); setErrorRevision(""); }
+  function cerrarResultado() { secuencia.current++; setSeleccion(null); setDetalle(null); }
   async function evaluar() {
     let huboCambios = false;
     setOcupado("Comprobando licitaciones nuevas o modificadas…"); setError("");
@@ -108,13 +107,19 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     }
   }
   async function revisar(accion, motivoAnalisis) {
-    setOcupado("Guardando revisión…"); setErrorRevision("");
+    setOcupado("Guardando decisión…");
     try {
-      await apiJson(`${URL}/${seleccion.id}/revision`, { method: "POST", body: { evaluacion_id: detalle.evaluacion.id, accion, categoria_motivo: "otro", motivo: motivoAnalisis || "Decisión registrada por el usuario." } });
-      setSeleccion(null); setDetalle(null); actualizar();
-      await onActualizada?.();
-    } catch (e) { setErrorRevision(e.message); }
-    finally { setOcupado(""); }
+      const revision = await apiJson(`${URL}/${seleccion.id}/revision`, {
+        method: "POST",
+        body: { evaluacion_id: detalle.evaluacion.id, accion, categoria_motivo: "otro", motivo: motivoAnalisis },
+      });
+      setSeleccion(fila => fila?.id === seleccion.id ? {
+        ...fila, estado_seleccion: revision.estado_seleccion, motivo_seleccion: revision.motivo_seleccion,
+      } : fila);
+      actualizar();
+      void onActualizada?.();
+      return revision;
+    } finally { setOcupado(""); }
   }
   const mensajeVacio = busquedaId.trim()
     ? `No hay licitaciones para el ID «${busquedaId.trim()}» con los filtros seleccionados.`
@@ -164,7 +169,7 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
         cargando={cargando || !!ocupado} onCambiar={setOffset} etiqueta="Páginas de licitaciones" />}
     </>}
     <ResultadoPreseleccion fila={seleccion} detalle={detalle} pilares={pilares} etiquetas={etiquetas} tonos={tonos}
-      ocupado={ocupado} errorRevision={errorRevision}
+      ocupado={ocupado}
       onCerrar={cerrarResultado} onReintentar={() => abrir(seleccion)} onRevisar={revisar} />
     </div>
     {mostrarModalidades && <div className="pre-modalidad-panel" id={`${id}-panel-compras-agiles`} role="tabpanel"

@@ -11,10 +11,13 @@ const tonosCriterio = { cumple: "green", no_cumple: "", sin_informacion: "amber"
 const evidencia = c => (c.evidencias || []).filter(e => e.evidencia || e.texto).slice(0, 5);
 
 export default function ResultadoPreseleccion({ fila, detalle, pilares, etiquetas, tonos, ocupado,
-  errorRevision, onCerrar, onReintentar, onRevisar }) {
+  onCerrar, onReintentar, onRevisar }) {
   const id = useId();
   const licitacion = detalle?.licitacion || fila;
   const fichaMercadoPublico = licitacion?.url_oficial || fila?.url_oficial;
+  const estado = fila?.estado_seleccion;
+  const descarteManual = estado === "descartada" && fila.motivo_seleccion?.includes("Registrado por ");
+  const etiqueta = descarteManual ? "Descartada por usuario" : etiquetas[estado] || "Sin evaluar";
   return <Dialog open={!!fila} onClose={onCerrar} onCancel={e => { if (ocupado) e.preventDefault(); }}
     className="pre-result-dialog" aria-labelledby={`${id}-titulo`}>
     {fila && <>
@@ -25,10 +28,10 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
       </header>
       <div className="pre-result-body">
         <div className="pre-result-status">
-          <span className={"badge " + (tonos[fila.estado_seleccion] || "")}>{etiquetas[fila.estado_seleccion] || "Sin evaluar"}</span>
+          <span className={"badge " + (tonos[estado] || "")}>{etiqueta}</span>
           <ClienteImportanteBadge clientes={licitacion.clientes_importantes || fila.clientes_importantes} />
         </div>
-        {detalle && <ResumenAnalisis estado={fila.estado_seleccion} motivo={fila.motivo_seleccion}
+        {detalle && <ResumenAnalisis estado={estado} motivo={detalle.evaluacion?.motivo || fila.motivo_seleccion}
           criterios={detalle.criterios || []}
           fechaCierre={fecha(licitacion.fecha_cierre)}
           monto={licitacion.monto_estimado == null ? "" : dinero(licitacion.monto_estimado, licitacion.moneda)}
@@ -36,7 +39,8 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
           entidadTipo="licitacion" entidadId={fila.id} resumenIA={detalle.resumen_ia?.resumen}
           clasificacionActual={detalle.evaluacion?.clasificacion} hashFuente={detalle.hash_fuente}
           fuenteActualizada={Boolean(detalle.fuente_actualizada)}
-          onDecidir={detalle.evaluacion?.id ? onRevisar : undefined} guardandoDecision={Boolean(ocupado)} />}
+          onDecidir={detalle.evaluacion?.id ? onRevisar : undefined}
+          guardandoDecision={Boolean(ocupado)} onRecargarFicha={onReintentar} />}
         {detalle?.revision_id && <p className="pre-result-notice">Decisión registrada{fila.revisado_por ? ` por ${fila.revisado_por}` : ""}{fila.revisado_en ? ` · ${fecha(fila.revisado_en)}` : ""}.</p>}
         {!detalle ? <p role="status">Cargando información de la licitación y su evaluación…</p> : <>
           {(detalle.errorResultado || detalle.errorFicha) && <div className="pre-result-error" role="alert">
@@ -44,8 +48,6 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
             <button type="button" onClick={onReintentar}>Reintentar</button>
           </div>}
           {(!detalle.fuente_actualizada || !detalle.evaluacion) && <p className="pre-result-notice">La evaluación necesita actualizarse. Usa Actualizar preselección antes de registrar una revisión.</p>}
-          {errorRevision && <p className="pre-result-error" role="alert">{errorRevision}</p>}
-          {ocupado && <p role="status">{ocupado}</p>}
           <section className="pre-result-section" aria-label="Información general">
             <h3>Información de la licitación</h3>
             <dl className="pre-result-facts">

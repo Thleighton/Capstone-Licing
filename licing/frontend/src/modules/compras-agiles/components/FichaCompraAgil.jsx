@@ -6,7 +6,7 @@ import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
 import ResumenAnalisis from "../../../core/ui/ResumenAnalisis";
-import { cerrarCompraAgil, fichaCompraAgil, finalizarRevisionCompraAgil } from "../store";
+import { cerrarCompraAgil, fichaCompraAgil, notificarRevisionCompraAgil } from "../store";
 import { etiquetaPreseleccion, PILARES, TONOS } from "../comun";
 import "../../dashboard/components/resultado-preseleccion.css";
 
@@ -19,11 +19,9 @@ export default function FichaCompraAgil() {
   const [detalle, setDetalle] = useState(null);
   const [intento, setIntento] = useState(0);
   const [guardandoRevision, setGuardandoRevision] = useState(false);
-  const [errorRevision, setErrorRevision] = useState(null);
   const tituloId = useId();
   useEffect(() => {
     setDetalle(null);
-    setErrorRevision(null);
     if (!id) return;
     let vivo = true;
     Promise.allSettled([apiJson(`/api/compras-agiles/${id}`), apiJson(`/api/compras-agiles/${id}/preseleccion`)])
@@ -46,16 +44,19 @@ export default function FichaCompraAgil() {
 
   async function revisar(accion, motivo) {
     setGuardandoRevision(true);
-    setErrorRevision(null);
     try {
-      await apiJson(`/api/compras-agiles/${id}/revision`, {
+      const revision = await apiJson(`/api/compras-agiles/${id}/revision`, {
         method: "POST",
         body: { evaluacion_id: evaluacion.id, accion, categoria_motivo: "otro", motivo },
       });
-      setDetalle(null);
-      finalizarRevisionCompraAgil(id);
-    } catch (error) {
-      setErrorRevision(error);
+      setDetalle(ficha => ficha?.id === id && ficha.preseleccion?.evaluacion?.id === evaluacion.id ? {
+        ...ficha,
+        preseleccion: {
+          ...ficha.preseleccion, estado_seleccion: revision.estado_seleccion, motivo_seleccion: revision.motivo_seleccion,
+        },
+      } : ficha);
+      notificarRevisionCompraAgil();
+      return revision;
     } finally {
       setGuardandoRevision(false);
     }
@@ -121,13 +122,8 @@ export default function FichaCompraAgil() {
             hashFuente={preseleccion?.hash_fuente}
             fuenteActualizada={Boolean(vigente)} onActualizarEvaluacion={actualizarEvaluacion}
             prepararResumenIA={prepararResumenIA} onDecidir={vigente && evaluacion.id ? revisar : undefined}
-            guardandoDecision={guardandoRevision} />
-          {decisionRegistrada && <p className="pre-result-notice"><strong>Decisión registrada.</strong> {motivoSeleccion}</p>}
-          {guardandoRevision && <p role="status">Guardando revisión…</p>}
-          {errorRevision && <div className="pre-result-error" role="alert">
-            <p>No se pudo guardar la decisión. {errorRevision.message}</p>
-            {errorRevision.status === 409 && <button type="button" onClick={() => setIntento(n => n + 1)}>Recargar ficha</button>}
-          </div>}
+            guardandoDecision={guardandoRevision} onRecargarFicha={() => setIntento(n => n + 1)} />
+          {decisionRegistrada && <p className="pre-result-notice"><strong>Motivo de la decisión.</strong> {motivoSeleccion}</p>}
           <section className="pre-result-section" aria-label="Información general">
             <h3>Información de la Compra Ágil</h3>
             <dl className="pre-result-facts">

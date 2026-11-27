@@ -4,7 +4,6 @@ import { createStore } from "../../core/store/createStore";
 export const fichaCompraAgil = createStore({ id: null, versionRevision: 0 });
 export const abrirCompraAgil = id => fichaCompraAgil.set({ id });
 export const cerrarCompraAgil = () => fichaCompraAgil.set({ id: null });
-export const finalizarRevisionCompraAgil = id => fichaCompraAgil.set(s => ({
-  id: s.id === id ? null : s.id,
+export const notificarRevisionCompraAgil = () => fichaCompraAgil.set(s => ({
   versionRevision: s.versionRevision + 1,
 }));

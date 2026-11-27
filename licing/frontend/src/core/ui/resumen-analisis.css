@@ -202,6 +202,13 @@
 .resumen-analisis__decisiones button.is-confirm { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); color: var(--ok); }
 .resumen-analisis__decisiones button:disabled { cursor: wait; opacity: .6; }
 
+.resumen-analisis__aviso-decision { margin: 0; font-size: 13px; }
+.resumen-analisis__aviso-decision:not(:empty) { margin-top: 10px; padding: 9px 12px; border-radius: 8px; }
+.resumen-analisis__aviso-decision.is-success { color: var(--ok); background: var(--ok-bg); font-weight: 650; }
+.resumen-analisis__aviso-decision.is-error { color: var(--err); background: var(--err-bg); }
+.resumen-analisis__aviso-decision.is-error p { margin: 0; overflow-wrap: anywhere; }
+.resumen-analisis__aviso-decision.is-error button { margin-top: 8px; }
+
 .resumen-analisis__nota {
   display: block;
   margin-top: 11px;

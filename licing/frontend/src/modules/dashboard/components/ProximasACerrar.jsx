@@ -54,12 +54,12 @@ export default function ProximasACerrar({ rows, disponibles = true, estado, abri
         const cantidad = Math.max(1, Math.ceil(restantes / (unidad === "min" ? 60000 : 3600000)));
         const mensajeDias = `${dias} ${dias === 1 ? "día" : "días"}${horas ? ` y ${horas} h` : ""}`;
         const mensaje = restantes <= 0 ? "Plazo vencido" : restantes > dia ? `Quedan ${mensajeDias}` : `${cantidad === 1 ? "Queda" : "Quedan"} ${cantidad} ${unidad}`;
-        return <article className="closing-item" data-urgency={aviso ? nivel : undefined} data-cliente-importante={!!r.clientes_importantes?.length} key={r.id}>
+        return <article className="closing-item" data-urgency={aviso ? nivel : undefined} key={r.id}>
           <div className="closing-item-header">
             {officialOpportunityUrl(r) ? <a className="closing-reference" href={officialOpportunityUrl(r)} target="_blank" rel="noopener noreferrer" aria-label={`Ver licitación ${r.codigo_externo} en Mercado Público`}>{r.codigo_externo} ↗</a> : <span className="closing-reference">{r.codigo_externo}</span>}
             {aviso && <span className={"closing-alert closing-alert-" + nivel}><Icon name="clock" />{mensaje}</span>}
           </div>
-          <ClienteImportanteBadge clientes={r.clientes_importantes} />
+          <ClienteImportanteBadge oportunidad={r} />
           <TituloLicitacion licitacion={r} className="closing-item-title" />
           <div className="closing-item-footer">
             <time dateTime={r.fecha_cierre}><span>Cierre</span>{fecha(r.fecha_cierre)}</time>

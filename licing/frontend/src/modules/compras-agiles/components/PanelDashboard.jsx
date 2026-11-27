@@ -72,7 +72,7 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
               </div>
               <CierrePlazo fechaCierre={f.fecha_cierre} />
             </div>
-            <ClienteImportanteBadge clientes={f.clientes_importantes} />
+            <ClienteImportanteBadge oportunidad={f} />
             <TituloLicitacion licitacion={f} className="ca-item-title" />
             {f.estado_seleccion === "descartada" ? <p className="ca-item-motivo ca-item-descarte"><strong>{etiqueta}.</strong> {f.motivo_seleccion || "No se recibió el detalle del descarte."}</p>
               : <p className="ca-item-motivo">{f.motivo_seleccion || "Sin motivo de clasificación informado."}</p>}

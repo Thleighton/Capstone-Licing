@@ -14,6 +14,7 @@ export function LicitacionesProvider({ children }) {
   const [q, escribirQ] = useState("");
   const [filtros, escribirFiltros] = useState({ soloAbiertas: false, region: "", visibles: false });
   const [pagina, setPagina] = useState(0), [fichaId, setFichaId] = useState(null);
+  const [clientesDemo, setClientesDemo] = useState([]);
   const listaControl = useRef(null), resumenControl = useRef(null);
   const cargarLista = useCallback(async () => {
     listaControl.current?.abort();
@@ -61,5 +62,6 @@ export function LicitacionesProvider({ children }) {
       if ("region" in cambios || "soloAbiertas" in cambios) setPagina(0);
     },
     fichaId, abrirFicha: setFichaId, cerrarFicha: () => setFichaId(null),
+    clientesDemo, setClientesDemo,
   }}>{children}</Ctx.Provider>;
 }

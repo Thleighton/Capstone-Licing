@@ -53,12 +53,11 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: 190 }} /><col style={{ width: 135 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Cierre</th><th>Presupuesto</th><th>Preselección</th></tr></thead>
       <tbody>{datos.filas.map(f => {
-        return <tr key={f.id} onClick={() => abrirCompraAgil(f.id)}
-          className={f.clientes_importantes?.length ? "opportunity-important" : undefined}>
+        return <tr key={f.id} onClick={() => abrirCompraAgil(f.id)}>
           <td><span className="ca-codigo-estado"><button className="cod" onClick={e => { e.stopPropagation(); abrirCompraAgil(f.id); }}>{f.codigo_externo}</button><EstadoPlazo fila={f} /></span>
             {f.url_oficial && <div className="sub"><a href={f.url_oficial} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Mercado Público ↗</a></div>}</td>
           <td className="nom"><TituloLicitacion as="div" licitacion={f} />
-            <ClienteImportanteBadge clientes={f.clientes_importantes} />
+            <ClienteImportanteBadge oportunidad={f} />
             <p className="ca-motivo">{f.motivo_seleccion}</p></td>
           <td><CierrePlazo fechaCierre={f.fecha_cierre} compacto /></td>
           <td>{f.monto_disponible_clp == null ? "-" : dinero(f.monto_disponible_clp, "CLP")}<div className="sub">{f.region_comprador}</div></td>

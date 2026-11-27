@@ -185,9 +185,9 @@ El modelo de datos completo (lógico, relacional y diccionario de datos) está e
 - Fichas con código, organismo, estado, montos, fechas, ítems o productos solicitados y el resultado de los tres pilares.
 
 ### 👥 Clientes *(demostración)*
-- Listado de clientes con contacto y servicios de interés.
+- Listado de clientes con datos de contacto opcionales.
 - Alta y baja de clientes demo, con validación de campos obligatorios, formato de correo y nombres duplicados.
-- Distintivo de **cliente importante** en las licitaciones de organismos destacados.
+- Distintivo de **cliente importante** en Licitaciones y Compras Ágiles. Los clientes demo se reconocen por nombre del organismo o de la unidad compradora durante la sesión.
 
 ### 📄 Documentos de Origen *(retirado del MVP)*
 > El análisis y la carga de documentos responden HTTP 410 en esta versión. Se conserva el lector y sus pruebas de regresión; las bases se consultan en la ficha oficial.

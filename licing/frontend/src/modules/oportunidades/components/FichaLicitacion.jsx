@@ -23,7 +23,7 @@ export default function FichaLicitacion() {
     <div className="dlg-head"><div><div className="code">{r?.codigo_externo || "Licitación"}</div>{r ? <TituloLicitacion as="div" licitacion={r} /> : <strong>Detalle de la oportunidad</strong>}</div><button onClick={cerrarFicha}>Cerrar</button></div>
     {url && <div className="detail-source"><a className="button primary" href={url} target="_blank" rel="noopener noreferrer">Abrir en Mercado Público ↗</a><p className="sub">Ficha oficial · se abre en una pestaña nueva.</p></div>}
     <div className="dlg-body">{!actual ? "Cargando..." : actual.error ? <p role="alert">Error: {actual.error}</p> : <>
-      <ClienteImportanteBadge clientes={r.clientes_importantes} />
+      <ClienteImportanteBadge oportunidad={r} />
       <dl className="kv">
         <dt>Organismo</dt><dd>{r.nombre_organismo || "-"}</dd><dt>Unidad compradora</dt><dd>{r.nombre_unidad || "-"}</dd>
         <dt>Ubicación del comprador</dt><dd>{[r.comuna_comprador, r.region_comprador].filter(Boolean).join(", ") || "No informada"}</dd>

@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { normalizarNombreCliente } from "../../core/data/clientes";
 import Dialog from "../../core/ui/Dialog";
 
-const VACIO = { nombre: "", contacto: "", correo: "", telefono: "", servicios: [] };
-const SERVICIOS = ["Alojamiento", "Salones", "Alimentación"];
+const VACIO = { nombre: "", contacto: "", correo: "", telefono: "" };
 
 export default function AgregarClienteDemo({ abierto, nombresExistentes, onCerrar, onAgregar }) {
   const id = useId();
@@ -17,8 +17,9 @@ export default function AgregarClienteDemo({ abierto, nombresExistentes, onCerra
   function guardar(e) {
     e.preventDefault();
     const nombre = datos.nombre.trim();
-    if (!nombre) { setError("Escribe el nombre del cliente o institución."); nombreRef.current?.focus(); return; }
-    if (nombresExistentes.some(n => n.localeCompare(nombre, "es", { sensitivity: "base" }) === 0)) {
+    const nombreNormalizado = normalizarNombreCliente(nombre);
+    if (!nombreNormalizado) { setError("Escribe el nombre del cliente o institución."); nombreRef.current?.focus(); return; }
+    if (nombresExistentes.some(n => normalizarNombreCliente(n) === nombreNormalizado)) {
       setError("Ya hay un cliente con ese nombre."); nombreRef.current?.focus(); return;
     }
     onAgregar({ ...datos, nombre, contacto: datos.contacto.trim(), correo: datos.correo.trim(), telefono: datos.telefono.trim() });
@@ -29,7 +30,7 @@ export default function AgregarClienteDemo({ abierto, nombresExistentes, onCerra
       <button type="button" onClick={cerrar} aria-label="Cerrar formulario de cliente">Cerrar</button></header>
     <form onSubmit={guardar} className="cliente-demo-form">
       <div className="dlg-body">
-        <p id={`${id}-ayuda`} className="cliente-demo-help">El cliente se agregará a esta demostración. Los datos se borran al recargar la página.</p>
+        <p id={`${id}-ayuda`} className="cliente-demo-help">Usa el nombre del organismo tal como aparece en Mercado Público. El cliente se guarda hasta que recargues la página.</p>
         <div className="fields">
           <label className="wide">Nombre del cliente o institución *<input ref={nombreRef} autoFocus required maxLength={120}
             value={datos.nombre} onChange={cambiar("nombre")} placeholder="Ej.: Corporación de Turismo" /></label>
@@ -37,10 +38,6 @@ export default function AgregarClienteDemo({ abierto, nombresExistentes, onCerra
           <label>Correo electrónico<input type="email" maxLength={160} value={datos.correo} onChange={cambiar("correo")} placeholder="contacto@ejemplo.cl" /></label>
           <label>Teléfono<input type="tel" maxLength={30} value={datos.telefono} onChange={cambiar("telefono")} placeholder="+56 9 1234 5678" /></label>
         </div>
-        <fieldset className="cliente-demo-services"><legend>Servicios de interés (opcional)</legend>
-          <div className="cliente-demo-checks">{SERVICIOS.map(s => <label key={s}><input type="checkbox" checked={datos.servicios.includes(s)}
-            onChange={e => setDatos(d => ({ ...d, servicios: e.target.checked ? [...d.servicios, s] : d.servicios.filter(v => v !== s) }))} />{s}</label>)}</div>
-        </fieldset>
         {error && <p className="msg err" role="alert">{error}</p>}
       </div>
       <footer className="cliente-demo-actions"><button type="button" onClick={cerrar}>Cancelar</button><button type="submit" className="primary">Agregar cliente demo</button></footer>

@@ -5,7 +5,7 @@ import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { ETIQUETAS, useActualizarComprasAgiles, useResumenComprasAgiles } from "../comun";
+import { etiquetaPreseleccion, TONOS, useActualizarComprasAgiles, useResumenComprasAgiles } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import EstadoPlazo from "../../../core/ui/EstadoPlazo";
 import CierrePlazo from "../../../core/ui/CierrePlazo";
@@ -30,7 +30,12 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
     setLista(l => ({ ...l, cargando: true }));
     const parametros = new URLSearchParams({ clasificacion: pestaña, codigo: busquedaId.trim(), limite: String(VISIBLES), offset: String(offset) });
     apiJson(`/api/compras-agiles/preseleccion?${parametros}`, { signal: control.signal })
-      .then(r => setLista({ filas: r.filas, total: r.total, cargando: false, error: "" }))
+      .then(r => {
+        if (control.signal.aborted) return;
+        setLista({ filas: r.filas, total: r.total, cargando: false, error: "" });
+        const ultimoOffset = Math.max(0, Math.floor((r.total - 1) / VISIBLES) * VISIBLES);
+        if (offset > ultimoOffset) setOffset(ultimoOffset);
+      })
       .catch(e => { if (!control.signal.aborted) setLista({ filas: [], total: 0, cargando: false, error: e.message }); });
     return () => control.abort();
   }, [pestaña, busquedaId, versionDatos, offset]);
@@ -58,6 +63,7 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
         : (lista.cargando || actualizando) && !lista.filas.length ? <p className="empty" role="status">{actualizando ? "Actualizando la preselección de Compras Ágiles…" : "Cargando Compras Ágiles…"}</p>
         : !lista.filas.length ? <p className="empty">{busquedaId.trim() ? `No hay Compras Ágiles para el ID «${busquedaId.trim()}» en esta vista.` : pestaña === "preseleccionada" ? "No hay posibles oportunidades en esta carga. Puedes consultar Revisión necesaria o Todas." : "No hay Compras Ágiles en esta vista."}</p>
         : <div className="ca-lista">{lista.filas.map(f => {
+          const etiqueta = etiquetaPreseleccion(f.estado_seleccion, f.motivo_seleccion);
           return <article className="ca-item" data-estado={f.estado_seleccion} key={f.id}>
             <div className="ca-item-meta">
               <div className="ca-item-identidad">
@@ -68,12 +74,10 @@ export default forwardRef(function PanelComprasAgiles({ version, integrado = fal
             </div>
             <ClienteImportanteBadge clientes={f.clientes_importantes} />
             <TituloLicitacion licitacion={f} className="ca-item-title" />
-            {f.estado_seleccion === "descartada" ? <p className="ca-item-motivo ca-item-descarte"><strong>{f.motivo_seleccion?.includes("Registrado por ") ? "Descartada por usuario" : "Descartada por regla"}:</strong> {f.motivo_seleccion || "No se recibió el detalle del descarte."}</p>
+            {f.estado_seleccion === "descartada" ? <p className="ca-item-motivo ca-item-descarte"><strong>{etiqueta}.</strong> {f.motivo_seleccion || "No se recibió el detalle del descarte."}</p>
               : <p className="ca-item-motivo">{f.motivo_seleccion || "Sin motivo de clasificación informado."}</p>}
             <div className="ca-item-bottom">
-              <span className={`badge ${f.estado_seleccion === "preseleccionada" ? "green" : f.estado_seleccion === "revision_manual" ? "amber" : ""}`}>
-                {f.estado_seleccion === "descartada" && f.motivo_seleccion?.includes("Registrado por ") ? "Descartada por usuario" : ETIQUETAS[f.estado_seleccion] || f.estado_seleccion}
-              </span>
+              <span className={"badge " + (TONOS[f.estado_seleccion] || "")}>{etiqueta}</span>
               <div className="ca-item-actions">
                 <span>{f.monto_disponible_clp == null ? "Presupuesto no informado" : dinero(f.monto_disponible_clp, "CLP")}</span>
                 <button type="button" onClick={() => abrirCompraAgil(f.id)}>Ver resultado</button>

@@ -333,6 +333,81 @@ def test_evaluar_y_detalle_desde_la_sesion(usuario, db, monkeypatch):
     assert usuario.get("/api/compras-agiles/preseleccion").status_code == 503
 
 
+def test_decisiones_usan_la_revision_actual_en_ficha_y_listados(usuario, db, monkeypatch):
+    compra = guardar(db, "9031-1-COT26")
+    monkeypatch.setattr(filtradas, "operar", filtradas_falsa())
+    asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    db.expire_all()
+    guardada = compra.preseleccion
+    evaluacion = {
+        "id": guardada["evaluacion_id"], "clasificacion": guardada["clasificacion"],
+        "motivo": "Clasificación del filtro automático.",
+    }
+    fila = {
+        "id": compra.id, "codigo_externo": compra.codigo_externo, "fuente_raw_id": compra.raw_id,
+        "hash_fuente": guardada["firma"], "evaluacion_id": evaluacion["id"],
+        "estado_seleccion": evaluacion["clasificacion"], "motivo_seleccion": evaluacion["motivo"],
+    }
+    estados = {
+        "descartar": "descartada",
+        "confirmar_relevante": "preseleccionada",
+        "mantener_pendiente": "revision_manual",
+    }
+
+    async def operar(operacion, datos):
+        if operacion == "revision":
+            assert (datos["codigo"], datos["raw_id"], datos["hash_fuente"], datos["evaluacion_id"]) == (
+                compra.codigo_externo, compra.raw_id, guardada["firma"], evaluacion["id"],
+            )
+            assert datos["usuario"] == USUARIO_ID
+            fila.update(estado_seleccion=estados[datos["accion"]], motivo_seleccion=datos["motivo"])
+            return {"guardada": True}
+        if operacion == "detalle":
+            return {"evaluacion": evaluacion, "hash_fuente": guardada["firma"], "raw_id": compra.raw_id, "criterios": []}
+        assert operacion == "listar"
+        assert datos["fuentes"] == {compra.codigo_externo: compra.raw_id}
+        filas = [fila.copy()] if datos.get("clasificacion") in {None, fila["estado_seleccion"]} else []
+        return {"filas": filas, "total": len(filas)}
+
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(side_effect=operar))
+    ruta = f"/api/compras-agiles/{compra.id}"
+    for accion, estado in estados.items():
+        respuesta = usuario.post(f"{ruta}/revision", json={
+            "evaluacion_id": evaluacion["id"], "accion": accion, "categoria_motivo": "otro",
+            "motivo": "Decisión de prueba.",
+        })
+        assert respuesta.status_code == 200 and respuesta.json() == {"guardada": True}
+        ficha = usuario.get(f"{ruta}/preseleccion").json()
+        assert ficha["estado_seleccion"] == estado
+        assert ficha["motivo_seleccion"] == "Decisión de prueba. · Registrado por Prueba"
+        assert ficha["evaluacion"]["clasificacion"] == evaluacion["clasificacion"]
+        lista = usuario.get("/api/compras-agiles/preseleccion", params={"clasificacion": estado}).json()
+        assert lista["filas"][0]["estado_seleccion"] == estado
+        todas = usuario.get("/api/compras-agiles", params={"incluir_estado_seleccion": True}).json()
+        assert todas["items"][0]["estado_seleccion"] == estado
+    db.expire_all()
+    assert compra.preseleccion == guardada
+
+
+def test_revision_rechaza_compra_modificada_desde_la_evaluacion(usuario, db, monkeypatch):
+    codigo = "9032-1-COT26"
+    compra = guardar(db, codigo)
+    monkeypatch.setattr(filtradas, "operar", filtradas_falsa())
+    asyncio.run(preseleccion.evaluar_compras_agiles(db, [compra.id]))
+    db.expire_all()
+    evaluacion_id = compra.preseleccion["evaluacion_id"]
+    guardar(db, codigo, nombre="Almuerzo para un nuevo evento en Santiago")
+    servicio = AsyncMock()
+    monkeypatch.setattr(filtradas, "operar", servicio)
+
+    respuesta = usuario.post(f"/api/compras-agiles/{compra.id}/revision", json={
+        "evaluacion_id": evaluacion_id, "accion": "descartar", "categoria_motivo": "otro",
+        "motivo": "Decisión sobre la ficha anterior.",
+    })
+    assert respuesta.status_code == 409
+    servicio.assert_not_awaited()
+
+
 def test_resumen_ia_acepta_la_misma_huella_que_entrega_el_detalle(usuario, db, monkeypatch):
     compra = guardar(db, "9030-1-COT26")
     monkeypatch.setattr(filtradas, "operar", filtradas_falsa())
@@ -484,3 +559,4 @@ def test_reglas_propias_solo_reevaluan_compras_agiles():
 def test_rutas_de_preseleccion_requieren_sesion(client):
     assert client.get("/api/compras-agiles/preseleccion").status_code == 401
     assert client.post("/api/compras-agiles/preseleccion/evaluar").status_code == 401
+    assert client.post("/api/compras-agiles/1/revision").status_code == 401

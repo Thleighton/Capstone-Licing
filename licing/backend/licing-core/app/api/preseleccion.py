@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -144,14 +144,6 @@ class Lote(BaseModel):
     ids: list[Annotated[int, Field(strict=True, gt=0)]] = Field(min_length=1, max_length=100)
 
 
-class Revision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    evaluacion_id: Annotated[int, Field(strict=True, gt=0)]
-    accion: Literal["confirmar_relevante", "descartar", "mantener_pendiente"]
-    categoria_motivo: Literal["servicio", "capacidad", "ubicacion", "plazo", "documentos", "presupuesto", "otro"]
-    motivo: str = Field(min_length=5, max_length=1500)
-
-
 @router.get("/integracion/verificar", dependencies=[Depends(solo_cron)], include_in_schema=False)
 def verificar_integracion():
     # La función del segundo proyecto valida aquí la credencial privada existente.
@@ -268,13 +260,13 @@ def pendientes_documentales(response: Response, limite: int = Query(default=25, 
 @router.get("/exportar.xlsx", dependencies=[Depends(usuario_actual)])
 async def exportar_excel(db: Session = Depends(get_db)):
     from starlette.concurrency import run_in_threadpool
-    from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
+    from ..services.exportacion_oportunidades import crear_excel, HOJAS
 
     try:
         ids = list(db.scalars(select(Licitacion.id).order_by(Licitacion.id)))
         entradas = await run_in_threadpool(cargar_entradas, db, ids)
         fuentes = {d["codigo_externo"]: d["raw_id"] for d in entradas.values()}
-        guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
+        guardadas = await filtradas.cargar_clasificaciones(fuentes)
         filas = []
         for identificador, datos in entradas.items():
             guardada = guardadas.get(identificador, {})
@@ -349,16 +341,14 @@ async def analizar_documentos_licitacion(licitacion_id: int, usuario=Depends(usu
 
 
 @router.post("/{licitacion_id}/revision")
-async def revisar(licitacion_id: int, entrada: Revision, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
+async def revisar(licitacion_id: int, entrada: filtradas.Revision, usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
     fila = db.get(Licitacion, licitacion_id)
     if fila is None:
         raise HTTPException(404, "La licitación ya no está disponible.")
-    nombre_usuario = " ".join(str(usuario.get("nombre") or "").split())
-    motivo_registro = entrada.motivo
-    if nombre_usuario and f"Registrado por {nombre_usuario}" not in motivo_registro:
-        motivo_registro = f"{motivo_registro} · Registrado por {nombre_usuario}"[:1500]
-    return await filtradas.operar("revision", {**entrada.model_dump(), "motivo": motivo_registro, "codigo": fila.codigo_externo,
-                                              "raw_id": fila.raw_id, "hash_fuente": firma_fuente(cargar_entradas(db, [licitacion_id])[str(licitacion_id)]), "usuario": str(UUID(usuario["id"]))})
+    datos = cargar_entradas(db, [licitacion_id])[str(licitacion_id)]
+    return await filtradas.registrar_revision(
+        entrada, usuario, codigo=fila.codigo_externo, raw_id=fila.raw_id, hash_fuente=firma_fuente(datos),
+    )
 
 
 @router.post("/{licitacion_id}/documentos")

@@ -35,6 +35,7 @@ export default function ResumenAnalisis({
   hashFuente,
   fuenteActualizada = false,
   onDecidir,
+  guardandoDecision = false,
   onActualizarEvaluacion,
   prepararResumenIA,
 }) {
@@ -68,6 +69,7 @@ export default function ResumenAnalisis({
   const nombreProceso = entidadTipo === "compra_agil" ? "Compra Ágil" : "licitación";
   const claseAptaIA = ["preseleccionada", "posible_oportunidad", "revision_manual", "revision_necesaria"].includes(claseIA);
   const puedeUsarIa = entidadTipo && entidadId && claseAptaIA && fuenteActualizada;
+  const ocupado = cargandoIa || guardandoDecision;
   const cargarLecturaIa = useCallback(async () => {
     setCargandoIa(true);
     setErrorIa("");
@@ -121,11 +123,11 @@ export default function ResumenAnalisis({
     {datos.length > 0 && <dl className="resumen-analisis__datos">{datos.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
     {motivo && !(errorIa && hallazgos.length) && <div className="resumen-analisis__conclusion"><strong>Por qué LICING la clasificó así</strong><p>{clean(motivo, 300)}</p></div>}
     {onDecidir && puedeUsarIa && <div className="resumen-analisis__decisiones" aria-label="Registrar decisión">
-      <span>¿Qué hacemos con esta licitación?</span>
+      <span>¿Qué hacemos con esta {nombreProceso}?</span>
       <div>
-        <button type="button" className="is-discard" disabled={cargandoIa} onClick={() => onDecidir("descartar", ia?.siguiente_paso || motivo || "Descartada según el análisis de LICING.")}>Descartar</button>
-        <button type="button" className="is-confirm" disabled={cargandoIa} onClick={() => onDecidir("confirmar_relevante", motivo || "Confirmada como posible oportunidad por el usuario.")}>Confirmar oportunidad</button>
-        <button type="button" disabled={cargandoIa} onClick={() => onDecidir("mantener_pendiente", motivo || "Se mantiene en revisión por el usuario.")}>Mantener en revisión</button>
+        <button type="button" className="is-discard" disabled={ocupado} onClick={() => onDecidir("descartar", ia?.siguiente_paso || motivo || "Descartada según el análisis de LICING.")}>Descartar</button>
+        <button type="button" className="is-confirm" disabled={ocupado} onClick={() => onDecidir("confirmar_relevante", motivo || "Confirmada como posible oportunidad por el usuario.")}>Confirmar oportunidad</button>
+        <button type="button" disabled={ocupado} onClick={() => onDecidir("mantener_pendiente", motivo || "Se mantiene en revisión por el usuario.")}>Mantener en revisión</button>
       </div>
     </div>}
     {!ia && !cargandoIa && hallazgos.length > 0 && <div className="resumen-analisis__hallazgos">
@@ -166,14 +168,14 @@ export default function ResumenAnalisis({
           <div className="resumen-analisis__ia-mensaje"><strong>{analisisEnCurso ? "El análisis ya se está preparando" : conflictoEvaluacion ? "La evaluación cambió antes de generar el resumen" : "Gemini no está disponible temporalmente"}</strong>
             <p>{analisisEnCurso ? errorIa : conflictoEvaluacion ? `${errorIa} Actualiza la evaluación de esta ${nombreProceso} y vuelve a iniciar el análisis.` : "Se muestran solo los hallazgos del filtro LICING basados en la ficha y sus ítems."}</p>
           </div>
-          <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={cargandoIa}>
+          <button type="button" onClick={conflictoEvaluacion ? actualizarEvaluacion : cargarLecturaIa} disabled={ocupado}>
             {analisisEnCurso ? "Consultar análisis" : conflictoEvaluacion ? "Actualizar evaluación" : "Intentar de nuevo"}
           </button>
         </> : <div className="resumen-analisis__ia-inicio">
           <div className="resumen-analisis__ia-mensaje"><strong>{ia ? "Análisis guardado" : "¿Quieres un análisis asistido?"}</strong>
             <p>{ia ? "Puedes volver a solicitarlo; si la ficha no cambió, se reutilizará el resultado guardado." : `Gemini resumirá la ficha y sus ítems. El resultado se guardará para reutilizarlo al volver a abrir esta ${nombreProceso}.`}</p>
           </div>
-          <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={cargandoIa}>
+          <button type="button" className="resumen-analisis__iniciar-ia" onClick={cargarLecturaIa} disabled={ocupado}>
             <span aria-hidden="true">✦</span> {ia ? "Consultar análisis guardado" : "Iniciar análisis con IA"}
           </button>
         </div>}
@@ -183,7 +185,7 @@ export default function ResumenAnalisis({
         <div className="resumen-analisis__ia-mensaje"><strong>La evaluación necesita actualizarse</strong>
           <p>Los datos actuales de la ficha no coinciden con los usados por la última evaluación. Actualízala antes de pedir el análisis con IA.</p>
         </div>
-        {onActualizarEvaluacion && <button type="button" onClick={actualizarEvaluacion} disabled={cargandoIa}>Actualizar evaluación</button>}
+        {onActualizarEvaluacion && <button type="button" onClick={actualizarEvaluacion} disabled={ocupado}>Actualizar evaluación</button>}
       </div>}
       {ia && <small className="resumen-analisis__nota">Datos extraídos de la ficha e ítems disponibles. Los campos ausentes no se consideran confirmados; la lectura no cambia la clasificación.</small>}
       {!ia && !cargandoIa && errorIa && <small className="resumen-analisis__nota">El resumen inteligente es opcional. La clasificación y los hallazgos del filtro permanecen disponibles.</small>}

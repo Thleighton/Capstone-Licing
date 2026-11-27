@@ -5,7 +5,7 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import CierrePlazo from "../../../core/ui/CierrePlazo";
 import { dinero } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { ETIQUETAS, TONOS } from "../comun";
+import { etiquetaPreseleccion, TONOS } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import EstadoPlazo from "../../../core/ui/EstadoPlazo";
 import PaginacionResultados from "../../../core/ui/PaginacionResultados";
@@ -27,7 +27,12 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
     setCargando(true);
     const parametros = new URLSearchParams({ clasificacion, q, codigo: busquedaId.trim(), limite: String(LIMITE), offset: String(offset) });
     apiJson("/api/compras-agiles/preseleccion?" + parametros, { signal: control.signal })
-      .then(r => { setDatos(r); setError(""); })
+      .then(r => {
+        if (control.signal.aborted) return;
+        setDatos(r); setError("");
+        const ultimoOffset = Math.max(0, Math.floor((r.total - 1) / LIMITE) * LIMITE);
+        if (offset > ultimoOffset) setOffset(ultimoOffset);
+      })
       .catch(e => { if (!control.signal.aborted) setError(e.message); })
       .finally(() => { if (!control.signal.aborted) setCargando(false); });
     return () => control.abort();
@@ -57,7 +62,7 @@ export default function VistaPreseleccion({ q = "", version, actualizando = fals
             <p className="ca-motivo">{f.motivo_seleccion}</p></td>
           <td><CierrePlazo fechaCierre={f.fecha_cierre} compacto /></td>
           <td>{f.monto_disponible_clp == null ? "-" : dinero(f.monto_disponible_clp, "CLP")}<div className="sub">{f.region_comprador}</div></td>
-          <td><span className={"badge " + (TONOS[f.estado_seleccion] || "")}>{ETIQUETAS[f.estado_seleccion] || f.estado_seleccion}</span></td>
+          <td><span className={"badge " + (TONOS[f.estado_seleccion] || "")}>{etiquetaPreseleccion(f.estado_seleccion, f.motivo_seleccion)}</span></td>
         </tr>;
       })}</tbody>
     </table>

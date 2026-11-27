@@ -6,8 +6,8 @@ import ClienteImportanteBadge from "../../../core/ui/ClienteImportanteBadge";
 import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import { dinero, fecha } from "../../../core/ui/format";
 import ResumenAnalisis from "../../../core/ui/ResumenAnalisis";
-import { cerrarCompraAgil, fichaCompraAgil } from "../store";
-import { ETIQUETAS, PILARES, TONOS } from "../comun";
+import { cerrarCompraAgil, fichaCompraAgil, finalizarRevisionCompraAgil } from "../store";
+import { etiquetaPreseleccion, PILARES, TONOS } from "../comun";
 import "../../dashboard/components/resultado-preseleccion.css";
 
 const RESULTADOS = { cumple: "Cumple", no_cumple: "No cumple", sin_informacion: "Por verificar" };
@@ -18,11 +18,14 @@ export default function FichaCompraAgil() {
   const id = useStore(fichaCompraAgil, s => s.id);
   const [detalle, setDetalle] = useState(null);
   const [intento, setIntento] = useState(0);
+  const [guardandoRevision, setGuardandoRevision] = useState(false);
+  const [errorRevision, setErrorRevision] = useState(null);
   const tituloId = useId();
   useEffect(() => {
     if (!id) return;
     let vivo = true;
     setDetalle(null);
+    setErrorRevision(null);
     Promise.allSettled([apiJson(`/api/compras-agiles/${id}`), apiJson(`/api/compras-agiles/${id}/preseleccion`)])
       .then(([ficha, preseleccion]) => vivo && setDetalle({
         id,
@@ -34,9 +37,30 @@ export default function FichaCompraAgil() {
   }, [id, intento]);
   const actual = detalle?.id === id ? detalle : null;
   const c = actual?.compra;
-  const evaluacion = actual?.preseleccion?.evaluacion;
-  const vigente = evaluacion && actual.preseleccion.fuente_actualizada;
-  const estado = vigente ? evaluacion.clasificacion : "pendiente_evaluacion";
+  const preseleccion = actual?.preseleccion;
+  const evaluacion = preseleccion?.evaluacion;
+  const vigente = evaluacion && preseleccion.fuente_actualizada;
+  const estado = vigente ? preseleccion.estado_seleccion || evaluacion.clasificacion : "pendiente_evaluacion";
+  const motivoSeleccion = vigente ? preseleccion.motivo_seleccion || evaluacion.motivo : "";
+  const decisionRegistrada = vigente && (estado !== evaluacion.clasificacion || motivoSeleccion !== evaluacion.motivo);
+
+  async function revisar(accion, motivo) {
+    setGuardandoRevision(true);
+    setErrorRevision(null);
+    try {
+      await apiJson(`/api/compras-agiles/${id}/revision`, {
+        method: "POST",
+        body: { evaluacion_id: evaluacion.id, accion, categoria_motivo: "otro", motivo },
+      });
+      setDetalle(null);
+      finalizarRevisionCompraAgil(id);
+    } catch (error) {
+      setErrorRevision(error);
+    } finally {
+      setGuardandoRevision(false);
+    }
+  }
+
   async function actualizarEvaluacion() {
     await apiJson("/api/compras-agiles/preseleccion/evaluar", {
       method: "POST", body: { ids: [id] },
@@ -69,19 +93,21 @@ export default function FichaCompraAgil() {
       clasificacion: preseleccion.evaluacion?.clasificacion,
     };
   }
-  return <Dialog open={Boolean(id)} onClose={cerrarCompraAgil} className="pre-result-dialog" aria-labelledby={tituloId}>
+  return <Dialog open={Boolean(id)} onClose={cerrarCompraAgil}
+    onCancel={e => { if (guardandoRevision) e.preventDefault(); }}
+    className="pre-result-dialog" aria-labelledby={tituloId}>
     {id && <>
       <header className="pre-result-header">
         <div><p className="pre-result-kicker">Resultado de preselección · {c?.codigo_externo || "Cargando…"}</p>
           {c ? <TituloLicitacion as="h2" id={tituloId} licitacion={c} /> : <h2 id={tituloId}>Detalle de la Compra Ágil</h2>}</div>
-        <button type="button" onClick={cerrarCompraAgil} autoFocus>Cerrar</button>
+        <button type="button" onClick={cerrarCompraAgil} disabled={guardandoRevision} autoFocus>Cerrar</button>
       </header>
       <div className="pre-result-body">
         {!actual ? <p role="status">Cargando la Compra Ágil y su preselección…</p> : actual.error ? <div className="pre-result-error" role="alert">
           <p>No se pudo cargar la Compra Ágil. {actual.error}</p><button type="button" onClick={() => setIntento(n => n + 1)}>Reintentar</button>
         </div> : <>
           <div className="pre-result-status">
-            <span className={"badge " + (TONOS[estado] || "")}>{ETIQUETAS[estado]}</span>
+            <span className={"badge " + (TONOS[estado] || "")}>{etiquetaPreseleccion(estado, motivoSeleccion)}</span>
             <ClienteImportanteBadge clientes={c.clientes_importantes} />
           </div>
           <ResumenAnalisis estado={estado} motivo={vigente ? evaluacion.motivo : actual.preseleccion
@@ -91,10 +117,17 @@ export default function FichaCompraAgil() {
             fechaCierre={fecha(c.fecha_cierre)}
             monto={c.monto_disponible == null ? "" : dinero(c.monto_disponible, c.moneda)}
             lugar={c.direccion_entrega} entidadTipo="compra_agil" entidadId={id}
-            resumenIA={c.resumen_ia?.resumen} clasificacionActual={vigente ? estado : null}
-            hashFuente={actual.preseleccion?.hash_fuente}
+            resumenIA={c.resumen_ia?.resumen} clasificacionActual={evaluacion?.clasificacion}
+            hashFuente={preseleccion?.hash_fuente}
             fuenteActualizada={Boolean(vigente)} onActualizarEvaluacion={actualizarEvaluacion}
-            prepararResumenIA={prepararResumenIA} />
+            prepararResumenIA={prepararResumenIA} onDecidir={vigente && evaluacion.id ? revisar : undefined}
+            guardandoDecision={guardandoRevision} />
+          {decisionRegistrada && <p className="pre-result-notice"><strong>Decisión registrada.</strong> {motivoSeleccion}</p>}
+          {guardandoRevision && <p role="status">Guardando revisión…</p>}
+          {errorRevision && <div className="pre-result-error" role="alert">
+            <p>No se pudo guardar la decisión. {errorRevision.message}</p>
+            {errorRevision.status === 409 && <button type="button" onClick={() => setIntento(n => n + 1)}>Recargar ficha</button>}
+          </div>}
           <section className="pre-result-section" aria-label="Información general">
             <h3>Información de la Compra Ágil</h3>
             <dl className="pre-result-facts">

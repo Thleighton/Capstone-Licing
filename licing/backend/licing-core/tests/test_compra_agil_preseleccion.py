@@ -376,7 +376,12 @@ def test_decisiones_usan_la_revision_actual_en_ficha_y_listados(usuario, db, mon
             "evaluacion_id": evaluacion["id"], "accion": accion, "categoria_motivo": "otro",
             "motivo": "Decisión de prueba.",
         })
-        assert respuesta.status_code == 200 and respuesta.json() == {"guardada": True}
+        assert respuesta.status_code == 200
+        assert respuesta.json() == {
+            "guardada": True,
+            "estado_seleccion": estado,
+            "motivo_seleccion": "Decisión de prueba. · Registrado por Prueba",
+        }
         ficha = usuario.get(f"{ruta}/preseleccion").json()
         assert ficha["estado_seleccion"] == estado
         assert ficha["motivo_seleccion"] == "Decisión de prueba. · Registrado por Prueba"
@@ -387,6 +392,17 @@ def test_decisiones_usan_la_revision_actual_en_ficha_y_listados(usuario, db, mon
         assert todas["items"][0]["estado_seleccion"] == estado
     db.expire_all()
     assert compra.preseleccion == guardada
+
+
+def test_revision_requiere_confirmacion_del_servicio(monkeypatch):
+    monkeypatch.setattr(filtradas, "operar", AsyncMock(return_value={"guardada": False}))
+    entrada = filtradas.Revision(evaluacion_id=1, accion="descartar", categoria_motivo="otro",
+                                motivo="Decisión de prueba.")
+
+    with pytest.raises(filtradas.FiltradasNoDisponible, match="confirmó el guardado"):
+        asyncio.run(filtradas.registrar_revision(
+            entrada, {**USUARIO, "id": USUARIO_ID}, codigo="9031-1-COT26", raw_id=2, hash_fuente="firma",
+        ))
 
 
 def test_revision_rechaza_compra_modificada_desde_la_evaluacion(usuario, db, monkeypatch):

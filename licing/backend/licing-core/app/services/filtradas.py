@@ -12,6 +12,12 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
+ESTADOS_REVISION = {
+    "confirmar_relevante": "preseleccionada",
+    "mantener_pendiente": "revision_manual",
+    "descartar": "descartada",
+}
+
 
 class FiltradasNoDisponible(RuntimeError):
     pass
@@ -30,10 +36,13 @@ async def registrar_revision(entrada: Revision, usuario: dict, *, codigo: str, r
     motivo = entrada.motivo
     if nombre and f"Registrado por {nombre}" not in motivo:
         motivo = f"{motivo} · Registrado por {nombre}"[:1500]
-    return await operar("revision", {
+    resultado = await operar("revision", {
         **entrada.model_dump(), "motivo": motivo, "codigo": codigo, "raw_id": raw_id,
         "hash_fuente": hash_fuente, "usuario": str(UUID(usuario["id"])),
     })
+    if not isinstance(resultado, dict) or resultado.get("guardada") is not True:
+        raise FiltradasNoDisponible("El servicio de preselección no confirmó el guardado de la decisión.")
+    return {**resultado, "estado_seleccion": ESTADOS_REVISION[entrada.accion], "motivo_seleccion": motivo}
 
 
 async def cargar_clasificaciones(fuentes: dict[str, int], limite=100, concurrencia=3):

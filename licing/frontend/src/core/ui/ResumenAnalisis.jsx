@@ -14,6 +14,11 @@ const ESTADO_CRITERIO = {
   sin_informacion: "Por confirmar",
   por_verificar: "Por confirmar",
 };
+const ESTADO_DECISION = {
+  preseleccionada: "Posible oportunidad",
+  revision_manual: "Pendiente de revisión",
+  descartada: "Descartada por usuario",
+};
 
 function clean(value, max = 180) {
   if (typeof value !== "string") return "";
@@ -36,6 +41,7 @@ export default function ResumenAnalisis({
   fuenteActualizada = false,
   onDecidir,
   guardandoDecision = false,
+  onRecargarFicha,
   onActualizarEvaluacion,
   prepararResumenIA,
 }) {
@@ -43,6 +49,7 @@ export default function ResumenAnalisis({
   const [cargandoIa, setCargandoIa] = useState(false);
   const [errorIa, setErrorIa] = useState("");
   const [estadoErrorIa, setEstadoErrorIa] = useState(null);
+  const [resultadoDecision, setResultadoDecision] = useState(null);
   useEffect(() => { setIa(resumenIA || null); setErrorIa(""); setEstadoErrorIa(null); },
     [resumenIA, entidadId, fuenteActualizada, clasificacionActual]);
   const datos = [
@@ -73,6 +80,22 @@ export default function ResumenAnalisis({
   const motivoRevision = claseIA === "descartada" ? "" : motivo;
   const motivoDescarte = ia?.siguiente_paso || (estado === "descartada" ? motivo : motivoRevision);
   const ocupado = cargandoIa || guardandoDecision;
+  const decisionActual = resultadoDecision?.hashFuente === hashFuente ? resultadoDecision : null;
+  const errorDecision = decisionActual?.error;
+  const clasificacionGuardada = ESTADO_DECISION[decisionActual?.estado];
+  const recargarTrasConflicto = errorDecision?.status === 409 && Boolean(onRecargarFicha);
+  const deshabilitarDecisiones = ocupado || recargarTrasConflicto;
+
+  async function decidir(accion, razon) {
+    setResultadoDecision(null);
+    try {
+      const revision = await onDecidir(accion, razon);
+      setResultadoDecision({ hashFuente, estado: revision.estado_seleccion });
+    } catch (error) {
+      setResultadoDecision({ hashFuente, error });
+    }
+  }
+
   const cargarLecturaIa = useCallback(async () => {
     setCargandoIa(true);
     setErrorIa("");
@@ -125,14 +148,23 @@ export default function ResumenAnalisis({
     </header>
     {datos.length > 0 && <dl className="resumen-analisis__datos">{datos.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
     {motivo && !(errorIa && hallazgos.length) && <div className="resumen-analisis__conclusion"><strong>Por qué LICING la clasificó así</strong><p>{clean(motivo, 300)}</p></div>}
-    {puedeDecidir && <div className="resumen-analisis__decisiones" role="group" aria-label="Registrar decisión">
-      <span>¿Qué hacemos con esta {nombreProceso}?</span>
-      <div>
-        <button type="button" className="is-confirm" disabled={ocupado} onClick={() => onDecidir("confirmar_relevante", motivoRevision || "Confirmada como posible oportunidad por el usuario.")}>Posible oportunidad</button>
-        <button type="button" disabled={ocupado} onClick={() => onDecidir("mantener_pendiente", motivoRevision || "Dejada pendiente de revisión por el usuario.")}>Pendiente de revisión</button>
-        <button type="button" className="is-discard" disabled={ocupado} onClick={() => onDecidir("descartar", motivoDescarte || "Descartada por el usuario.")}>Descartar</button>
+    {puedeDecidir && <>
+      <div className="resumen-analisis__decisiones" role="group" aria-label="Registrar decisión">
+        <span>¿Qué hacemos con esta {nombreProceso}?</span>
+        <div>
+          <button type="button" className="is-confirm" disabled={deshabilitarDecisiones} onClick={() => decidir("confirmar_relevante", motivoRevision || "Confirmada como posible oportunidad por el usuario.")}>Posible oportunidad</button>
+          <button type="button" disabled={deshabilitarDecisiones} onClick={() => decidir("mantener_pendiente", motivoRevision || "Dejada pendiente de revisión por el usuario.")}>Pendiente de revisión</button>
+          <button type="button" className="is-discard" disabled={deshabilitarDecisiones} onClick={() => decidir("descartar", motivoDescarte || "Descartada por el usuario.")}>Descartar</button>
+        </div>
       </div>
-    </div>}
+      <p className={`resumen-analisis__aviso-decision${clasificacionGuardada ? " is-success" : ""}`} role="status">
+        {guardandoDecision ? "Guardando decisión…" : clasificacionGuardada && `Decisión guardada como «${clasificacionGuardada}».`}
+      </p>
+      {errorDecision && <div className="resumen-analisis__aviso-decision is-error">
+        <p role="alert">No se pudo guardar la decisión. {errorDecision.message || "Inténtalo nuevamente."}</p>
+        {recargarTrasConflicto && <button type="button" onClick={onRecargarFicha}>Recargar ficha</button>}
+      </div>}
+    </>}
     {!ia && !cargandoIa && hallazgos.length > 0 && <div className="resumen-analisis__hallazgos">
       <div className="resumen-analisis__hallazgos-heading">
         <div><span>LECTURA AUTOMÁTICA</span><strong>Hallazgos de LICING</strong></div>

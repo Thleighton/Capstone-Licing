@@ -152,12 +152,12 @@ export default function Preseleccion({ onActualizada, versionComprasAgiles, most
     {(error || errorCarga) && <p className="msg err" role="alert">{error || errorCarga}</p>}
     {cargando ? <p role="status">Cargando preselección…</p> : <>
       {!datos.filas.length && !error && !errorCarga && !ocupado && <p className="pre-vacio">{mensajeVacio}</p>}
-      <div className="pre-lista" role="region" aria-label="Resultados de licitaciones para el hotel" tabIndex={datos.filas.length ? 0 : undefined}>{datos.filas.map(fila => <article key={fila.id} className="pre-fila" data-estado={fila.estado_seleccion} data-cliente-importante={!!fila.clientes_importantes?.length && ["preseleccionada", "revision_manual"].includes(fila.estado_seleccion)}>
+      <div className="pre-lista" role="region" aria-label="Resultados de licitaciones para el hotel" tabIndex={datos.filas.length ? 0 : undefined}>{datos.filas.map(fila => <article key={fila.id} className="pre-fila" data-estado={fila.estado_seleccion}>
         <div className={mostrarInformacion ? "pre-fila-ampliada" : undefined}><div className="pre-fila-meta">
           <div className="pre-fila-identidad"><span className="sub">{fila.codigo_externo}</span><EstadoPlazo fila={fila} /></div>
           <CierrePlazo fechaCierre={fila.fecha_cierre} />
         </div>
-          {["preseleccionada", "revision_manual"].includes(fila.estado_seleccion) && <ClienteImportanteBadge clientes={fila.clientes_importantes} />}
+          <ClienteImportanteBadge oportunidad={fila} />
           <TituloLicitacion licitacion={fila} />
           {mostrarInformacion && <ResumenLicitacion licitacion={fila} />}
           {fila.estado_seleccion === "descartada" && <p className="pre-regla-aplicada"><strong>{fila.motivo_seleccion?.includes("Registrado por ") ? "Descartada por usuario" : `Descartada por regla${fila.pilar_decisivo ? ` · ${nombrePilar[fila.pilar_decisivo] || fila.pilar_decisivo}` : " aplicada"}`}:</strong> {fila.motivo_seleccion || "No se recibió el detalle del descarte."}</p>}

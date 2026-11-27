@@ -29,7 +29,7 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
       <div className="pre-result-body">
         <div className="pre-result-status">
           <span className={"badge " + (tonos[estado] || "")}>{etiqueta}</span>
-          <ClienteImportanteBadge clientes={licitacion.clientes_importantes || fila.clientes_importantes} />
+          <ClienteImportanteBadge oportunidad={licitacion} clientes={licitacion.clientes_importantes ?? fila.clientes_importantes} />
         </div>
         {detalle && <ResumenAnalisis estado={estado} motivo={detalle.evaluacion?.motivo || fila.motivo_seleccion}
           criterios={detalle.criterios || []}

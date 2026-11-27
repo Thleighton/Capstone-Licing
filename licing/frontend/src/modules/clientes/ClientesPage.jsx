@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiJson } from "../../core/api/client";
+import { useLicitaciones } from "../../core/data/LicitacionesProvider";
 import ClienteImportanteBadge from "../../core/ui/ClienteImportanteBadge";
 import AgregarClienteDemo from "./AgregarClienteDemo";
 import Icon from "../../core/ui/Icon";
@@ -10,7 +11,7 @@ export default function ClientesPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
-  const [clientesDemo, setClientesDemo] = useState([]);
+  const { clientesDemo, setClientesDemo } = useLicitaciones();
   const [agregando, setAgregando] = useState(false);
   const [mensaje, setMensaje] = useState("");
   function agregarCliente(datos) {
@@ -29,7 +30,7 @@ export default function ClientesPage() {
   return <>
     <section className="card panel important-clients-intro">
       <div><h2>Clientes importantes para el hotel</h2>
-        <p>Estos organismos tienen importancia comercial para el hotel. Sus licitaciones se destacan con una estrella y color violeta para facilitar su identificación.</p>
+        <p>Las licitaciones y Compras Ágiles de estos organismos se destacan con una estrella y color violeta.</p>
         <p className="sub">La marca indica importancia comercial. La clasificación sigue dependiendo de vigencia, ubicación y servicio solicitado.</p></div>
       <div className="clientes-toolbar-actions">
         {!cargando && !error && <span className="badge violet">{clientes.length} organismos</span>}
@@ -55,7 +56,6 @@ export default function ClientesPage() {
           {c.correo && <div><dt>Correo</dt><dd>{c.correo}</dd></div>}
           {c.telefono && <div><dt>Teléfono</dt><dd>{c.telefono}</dd></div>}
         </dl>}
-        {!!c.servicios.length && <div className="cliente-demo-tags" aria-label="Servicios de interés">{c.servicios.map(s => <span className="badge" key={s}>{s}</span>)}</div>}
       </article>)}</div>
     </section>}
     <AgregarClienteDemo abierto={agregando} onCerrar={() => setAgregando(false)} onAgregar={agregarCliente}

@@ -14,7 +14,7 @@
 }
 .important-client-badge .ic { width: 14px; height: 14px; flex-shrink: 0; fill: currentColor; }
 .important-client-name { display: block; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
-.dashboard-page .dashboard-priorities .pre-fila[data-cliente-importante="true"] {
+.dashboard-page .dashboard-priorities .pre-fila:has(.important-client-badge) {
   background: var(--violet-bg);
   border: 1px solid var(--line);
   border-left: 3px solid var(--violet);
@@ -22,13 +22,17 @@
   padding: 16px;
   margin: 12px 0;
 }
+.oportunidades-page .pre-fila:has(.important-client-badge),
+.closing-item:has(> .important-client-badge),
+.ca-tabla tbody tr:has(.important-client-badge),
+.dashboard-page .ca-panel-content .ca-item:has(> .important-client-badge) {
+  background: var(--violet-bg);
+}
 .pre-fila .important-client-badge { display: flex; width: max-content; margin: 9px 0 4px; }
-.closing-item[data-cliente-importante="true"] { background: var(--violet-bg); }
 .closing-item > .important-client-badge { margin-top: 10px; }
-.opportunity-important { background: var(--violet-bg); }
-.opportunity-important > td:first-child { border-left: 3px solid var(--violet); }
+.ca-tabla tr:has(.important-client-badge) > td:first-child { border-left: 3px solid var(--violet); }
 .opportunity-client-name { display: block; }
-.opportunity-important .important-client-badge { margin-top: 7px; }
+.ca-tabla .important-client-badge { margin-top: 7px; }
 .important-clients-intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .important-clients-intro h2 { margin: 0 0 8px; }
 .important-clients-intro p { max-width: 760px; line-height: 1.6; margin: 0; }

@@ -109,7 +109,7 @@ export default function FichaCompraAgil() {
         </div> : <>
           <div className="pre-result-status">
             <span className={"badge " + (TONOS[estado] || "")}>{etiquetaPreseleccion(estado, motivoSeleccion)}</span>
-            <ClienteImportanteBadge clientes={c.clientes_importantes} />
+            <ClienteImportanteBadge oportunidad={c} />
           </div>
           <ResumenAnalisis estado={estado} motivo={vigente ? evaluacion.motivo : actual.preseleccion
             ? "La preselección se actualizará en el próximo turno de ingesta."

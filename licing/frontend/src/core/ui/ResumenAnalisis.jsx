@@ -69,6 +69,9 @@ export default function ResumenAnalisis({
   const nombreProceso = entidadTipo === "compra_agil" ? "Compra Ágil" : "licitación";
   const claseAptaIA = ["preseleccionada", "posible_oportunidad", "revision_manual", "revision_necesaria"].includes(claseIA);
   const puedeUsarIa = entidadTipo && entidadId && claseAptaIA && fuenteActualizada;
+  const puedeDecidir = onDecidir && fuenteActualizada;
+  const motivoRevision = claseIA === "descartada" ? "" : motivo;
+  const motivoDescarte = ia?.siguiente_paso || (estado === "descartada" ? motivo : motivoRevision);
   const ocupado = cargandoIa || guardandoDecision;
   const cargarLecturaIa = useCallback(async () => {
     setCargandoIa(true);
@@ -122,12 +125,12 @@ export default function ResumenAnalisis({
     </header>
     {datos.length > 0 && <dl className="resumen-analisis__datos">{datos.map(d => <div key={d.label}><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
     {motivo && !(errorIa && hallazgos.length) && <div className="resumen-analisis__conclusion"><strong>Por qué LICING la clasificó así</strong><p>{clean(motivo, 300)}</p></div>}
-    {onDecidir && puedeUsarIa && <div className="resumen-analisis__decisiones" aria-label="Registrar decisión">
+    {puedeDecidir && <div className="resumen-analisis__decisiones" role="group" aria-label="Registrar decisión">
       <span>¿Qué hacemos con esta {nombreProceso}?</span>
       <div>
-        <button type="button" className="is-discard" disabled={ocupado} onClick={() => onDecidir("descartar", ia?.siguiente_paso || motivo || "Descartada según el análisis de LICING.")}>Descartar</button>
-        <button type="button" className="is-confirm" disabled={ocupado} onClick={() => onDecidir("confirmar_relevante", motivo || "Confirmada como posible oportunidad por el usuario.")}>Confirmar oportunidad</button>
-        <button type="button" disabled={ocupado} onClick={() => onDecidir("mantener_pendiente", motivo || "Se mantiene en revisión por el usuario.")}>Mantener en revisión</button>
+        <button type="button" className="is-confirm" disabled={ocupado} onClick={() => onDecidir("confirmar_relevante", motivoRevision || "Confirmada como posible oportunidad por el usuario.")}>Posible oportunidad</button>
+        <button type="button" disabled={ocupado} onClick={() => onDecidir("mantener_pendiente", motivoRevision || "Dejada pendiente de revisión por el usuario.")}>Pendiente de revisión</button>
+        <button type="button" className="is-discard" disabled={ocupado} onClick={() => onDecidir("descartar", motivoDescarte || "Descartada por el usuario.")}>Descartar</button>
       </div>
     </div>}
     {!ia && !cargandoIa && hallazgos.length > 0 && <div className="resumen-analisis__hallazgos">

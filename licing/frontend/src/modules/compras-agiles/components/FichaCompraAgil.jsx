@@ -22,10 +22,10 @@ export default function FichaCompraAgil() {
   const [errorRevision, setErrorRevision] = useState(null);
   const tituloId = useId();
   useEffect(() => {
-    if (!id) return;
-    let vivo = true;
     setDetalle(null);
     setErrorRevision(null);
+    if (!id) return;
+    let vivo = true;
     Promise.allSettled([apiJson(`/api/compras-agiles/${id}`), apiJson(`/api/compras-agiles/${id}/preseleccion`)])
       .then(([ficha, preseleccion]) => vivo && setDetalle({
         id,

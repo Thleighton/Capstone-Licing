@@ -26,6 +26,29 @@ function clean(value, max = 180) {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
+function CopiarId({ codigo }) {
+  const [estado, setEstado] = useState(null);
+
+  async function copiar() {
+    setEstado("copiando");
+    try {
+      await navigator.clipboard.writeText(codigo);
+      setEstado("copiado");
+    } catch {
+      setEstado("error");
+    }
+  }
+
+  return <>
+    <button type="button" className="resumen-analisis__copiar-id" disabled={estado === "copiando"} onClick={copiar}>
+      <span aria-live="polite">{estado === "copiado" ? "ID copiado" : "Copiar ID"}</span>
+    </button>
+    {estado === "error" && <p className="resumen-analisis__error-copia" role="alert">
+      No se pudo copiar el ID. Copia <strong>{codigo}</strong> manualmente.
+    </p>}
+  </>;
+}
+
 export default function ResumenAnalisis({
   estado,
   motivo,
@@ -35,6 +58,7 @@ export default function ResumenAnalisis({
   lugar,
   entidadTipo,
   entidadId,
+  codigoExterno,
   resumenIA,
   clasificacionActual,
   hashFuente,
@@ -157,9 +181,12 @@ export default function ResumenAnalisis({
           <button type="button" className="is-discard" disabled={deshabilitarDecisiones} onClick={() => decidir("descartar", motivoDescarte || "Descartada por el usuario.")}>Descartar</button>
         </div>
       </div>
-      <p className={`resumen-analisis__aviso-decision${clasificacionGuardada ? " is-success" : ""}`} role="status">
-        {guardandoDecision ? "Guardando decisión…" : clasificacionGuardada && `Decisión guardada como «${clasificacionGuardada}».`}
-      </p>
+      <div className={`resumen-analisis__aviso-decision${clasificacionGuardada ? " is-success" : ""}`}>
+        <p role="status">
+          {guardandoDecision ? "Guardando decisión…" : clasificacionGuardada && `Decisión guardada como «${clasificacionGuardada}».`}
+        </p>
+        {clasificacionGuardada && codigoExterno && <CopiarId key={codigoExterno} codigo={codigoExterno} />}
+      </div>
       {errorDecision && <div className="resumen-analisis__aviso-decision is-error">
         <p role="alert">No se pudo guardar la decisión. {errorDecision.message || "Inténtalo nuevamente."}</p>
         {recargarTrasConflicto && <button type="button" onClick={onRecargarFicha}>Recargar ficha</button>}

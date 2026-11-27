@@ -36,7 +36,8 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
           fechaCierre={fecha(licitacion.fecha_cierre)}
           monto={licitacion.monto_estimado == null ? "" : dinero(licitacion.monto_estimado, licitacion.moneda)}
           lugar={licitacion.direccion_entrega}
-          entidadTipo="licitacion" entidadId={fila.id} resumenIA={detalle.resumen_ia?.resumen}
+          entidadTipo="licitacion" entidadId={fila.id} codigoExterno={fila.codigo_externo}
+          resumenIA={detalle.resumen_ia?.resumen}
           clasificacionActual={detalle.evaluacion?.clasificacion} hashFuente={detalle.hash_fuente}
           fuenteActualizada={Boolean(detalle.fuente_actualizada)}
           onDecidir={detalle.evaluacion?.id ? onRevisar : undefined}

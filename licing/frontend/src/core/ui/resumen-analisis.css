@@ -203,11 +203,31 @@
 .resumen-analisis__decisiones button:disabled { cursor: wait; opacity: .6; }
 
 .resumen-analisis__aviso-decision { margin: 0; font-size: 13px; }
-.resumen-analisis__aviso-decision:not(:empty) { margin-top: 10px; padding: 9px 12px; border-radius: 8px; }
-.resumen-analisis__aviso-decision.is-success { color: var(--ok); background: var(--ok-bg); font-weight: 650; }
+.resumen-analisis__aviso-decision:has(> p:not(:empty)) { margin-top: 10px; padding: 9px 12px; border-radius: 8px; }
+.resumen-analisis__aviso-decision > p { margin: 0; overflow-wrap: anywhere; }
+.resumen-analisis__aviso-decision.is-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--ok);
+  background: var(--ok-bg);
+  font-weight: 650;
+}
 .resumen-analisis__aviso-decision.is-error { color: var(--err); background: var(--err-bg); }
-.resumen-analisis__aviso-decision.is-error p { margin: 0; overflow-wrap: anywhere; }
 .resumen-analisis__aviso-decision.is-error button { margin-top: 8px; }
+.resumen-analisis__aviso-decision > .resumen-analisis__copiar-id {
+  min-height: 36px;
+  min-width: 98px;
+  padding: 6px 12px;
+  color: var(--ok);
+  background: var(--raised);
+  border-color: var(--ok);
+  white-space: nowrap;
+}
+.resumen-analisis__aviso-decision > .resumen-analisis__copiar-id:hover { background: var(--ok-bg); }
+.resumen-analisis__error-copia { flex-basis: 100%; color: var(--err); user-select: text; }
 
 .resumen-analisis__nota {
   display: block;
@@ -351,4 +371,5 @@
   .resumen-analisis__decisiones { align-items: stretch; }
   .resumen-analisis__decisiones > div { width: 100%; }
   .resumen-analisis__decisiones button { flex: 1 1 100%; }
+  .resumen-analisis__aviso-decision > .resumen-analisis__copiar-id { min-height: 44px; }
 }

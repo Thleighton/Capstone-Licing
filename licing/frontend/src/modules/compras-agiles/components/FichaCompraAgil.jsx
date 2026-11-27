@@ -118,6 +118,7 @@ export default function FichaCompraAgil() {
             fechaCierre={fecha(c.fecha_cierre)}
             monto={c.monto_disponible == null ? "" : dinero(c.monto_disponible, c.moneda)}
             lugar={c.direccion_entrega} entidadTipo="compra_agil" entidadId={id}
+            codigoExterno={c.codigo_externo}
             resumenIA={c.resumen_ia?.resumen} clasificacionActual={evaluacion?.clasificacion}
             hashFuente={preseleccion?.hash_fuente}
             fuenteActualizada={Boolean(vigente)} onActualizarEvaluacion={actualizarEvaluacion}

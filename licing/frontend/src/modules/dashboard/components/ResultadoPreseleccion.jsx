@@ -35,7 +35,8 @@ export default function ResultadoPreseleccion({ fila, detalle, pilares, etiqueta
           lugar={licitacion.direccion_entrega}
           entidadTipo="licitacion" entidadId={fila.id} resumenIA={detalle.resumen_ia?.resumen}
           clasificacionActual={detalle.evaluacion?.clasificacion} hashFuente={detalle.hash_fuente}
-          fuenteActualizada={Boolean(detalle.fuente_actualizada)} onDecidir={onRevisar} />}
+          fuenteActualizada={Boolean(detalle.fuente_actualizada)}
+          onDecidir={detalle.evaluacion?.id ? onRevisar : undefined} guardandoDecision={Boolean(ocupado)} />}
         {detalle?.revision_id && <p className="pre-result-notice">Decisión registrada{fila.revisado_por ? ` por ${fila.revisado_por}` : ""}{fila.revisado_en ? ` · ${fecha(fila.revisado_en)}` : ""}.</p>}
         {!detalle ? <p role="status">Cargando información de la licitación y su evaluación…</p> : <>
           {(detalle.errorResultado || detalle.errorFicha) && <div className="pre-result-error" role="alert">

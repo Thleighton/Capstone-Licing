@@ -1,13 +1,22 @@
 // Textos y cálculos compartidos por la página, la ficha y el apartado del dashboard.
 import { useCallback, useEffect, useState } from "react";
 import { apiJson } from "../../core/api/client";
+import { useStore } from "../../core/store/createStore";
+import { fichaCompraAgil } from "./store";
 
-export const ETIQUETAS = {
+const ETIQUETAS = {
   preseleccionada: "Posible oportunidad",
   revision_manual: "Revisión necesaria",
-  descartada: "Descartada por regla",
+  descartada: "Descartada",
   pendiente_evaluacion: "Sin evaluar",
 };
+export function etiquetaPreseleccion(estado, motivo) {
+  if (estado === "descartada" && motivo) {
+    return motivo.includes("Registrado por ") ? "Descartada por usuario" : "Descartada por regla";
+  }
+  return ETIQUETAS[estado] || estado;
+}
+
 export const TONOS = { preseleccionada: "green", revision_manual: "amber", descartada: "", pendiente_evaluacion: "violet" };
 export const PILARES = [
   { codigo: "vigencia", nombre: "Vigencia" },
@@ -54,6 +63,7 @@ function actualizarEvaluaciones(onAvance, pendientesIniciales) {
 /** Evalúa automáticamente solo registros nuevos o con reglas/datos desactualizados. */
 export function useActualizarComprasAgiles(version) {
   const [revision, setRevision] = useState(0);
+  const versionRevision = useStore(fichaCompraAgil, s => s.versionRevision);
   const [actualizando, setActualizando] = useState(false);
   const [pendientes, setPendientes] = useState(0);
   const [avance, setAvance] = useState({ evaluadas: 0, pendientes: 0 });
@@ -85,7 +95,7 @@ export function useActualizarComprasAgiles(version) {
     return () => control.abort();
   }, [version, solicitud, actualizar]);
   return {
-    versionDatos: `${version || ""}:${revision}`, actualizando, errorActualizacion,
+    versionDatos: `${version || ""}:${revision}:${versionRevision}`, actualizando, errorActualizacion,
     pendientes, avance, filtroActivo, actualizar: () => actualizar(pendientes),
   };
 }

@@ -5,7 +5,7 @@ import TituloLicitacion from "../../../core/ui/TituloLicitacion";
 import CierrePlazo from "../../../core/ui/CierrePlazo";
 import { dinero } from "../../../core/ui/format";
 import { abrirCompraAgil } from "../store";
-import { ETIQUETAS, TONOS } from "../comun";
+import { etiquetaPreseleccion, TONOS } from "../comun";
 import PreseleccionControles from "../../../core/ui/PreseleccionControles";
 import EstadoPlazo from "../../../core/ui/EstadoPlazo";
 import PaginacionResultados from "../../../core/ui/PaginacionResultados";
@@ -22,7 +22,9 @@ export default function VistaTodas({ q, codigo, onCodigo, version, onClasificaci
     const control = new AbortController();
     setCargando(true);
     const espera = setTimeout(() => {
-      const parametros = new URLSearchParams({ q, codigo: (codigo || "").trim(), limite: String(LIMITE), offset: String(offset) });
+      const parametros = new URLSearchParams({
+        q, codigo: (codigo || "").trim(), limite: String(LIMITE), offset: String(offset), incluir_estado_seleccion: "true",
+      });
       apiJson("/api/compras-agiles?" + parametros, { signal: control.signal })
         .then(r => { setDatos(r); setError(""); })
         .catch(e => { if (!control.signal.aborted) setError(e.message); })
@@ -38,7 +40,7 @@ export default function VistaTodas({ q, codigo, onCodigo, version, onClasificaci
       <colgroup><col style={{ width: 185 }} /><col /><col style={{ width: "22%" }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /></colgroup>
       <thead><tr><th>Código</th><th>Compra Ágil</th><th>Institución</th><th>Presupuesto</th><th>Preselección</th></tr></thead>
       <tbody>{datos.items.map(c => {
-        const estado = c.clasificacion || "pendiente_evaluacion";
+        const estado = c.estado_seleccion || c.clasificacion || "pendiente_evaluacion";
         return <tr key={c.id} onClick={() => abrirCompraAgil(c.id)}
           className={c.clientes_importantes?.length ? "opportunity-important" : undefined}>
           <td><span className="ca-codigo-estado"><button className="cod" onClick={e => { e.stopPropagation(); abrirCompraAgil(c.id); }}>{c.codigo_externo}</button><EstadoPlazo fila={c} /></span>
@@ -48,7 +50,7 @@ export default function VistaTodas({ q, codigo, onCodigo, version, onClasificaci
             <div className="sub cut">{c.region_comprador}</div><ClienteImportanteBadge clientes={c.clientes_importantes} /></td>
           <td>{c.monto_disponible == null ? "-" : dinero(c.monto_disponible, c.moneda)}
             <CierrePlazo fechaCierre={c.fecha_cierre} compacto /></td>
-          <td><span className={"badge " + (TONOS[estado] || "")}>{ETIQUETAS[estado]}</span></td>
+          <td><span className={"badge " + (TONOS[estado] || "")}>{etiquetaPreseleccion(estado)}</span></td>
         </tr>;
       })}</tbody>
     </table>

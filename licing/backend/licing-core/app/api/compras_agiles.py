@@ -126,7 +126,7 @@ class CompraAgilDetalle(CompraAgilResumen):
 
 
 @router.get("/compras-agiles")
-def listar_compras_agiles(
+async def listar_compras_agiles(
     response: Response,
     q: str = Query(default="", max_length=200),
     codigo: str = Query(default="", max_length=60),
@@ -139,6 +139,7 @@ def listar_compras_agiles(
     cierre_hasta: date | None = None,
     orden_cierre: str = Query(default="proximo", pattern="^(proximo|lejano|ninguno)$"),
     orden_publicacion: str = Query(default="ninguna", pattern="^(ninguna|reciente|antigua)$"),
+    incluir_estado_seleccion: bool = False,
 ):
     filtros = []
     if q.strip():
@@ -160,9 +161,19 @@ def listar_compras_agiles(
     consulta = filtrar_cierre(select(CompraAgil).where(*filtros), CompraAgil.fecha_cierre, cierre_desde, cierre_hasta)
     total = db.scalar(select(func.count()).select_from(consulta.subquery()))
     filas = db.scalars(consulta.order_by(*_orden_compra_agil(orden_cierre, orden_publicacion), CompraAgil.id.desc()).offset(offset).limit(limite)).all()
+    items = [CompraAgilResumen.model_validate(f).model_dump(mode="json") for f in filas]
+    if incluir_estado_seleccion and filas:
+        try:
+            clasificaciones = await filtradas.cargar_clasificaciones({f.codigo_externo: f.raw_id for f in filas})
+        except filtradas.FiltradasNoDisponible:
+            clasificaciones = {}
+        for compra, item in zip(filas, items):
+            estado = clasificaciones.get(str(compra.id))
+            if estado:
+                vigente = _evaluacion_vigente(compra, estado.get("hash_fuente"), estado.get("fuente_raw_id"))
+                item["estado_seleccion"] = estado["estado_seleccion"] if vigente else "pendiente_evaluacion"
     response.headers["Cache-Control"] = "no-store"
-    return {"items": [CompraAgilResumen.model_validate(f) for f in filas], "total": total,
-            "limite": limite, "offset": offset}
+    return {"items": items, "total": total, "limite": limite, "offset": offset}
 
 
 def _evaluacion_vigente(compra: CompraAgil | None, hash_fuente, raw_id=None, firma_actual=None) -> bool:
@@ -213,13 +224,13 @@ def resumen_compras_agiles(response: Response, db: Session = Depends(get_db)):
 async def exportar_compras_agiles(db: Session = Depends(get_db)):
     """Excel separado por clasificación; datos desactualizados quedan en revisión."""
     from starlette.concurrency import run_in_threadpool
-    from ..services.exportacion_oportunidades import cargar_clasificaciones, crear_excel, HOJAS
+    from ..services.exportacion_oportunidades import crear_excel, HOJAS
 
     try:
         ids = list(db.scalars(select(CompraAgil.id).order_by(CompraAgil.id)))
         entradas = await run_in_threadpool(cargar_entradas_compra, db, ids)
         fuentes = {datos["codigo_externo"]: datos["raw_id"] for datos in entradas.values()}
-        guardadas = await cargar_clasificaciones(fuentes, filtradas.operar)
+        guardadas = await filtradas.cargar_clasificaciones(fuentes)
 
         compras = {compra.id: compra for compra in db.scalars(
             select(CompraAgil).where(CompraAgil.id.in_(ids))
@@ -335,10 +346,42 @@ async def detalle_preseleccion_compra_agil(compra_agil_id: int, response: Respon
     entrada_actual = cargar_entradas_compra(db, [fila.id]).get(str(fila.id))
     firma_actual = firma_compra(entrada_actual) if entrada_actual else None
     resultado["fuente_actualizada"] = _evaluacion_vigente(
-        fila, resultado.get("hash_fuente"), firma_actual=firma_actual,
+        fila, resultado.get("hash_fuente"), resultado.get("raw_id"), firma_actual=firma_actual,
     )
+    evaluacion_id = (resultado.get("evaluacion") or {}).get("id")
+    if resultado["fuente_actualizada"] and evaluacion_id:
+        try:
+            # El detalle devuelve la propuesta automática. El listado aplica la revisión manual.
+            listado = await filtradas.operar("listar", {
+                "codigos": [fila.codigo_externo], "fuentes": {fila.codigo_externo: fila.raw_id}, "limite": 1,
+            })
+        except filtradas.FiltradasNoDisponible:
+            pass
+        else:
+            estado = next(iter(listado.get("filas", [])), {})
+            if estado.get("evaluacion_id") != evaluacion_id or estado.get("estado_seleccion") == "pendiente_evaluacion":
+                resultado["fuente_actualizada"] = False
+            else:
+                resultado.update(estado_seleccion=estado["estado_seleccion"], motivo_seleccion=estado["motivo_seleccion"])
     response.headers["Cache-Control"] = "no-store"
     return resultado
+
+
+@router.post("/compras-agiles/{compra_agil_id}/revision")
+async def revisar_compra_agil(compra_agil_id: int, entrada: filtradas.Revision,
+                             usuario=Depends(usuario_actual), db: Session = Depends(get_db)):
+    fila = db.get(CompraAgil, compra_agil_id)
+    if fila is None:
+        raise HTTPException(404, "La Compra Ágil ya no está disponible.")
+    datos = cargar_entradas_compra(db, [compra_agil_id]).get(str(compra_agil_id))
+    if not datos:
+        raise HTTPException(404, "La Compra Ágil ya no está disponible.")
+    firma_actual = firma_compra(datos)
+    if not _evaluacion_vigente(fila, firma_actual, datos["raw_id"]):
+        raise HTTPException(409, "La ficha de la Compra Ágil cambió. Actualiza la preselección antes de registrar una decisión.")
+    return await filtradas.registrar_revision(
+        entrada, usuario, codigo=fila.codigo_externo, raw_id=datos["raw_id"], hash_fuente=firma_actual,
+    )
 
 
 @router.get("/compras-agiles/{compra_agil_id}")

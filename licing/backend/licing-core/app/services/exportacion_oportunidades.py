@@ -1,5 +1,4 @@
 """Excel de licitaciones: solo referencia, comprador y enlace público."""
-import asyncio
 from io import BytesIO
 
 from openpyxl import Workbook
@@ -14,40 +13,6 @@ HOJAS = {
     "revision_manual": "Pendientes de revisión",
     "descartada": "Descartadas",
 }
-
-
-async def cargar_clasificaciones(fuentes, consultar, limite=100, concurrencia=3):
-    """Lee las clasificaciones en una respuesta ligera y pagina solo por compatibilidad."""
-    codigos = list(fuentes)
-    if not codigos:
-        return {}
-
-    async def cargar_pagina(offset):
-        return await consultar("listar", {
-            "codigos": codigos, "fuentes": fuentes, "solo_firmas": True,
-            "limite": limite, "offset": offset,
-        })
-
-    primera = await cargar_pagina(0)
-    try:
-        total = max(0, int(primera.get("total", len(codigos))))
-    except (TypeError, ValueError):
-        total = len(codigos)
-
-    filas = list(primera.get("filas", []))
-    # La lectura solo_firmas omite paginación. Si el servicio remoto todavía es
-    # antiguo y devuelve una página normal, completar las páginas restantes.
-    offsets = range(limite, total, limite) if total > len(filas) else ()
-    semaforo = asyncio.Semaphore(concurrencia)
-
-    async def cargar_acotada(offset):
-        async with semaforo:
-            return await cargar_pagina(offset)
-
-    paginas = await asyncio.gather(*(cargar_acotada(offset) for offset in offsets))
-    for pagina in paginas:
-        filas.extend(pagina.get("filas", []))
-    return {str(fila["id"]): fila for fila in filas}
 
 
 def crear_excel(filas, modalidad="licitacion"):
